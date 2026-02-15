@@ -115,3 +115,15 @@ export type Task = {
   dueDate: string;
   assignedTo: string;
 };
+
+export type CampaignStatus = 'Planning' | 'Active' | 'Completed' | 'Cancelled';
+
+export type Campaign = {
+  id: string;
+  name: string;
+  status: CampaignStatus;
+  budget: number;
+  startDate: string;
+  endDate: string;
+  channel: 'Google Ads' | 'Facebook' | 'Email' | 'Content Marketing';
+};
