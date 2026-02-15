@@ -81,16 +81,23 @@ export const columns: ColumnDef<Account>[] = [
     header: 'Website',
     cell: ({ row }) => {
       const website = row.getValue('website') as string;
+      if (!website) return <span className="text-muted-foreground">-</span>;
       return <a href={`https://${website}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{website}</a>
     }
   },
   {
-    accessorKey: 'owner',
-    header: 'Owner',
+    accessorKey: 'phone',
+    header: 'Phone',
+    cell: ({ row }) => {
+        const phone = row.getValue('phone') as string;
+        return phone ? <span>{phone}</span> : <span className="text-muted-foreground">-</span>;
+    }
   },
   {
-    accessorKey: 'employees',
-    header: 'Employees',
+    accessorKey: 'ownerId',
+    header: 'Owner',
+    // In a real app, you'd fetch the user's name from this ID
+    cell: ({ row }) => <div className="text-xs text-muted-foreground truncate">{row.getValue('ownerId')}</div>
   },
   {
     id: 'actions',

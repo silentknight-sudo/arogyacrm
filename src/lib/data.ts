@@ -39,21 +39,12 @@ export const interactionLogs: { [leadId: string]: InteractionLog[] } = {
   // ... other logs
 };
 
-export const accounts: Account[] = Array.from({ length: 15 }, (_, i) => ({
-  id: `acc-${i + 1}`,
-  name: `Account ${String.fromCharCode(65 + i)}`,
-  industry: (['Technology', 'Finance', 'Healthcare', 'Retail', 'Manufacturing'])[i % 5],
-  website: `account${i + 1}.com`,
-  owner: 'Sales Lead',
-  employees: Math.floor(Math.random() * 500) + 10,
-}));
-
 export const contacts: Contact[] = Array.from({ length: 25 }, (_, i) => ({
     id: `contact-${i + 1}`,
     name: `Contact Person ${i + 1}`,
     email: `contact${i + 1}@example.com`,
     phone: `+1-202-555-01${(i < 10 ? '0' : '') + i}`,
-    account: accounts[i % accounts.length].name,
+    account: `Account ${String.fromCharCode(65 + (i % 5))}`,
     jobTitle: (['CEO', 'CTO', 'Sales Manager', 'Developer'])[i % 4],
     avatar: `https://picsum.photos/seed/contact${i}/100/100`,
 }));

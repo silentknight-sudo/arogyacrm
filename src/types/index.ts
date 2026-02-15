@@ -47,12 +47,12 @@ export type Lead = {
   engagementScore?: number;
   leadSource?: string;
   demographicData?: {
-    industry: string,
-    companySize: string,
-    jobTitle: string,
-    country: string,
-  },
-  notes?: string,
+    industry: string;
+    companySize: string;
+    jobTitle: string;
+    country: string;
+  };
+  notes?: string;
   createdAt: any; // serverTimestamp
   updatedAt: any; // serverTimestamp
 };
@@ -95,11 +95,16 @@ export type Product = {
 
 export type Account = {
   id: string;
+  teamspaceId: string;
   name: string;
-  industry: string;
-  website: string;
-  owner: string;
-  employees: number;
+  industry?: string;
+  website?: string;
+  phone?: string;
+  address?: string;
+  ownerId: string;
+  createdAt?: any;
+  updatedAt?: any;
+  ownerName?: string; // For display
 };
 
 export type Contact = {
