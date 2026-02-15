@@ -26,11 +26,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   , [firestore, authUser]);
   const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const teamspacesQuery = useMemoFirebase(() => 
-    currentUser?.teamspaceIds?.length 
-      ? query(collection(firestore, 'teamspaces'), where('id', 'in', currentUser.teamspaceIds)) 
-      : null
-  , [firestore, currentUser]);
+  const teamspacesQuery = useMemoFirebase(() => {
+    if (!firestore || !currentUser) return null;
+
+    if (currentUser.role === 'admin') {
+      // Admins should see all teamspaces
+      return query(collection(firestore, 'teamspaces'));
+    }
+    
+    // Regular users see only their teamspaces
+    if (currentUser.teamspaceIds?.length) {
+      return query(collection(firestore, 'teamspaces'), where('id', 'in', currentUser.teamspaceIds));
+    }
+    
+    return null;
+  }, [firestore, currentUser]);
 
   const { data: availableTeamspaces } = useCollection<Teamspace>(teamspacesQuery);
 
