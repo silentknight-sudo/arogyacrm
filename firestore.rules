@@ -13,7 +13,7 @@
  * - Default Deny: All access is denied by default. Permissions must be explicitly granted.
  * - Teamspace Membership is Paramount: A user MUST be a member of a Teamspace (i.e., their UID must be in the `memberIds` array of the `/teamspaces/{teamspaceId}` document) to perform any action on data within that teamspace.
  * - Admins Manage Structure, Not All Data: Users with the 'admin' role can create users and teamspaces, but they do not automatically have write access to all team-level data like leads or deals. This respects the data ownership within teams.
- * - User Privacy: Listing all users in the `/users` collection is strictly forbidden to prevent data harvesting. Users can only access their own profile, while admins can manage any profile.
+ * - User Privacy: Listing all users in the `/users` collection is restricted to admins to prevent data harvesting. Users can only access their own profile.
  * - Auditability: Activity logs (`/activityLogs/...`) are append-only. Once created, they cannot be modified or deleted, ensuring the integrity of the audit trail.
  *
  * # Denormalization for Authorization
@@ -143,13 +143,13 @@ service cloud.firestore {
      * @description Manages user profiles. Users can manage their own profile, and admins can manage any user profile.
      * @path /users/{userId}
      * @allow (get) A user `auth.uid: "user_abc"` requests their own document `/users/user_abc`.
-     * @deny (list) Any user, including admins, attempts to list the `/users` collection.
+     * @deny (list) A non-admin user attempts to list the `/users` collection.
      * @principle Restricts access to a user's own data tree and grants admin override for management.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list: if false;
-      allow create: if (isOwner(userId) || isAdmin()) && hasValidId(userId);
+      allow list: if isAdmin();
+      allow create: if isAdmin() && hasValidId(userId); // Admins create users
       allow update: if (isOwner(userId) || isAdmin()) && isExistingDoc() && isIdImmutable();
       allow delete: if isAdmin() && isExistingDoc();
     }

@@ -26,13 +26,13 @@ import {
   LayoutDashboard,
   Target,
   ChevronDown,
-  ChevronRight,
-  Dot,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import React from 'react';
+import { useApp } from '@/context/app-context';
 
 const menuItems = [
     {
@@ -97,6 +97,7 @@ const menuItems = [
 
 export function MainSidebar() {
   const pathname = usePathname();
+  const { currentUser } = useApp();
 
   return (
     <aside className="hidden w-64 flex-col border-r bg-background lg:flex">
@@ -122,6 +123,30 @@ export function MainSidebar() {
       </div>
       <div className="flex-1 overflow-auto py-2">
         <nav className="grid items-start px-4 text-sm font-medium">
+          {currentUser?.role === 'admin' && (
+             <Collapsible key="Admin" defaultOpen={pathname.startsWith('/admin')} className="mb-2">
+                <CollapsibleTrigger className="w-full">
+                    <div className="flex w-full items-center justify-between">
+                        <span className="text-xs font-semibold text-muted-foreground">Admin</span>
+                        <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]]:rotate-180" />
+                    </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <div className="mt-2 flex flex-col gap-1">
+                        <Link
+                            href="/admin/users"
+                            className={cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                            pathname.startsWith('/admin/users') && 'bg-muted text-primary'
+                            )}
+                        >
+                            <Users className="h-4 w-4" />
+                            User Management
+                        </Link>
+                    </div>
+                </CollapsibleContent>
+             </Collapsible>
+          )}
           {menuItems.map((section) => (
              <Collapsible key={section.title} defaultOpen={section.items.some(item => pathname.startsWith(item.href))} className="mb-2">
                 <CollapsibleTrigger className="w-full">
