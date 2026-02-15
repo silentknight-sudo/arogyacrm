@@ -1,4 +1,5 @@
-import type { User, Teamspace, Lead, Deal, Product, InteractionLog } from '@/types';
+import type { User, Teamspace, Lead, Deal, Product, InteractionLog, Account, Contact, Task } from '@/types';
+import { format } from 'date-fns';
 
 export const users: User[] = [
   {
@@ -119,3 +120,30 @@ export const interactionLogs: { [leadId: string]: InteractionLog[] } = {
     { id: 'int-5-2', type: 'Note', date: '2024-05-16T11:30:00Z', notes: 'Follow up next week with a proposal.', agent: 'Sales Lead' },
   ],
 };
+
+export const accounts: Account[] = Array.from({ length: 15 }, (_, i) => ({
+  id: `acc-${i + 1}`,
+  name: `Account ${String.fromCharCode(65 + i)}`,
+  industry: (['Technology', 'Finance', 'Healthcare', 'Retail', 'Manufacturing'])[i % 5],
+  website: `account${i + 1}.com`,
+  owner: users[1].name,
+  employees: Math.floor(Math.random() * 500) + 10,
+}));
+
+export const contacts: Contact[] = Array.from({ length: 25 }, (_, i) => ({
+    id: `contact-${i + 1}`,
+    name: `Contact Person ${i + 1}`,
+    email: `contact${i + 1}@example.com`,
+    phone: `+1-202-555-01${(i < 10 ? '0' : '') + i}`,
+    account: accounts[i % accounts.length].name,
+    jobTitle: (['CEO', 'CTO', 'Sales Manager', 'Developer'])[i % 4],
+    avatar: `https://picsum.photos/seed/contact${i}/100/100`,
+}));
+
+export const tasks: Task[] = Array.from({ length: 12 }, (_, i) => ({
+  id: `task-${i + 1}`,
+  title: `Task number ${i+1}`,
+  status: (['Todo', 'In Progress', 'Done'] as const)[i % 3],
+  dueDate: new Date(Date.now() + (i-5) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  assignedTo: users[Math.floor(Math.random() * users.length)].name,
+}));

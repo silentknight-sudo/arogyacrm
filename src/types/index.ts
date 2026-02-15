@@ -86,3 +86,32 @@ export type Product = {
   stock: number;
   imageUrl: string;
 };
+
+export type Account = {
+  id: string;
+  name: string;
+  industry: string;
+  website: string;
+  owner: string;
+  employees: number;
+};
+
+export type Contact = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  account: string;
+  jobTitle: string;
+  avatar: string;
+};
+
+export type TaskStatus = 'Todo' | 'In Progress' | 'Done';
+
+export type Task = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  dueDate: string;
+  assignedTo: string;
+};
