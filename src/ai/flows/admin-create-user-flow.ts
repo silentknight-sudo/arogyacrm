@@ -7,7 +7,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import * as admin from 'firebase-admin';
+import { adminAuth, adminDb, serverTimestamp } from '@/firebase/admin';
 
 // Define the input schema for the flow
 const CreateUserInputSchema = z.object({
@@ -26,13 +26,6 @@ const CreateUserOutputSchema = z.object({
 });
 export type CreateUserOutput = z.infer<typeof CreateUserOutputSchema>;
 
-// Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
-const db = admin.firestore();
-
 // The exported wrapper function that the client will call
 export async function adminCreateUser(input: CreateUserInput): Promise<CreateUserOutput> {
   // Here, you would normally check if the calling user is an admin.
@@ -49,7 +42,7 @@ const adminCreateUserFlow = ai.defineFlow(
   },
   async (input) => {
     // Step 1: Create user in Firebase Authentication
-    const userRecord = await admin.auth().createUser({
+    const userRecord = await adminAuth.createUser({
       email: input.email,
       password: input.password,
       displayName: input.displayName,
@@ -59,20 +52,20 @@ const adminCreateUserFlow = ai.defineFlow(
     const newUserId = userRecord.uid;
 
     // Step 2: Create the user profile document in Firestore
-    const userDocRef = db.collection('users').doc(newUserId);
+    const userDocRef = adminDb.collection('users').doc(newUserId);
     await userDocRef.set({
       id: newUserId,
       displayName: input.displayName,
       email: input.email,
       role: input.role,
       teamspaceIds: input.teamspaceIds,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
       avatar: `https://picsum.photos/seed/${newUserId}/100/100`, // Placeholder avatar
     });
     
     // Optional: Set custom claims for role-based access if needed for backend rules
-    await admin.auth().setCustomUserClaims(newUserId, { role: input.role });
+    await adminAuth.setCustomUserClaims(newUserId, { role: input.role });
 
     return {
       uid: newUserId,

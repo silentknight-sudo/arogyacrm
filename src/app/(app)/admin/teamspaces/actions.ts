@@ -1,20 +1,7 @@
 'use server';
 
-import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import * as admin from 'firebase-admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
-
-// Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp();
-  } catch (error: any) {
-     if (error.code !== 'app/duplicate-app') {
-      console.error('Firebase admin initialization error', error);
-    }
-  }
-}
-const db = admin.firestore();
 
 type CreateTeamspaceInput = {
     name: string;
@@ -30,7 +17,7 @@ type CreateTeamspaceResult = {
 
 export async function createTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
     try {
-        const newTeamspaceRef = db.collection('teamspaces').doc();
+        const newTeamspaceRef = adminDb.collection('teamspaces').doc();
         const newTeamspaceId = newTeamspaceRef.id;
 
         await newTeamspaceRef.set({
@@ -39,8 +26,8 @@ export async function createTeamspace(values: CreateTeamspaceInput): Promise<Cre
             description: values.description,
             ownerId: values.ownerId,
             memberIds: [values.ownerId], // Owner is the first member
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
         });
 
         revalidatePath('/admin/teamspaces');
@@ -49,6 +36,6 @@ export async function createTeamspace(values: CreateTeamspaceInput): Promise<Cre
         return { success: true, teamspaceId: newTeamspaceId };
     } catch(error: any) {
         console.error('Error creating teamspace:', error);
-        return { success: false, error: 'Failed to create teamspace.' };
+        return { success: false, error: `Failed to create teamspace. Error: ${error.message}` };
     }
 }
