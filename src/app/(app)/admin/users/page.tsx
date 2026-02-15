@@ -13,7 +13,7 @@ import { useApp } from '@/context/app-context';
 
 export default function UserManagementPage() {
   const firestore = useFirestore();
-  const { availableTeamspaces } = useApp();
+  const { availableTeamspaces, areTeamspacesLoading } = useApp();
 
   const usersQuery = useMemoFirebase(() => 
     query(collection(firestore, 'users'))
@@ -31,7 +31,10 @@ export default function UserManagementPage() {
                 </p>
             </div>
             <div className="flex items-center space-x-2">
-                <CreateUserDialog teamspaces={availableTeamspaces || []}>
+                <CreateUserDialog 
+                  teamspaces={availableTeamspaces || []}
+                  isLoadingTeamspaces={areTeamspacesLoading}
+                >
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Create User

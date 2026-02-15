@@ -34,6 +34,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createUser } from './actions';
 import type { Teamspace, UserRole } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const roles: UserRole[] = ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'];
 
@@ -48,9 +49,10 @@ const formSchema = z.object({
 type CreateUserDialogProps = {
   children: React.ReactNode;
   teamspaces: Teamspace[];
+  isLoadingTeamspaces: boolean;
 };
 
-export function CreateUserDialog({ children, teamspaces }: CreateUserDialogProps) {
+export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: CreateUserDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,39 +174,52 @@ export function CreateUserDialog({ children, teamspaces }: CreateUserDialogProps
                       Select the teamspaces this user will belong to.
                     </FormDescription>
                   </div>
-                  {teamspaces.map((item) => (
-                    <FormField
-                      key={item.id}
-                      control={form.control}
-                      name="teamspaceIds"
-                      render={({ field }) => {
-                        return (
-                          <FormItem
-                            key={item.id}
-                            className="flex flex-row items-start space-x-3 space-y-0"
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(item.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...field.value, item.id])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== item.id
+                  {isLoadingTeamspaces ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Skeleton className="h-4 w-4" />
+                        <Skeleton className="h-4 w-[250px]" />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Skeleton className="h-4 w-4" />
+                        <Skeleton className="h-4 w-[200px]" />
+                      </div>
+                    </div>
+                  ) : (
+                    teamspaces.map((item) => (
+                      <FormField
+                        key={item.id}
+                        control={form.control}
+                        name="teamspaceIds"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={item.id}
+                              className="flex flex-row items-start space-x-3 space-y-0"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(item.id)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, item.id])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== item.id
+                                          )
                                         )
-                                      )
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              {item.name}
-                            </FormLabel>
-                          </FormItem>
-                        )
-                      }}
-                    />
-                  ))}
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {item.name}
+                              </FormLabel>
+                            </FormItem>
+                          )
+                        }}
+                      />
+                    ))
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

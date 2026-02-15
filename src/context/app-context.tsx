@@ -12,6 +12,7 @@ interface AppContextType {
   currentTeamspace: Teamspace | null;
   setCurrentTeamspace: (teamspace: Teamspace) => void;
   availableTeamspaces: Teamspace[];
+  areTeamspacesLoading: boolean;
   logout: () => void;
 }
 
@@ -42,7 +43,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [firestore, currentUser]);
 
-  const { data: availableTeamspaces } = useCollection<Teamspace>(teamspacesQuery);
+  const { data: availableTeamspaces, isLoading: areTeamspacesLoading } = useCollection<Teamspace>(teamspacesQuery);
 
   const [currentTeamspace, setCurrentTeamspace] = useState<Teamspace | null>(null);
 
@@ -66,6 +67,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     currentTeamspace,
     setCurrentTeamspace: (teamspace: Teamspace) => setCurrentTeamspace(teamspace),
     availableTeamspaces: availableTeamspaces || [],
+    areTeamspacesLoading,
     logout
   };
 
