@@ -1,0 +1,1942 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user within the Arogya CRM, including their profile information, assigned role, and associated teamspaces. User authentication is handled externally by Firebase Auth.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address, used for login and communication.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's full display name."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's assigned role (e.g., 'admin', 'sales_executive'). This determines access permissions and UI features.",
+          "format": "enum"
+        },
+        "teamspaceIds": {
+          "type": "array",
+          "description": "References to Teamspace entities that this user is a member of. (Relationship: User N:N Teamspace)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "displayName",
+        "role",
+        "teamspaceIds",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Teamspace": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Teamspace",
+      "type": "object",
+      "description": "Represents an isolated workspace for a team within Arogya CRM, designed to segregate data and modules for different functional teams.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Teamspace entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the teamspace (e.g., 'Sales Teamspace', 'Marketing Teamspace')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the teamspace's purpose and scope."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the User who created and typically administers this teamspace. (Relationship: User 1:N Teamspace)"
+        },
+        "memberIds": {
+          "type": "array",
+          "description": "References to Users who are members of this teamspace, granting them access to its data and modules. (Relationship: Teamspace N:N User)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the teamspace was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the teamspace was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "ownerId",
+        "memberIds",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Lead": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Lead",
+      "type": "object",
+      "description": "Represents a potential customer or prospect who has shown interest in Arogya Bio's products, requiring qualification and nurturing through the sales process.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Lead entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this lead belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Lead)"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the lead."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the lead."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the lead.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number of the lead."
+        },
+        "company": {
+          "type": "string",
+          "description": "The company or organization the lead is associated with, if applicable."
+        },
+        "leadSource": {
+          "type": "string",
+          "description": "The origin of the lead (e.g., 'Webform', 'Facebook Ads', 'Google Ads', 'Referral')."
+        },
+        "leadStatus": {
+          "type": "string",
+          "description": "The current status of the lead in the sales process (e.g., 'New', 'Contacted', 'Qualified', 'Unqualified')."
+        },
+        "leadScore": {
+          "type": "number",
+          "description": "A numerical score indicating the lead's potential or likelihood to convert, calculated by the AI lead scoring system."
+        },
+        "assignedToId": {
+          "type": "string",
+          "description": "Reference to the User (sales executive) currently assigned to nurture this lead. (Relationship: User 1:N Lead)"
+        },
+        "attributionFields": {
+          "type": "string",
+          "description": "JSON string containing attribution details, such as Google Ads campaign IDs or other marketing metadata, for tracking lead origins."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the lead record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the lead record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "firstName",
+        "lastName",
+        "email",
+        "leadSource",
+        "leadStatus",
+        "assignedToId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Contact": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Contact",
+      "type": "object",
+      "description": "Represents a person with whom Arogya CRM has an established relationship, typically converted from a lead or created directly as a customer or partner.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Contact entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this contact belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Contact)"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the contact."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the contact."
+        },
+        "email": {
+          "type": "string",
+          "description": "The primary email address of the contact.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The primary phone number of the contact."
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Reference to the Account (company) this contact is associated with. (Relationship: Account 1:N Contact)"
+        },
+        "leadId": {
+          "type": "string",
+          "description": "Optional reference to the original Lead if this contact was converted from a lead, for historical tracking. (Relationship: Lead 1:1 Contact)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the contact record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the contact record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "firstName",
+        "lastName",
+        "email",
+        "accountId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Account": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Account",
+      "type": "object",
+      "description": "Represents a company or organization with which Arogya CRM does business, serving as a hub for contacts, deals, and activities.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Account entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this account belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Account)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The official name of the company or organization."
+        },
+        "industry": {
+          "type": "string",
+          "description": "The industry sector in which the account operates."
+        },
+        "website": {
+          "type": "string",
+          "description": "The official website URL of the account.",
+          "format": "uri"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The primary phone number of the account."
+        },
+        "address": {
+          "type": "string",
+          "description": "The primary physical address of the account."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the User (account manager) responsible for managing this account. (Relationship: User 1:N Account)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the account record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the account record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "name",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Deal": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Deal",
+      "type": "object",
+      "description": "Represents a sales opportunity, tracking its progress through various stages in the sales pipeline.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Deal entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this deal belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Deal)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name or subject of the sales deal."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The estimated or actual monetary value of the deal."
+        },
+        "stage": {
+          "type": "string",
+          "description": "The current stage of the deal in the sales pipeline (e.g., 'New', 'Contacted', 'Qualified', 'Demo', 'Negotiation', 'Won', 'Lost')."
+        },
+        "closeDate": {
+          "type": "string",
+          "description": "The estimated or actual closing date of the deal.",
+          "format": "date-time"
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Reference to the Account associated with this deal. (Relationship: Account 1:N Deal)"
+        },
+        "contactId": {
+          "type": "string",
+          "description": "Reference to the primary Contact associated with this deal. (Relationship: Contact 1:N Deal)"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the User (sales executive) responsible for managing this deal. (Relationship: User 1:N Deal)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the deal record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the deal record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "name",
+        "amount",
+        "stage",
+        "closeDate",
+        "accountId",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a specific action or item of work that needs to be completed, often related to other CRM entities.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Task entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this task belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Task)"
+        },
+        "title": {
+          "type": "string",
+          "description": "A concise title or summary for the task."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the task, including instructions or context."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "The date and time by which the task is expected to be completed.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the task (e.g., 'Pending', 'Completed', 'In Progress', 'Overdue')."
+        },
+        "priority": {
+          "type": "string",
+          "description": "The importance or urgency level of the task (e.g., 'Low', 'Medium', 'High')."
+        },
+        "assignedToId": {
+          "type": "string",
+          "description": "Reference to the User who is responsible for completing this task. (Relationship: User 1:N Task)"
+        },
+        "relatedToEntityType": {
+          "type": "string",
+          "description": "The type of entity this task is related to (e.g., 'Lead', 'Contact', 'Deal', 'Account')."
+        },
+        "relatedToEntityId": {
+          "type": "string",
+          "description": "The unique identifier of the entity this task is related to."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the task was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the task was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "title",
+        "dueDate",
+        "status",
+        "assignedToId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Meeting": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Meeting",
+      "type": "object",
+      "description": "Represents a scheduled meeting, internal or external, with associated participants and related CRM entities.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Meeting entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this meeting belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Meeting)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The subject or title of the meeting."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description or agenda for the meeting."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The scheduled start date and time of the meeting.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The scheduled end date and time of the meeting.",
+          "format": "date-time"
+        },
+        "location": {
+          "type": "string",
+          "description": "The physical or virtual location where the meeting will take place (e.g., 'Zoom Link', 'Conference Room A')."
+        },
+        "organizerId": {
+          "type": "string",
+          "description": "Reference to the User who organized this meeting. (Relationship: User 1:N Meeting)"
+        },
+        "attendeeIds": {
+          "type": "array",
+          "description": "References to Users or Contacts attending this meeting. (Relationship: Meeting N:N User/Contact)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "relatedToEntityType": {
+          "type": "string",
+          "description": "The type of entity this meeting is primarily related to (e.g., 'Lead', 'Contact', 'Deal', 'Account')."
+        },
+        "relatedToEntityId": {
+          "type": "string",
+          "description": "The unique identifier of the entity this meeting is related to."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the meeting was scheduled.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the meeting details were last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "title",
+        "startTime",
+        "endTime",
+        "organizerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Call": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Call",
+      "type": "object",
+      "description": "Represents a logged phone call activity with a lead or contact, including details about the conversation and outcome.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Call entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this call belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Call)"
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject or main purpose of the phone call."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Detailed notes or a summary of the call discussion and outcomes."
+        },
+        "callDate": {
+          "type": "string",
+          "description": "The date and time the call occurred.",
+          "format": "date-time"
+        },
+        "callDurationMinutes": {
+          "type": "number",
+          "description": "The duration of the call in minutes."
+        },
+        "callType": {
+          "type": "string",
+          "description": "The type of call (e.g., 'Outbound', 'Inbound')."
+        },
+        "status": {
+          "type": "string",
+          "description": "The outcome or status of the call (e.g., 'Completed', 'No Answer', 'Voicemail', 'Busy')."
+        },
+        "callerId": {
+          "type": "string",
+          "description": "Reference to the User who made or received the call. (Relationship: User 1:N Call)"
+        },
+        "relatedToEntityType": {
+          "type": "string",
+          "description": "The type of entity this call is related to (e.g., 'Lead', 'Contact', 'Deal', 'Account')."
+        },
+        "relatedToEntityId": {
+          "type": "string",
+          "description": "The unique identifier of the entity this call is related to."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the call log was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the call log was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "subject",
+        "callDate",
+        "callDurationMinutes",
+        "callType",
+        "status",
+        "callerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Document": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Document",
+      "type": "object",
+      "description": "Represents a document or file stored in the CRM, often linked to other entities for contextual access.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Document entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this document belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Document)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name or title of the document."
+        },
+        "fileUrl": {
+          "type": "string",
+          "description": "The URL to the actual file stored in Firebase Storage.",
+          "format": "uri"
+        },
+        "fileType": {
+          "type": "string",
+          "description": "The MIME type or extension of the file (e.g., 'application/pdf', 'image/jpeg', 'text/plain')."
+        },
+        "fileSizeKB": {
+          "type": "number",
+          "description": "The size of the file in kilobytes (KB)."
+        },
+        "uploadedById": {
+          "type": "string",
+          "description": "Reference to the User who uploaded this document. (Relationship: User 1:N Document)"
+        },
+        "relatedToEntityType": {
+          "type": "string",
+          "description": "The type of entity this document is primarily related to (e.g., 'Lead', 'Contact', 'Deal', 'Product', 'Account')."
+        },
+        "relatedToEntityId": {
+          "type": "string",
+          "description": "The unique identifier of the entity this document is related to."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the document was uploaded.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the document metadata was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "name",
+        "fileUrl",
+        "fileType",
+        "uploadedById",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Campaign": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Campaign",
+      "type": "object",
+      "description": "Represents a marketing campaign, used to track efforts, budget, and results over a defined period.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Campaign entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this campaign belongs to, ensuring data isolation (e.g., 'Marketing Teamspace'). (Relationship: Teamspace 1:N Campaign)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the marketing campaign."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of campaign (e.g., 'Email Marketing', 'Social Media Ad', 'Event Promotion')."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the campaign (e.g., 'Planned', 'Active', 'Completed', 'Paused', 'Cancelled')."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The scheduled start date of the campaign.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The scheduled end date of the campaign.",
+          "format": "date-time"
+        },
+        "budget": {
+          "type": "number",
+          "description": "The allocated monetary budget for the campaign."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the User (marketer) responsible for this campaign. (Relationship: User 1:N Campaign)"
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the campaign objectives, target audience, and strategy."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the campaign record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the campaign record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "name",
+        "type",
+        "status",
+        "startDate",
+        "endDate",
+        "budget",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents an Ayurvedic wellness supplement product offered by Arogya Bio, including its catalog details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Product entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The common name of the product."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the product, including its benefits, ingredients, and usage."
+        },
+        "sku": {
+          "type": "string",
+          "description": "The Stock Keeping Unit (SKU) for the product, a unique identifier for inventory management."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category the product belongs to (e.g., 'Immunity Boosters', 'Digestive Health', 'Herbal Teas')."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the main product image stored in Firebase Storage.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the product was first added to the catalog.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the product information was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "sku",
+        "category",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PriceBook": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PriceBook",
+      "type": "object",
+      "description": "Manages different sets of prices for products, enabling varied pricing strategies for different customer segments or promotions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PriceBook entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the price book (e.g., 'Standard Retail Price', 'Wholesale Price', 'Seasonal Discount')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the pricing strategy or target audience for this price book."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates if this price book is currently active and can be used for pricing products."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the price book was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the price book was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProductPrice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ProductPrice",
+      "type": "object",
+      "description": "Links a specific product to a price book and defines its unit price within that particular price book.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ProductPrice entity."
+        },
+        "priceBookId": {
+          "type": "string",
+          "description": "Reference to the PriceBook this specific price entry belongs to. (Relationship: PriceBook 1:N ProductPrice)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product for which this price is defined. (Relationship: Product 1:N ProductPrice)"
+        },
+        "price": {
+          "type": "number",
+          "description": "The unit price of the product within the specified price book."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the product price entry was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the product price entry was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "priceBookId",
+        "productId",
+        "price",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Quote": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quote",
+      "type": "object",
+      "description": "A formal offer for products or services sent to a potential customer, detailing proposed items and pricing.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Quote entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this quote belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Quote)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name or subject of the quote (e.g., 'Quote for Corporate Wellness Package')."
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Reference to the Account for whom this quote is created. (Relationship: Account 1:N Quote)"
+        },
+        "contactId": {
+          "type": "string",
+          "description": "Reference to the primary Contact associated with this quote. (Relationship: Contact 1:N Quote)"
+        },
+        "validUntil": {
+          "type": "string",
+          "description": "The date and time until which the quote remains valid.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the quote (e.g., 'Draft', 'Sent', 'Accepted', 'Rejected', 'Expired')."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total monetary amount of the quote, including all line items, taxes, and discounts."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the User (sales executive) who created this quote. (Relationship: User 1:N Quote)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the quote was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the quote was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "name",
+        "accountId",
+        "validUntil",
+        "status",
+        "totalAmount",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "QuoteLineItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QuoteLineItem",
+      "type": "object",
+      "description": "Represents an individual product or service item included in a sales Quote, specifying quantity and price.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the QuoteLineItem entity."
+        },
+        "quoteId": {
+          "type": "string",
+          "description": "Reference to the Quote this line item belongs to. (Relationship: Quote 1:N QuoteLineItem)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product included in this line item. (Relationship: Product 1:N QuoteLineItem)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product specified in this line item."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "The unit price of the product at the time the quote was created."
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "The subtotal amount for this line item (quantity * unitPrice)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the quote line item was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the quote line item was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "quoteId",
+        "productId",
+        "quantity",
+        "unitPrice",
+        "subtotal",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SalesOrder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SalesOrder",
+      "type": "object",
+      "description": "A confirmed order placed by a customer, typically generated from an accepted quote, initiating the fulfillment process.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SalesOrder entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this sales order belongs to, ensuring data isolation. (Relationship: Teamspace 1:N SalesOrder)"
+        },
+        "orderNumber": {
+          "type": "string",
+          "description": "A unique identifier or reference number for the sales order."
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Reference to the Account that placed this order. (Relationship: Account 1:N SalesOrder)"
+        },
+        "contactId": {
+          "type": "string",
+          "description": "Reference to the primary Contact associated with this order. (Relationship: Contact 1:N SalesOrder)"
+        },
+        "orderDate": {
+          "type": "string",
+          "description": "The date and time the sales order was placed.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current fulfillment status of the sales order (e.g., 'Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled')."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total monetary amount of the sales order, including all line items, taxes, and shipping."
+        },
+        "quoteId": {
+          "type": "string",
+          "description": "Optional reference to the Quote from which this sales order was generated. (Relationship: Quote 1:1 SalesOrder)"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the User (sales executive) responsible for this sales order. (Relationship: User 1:N SalesOrder)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the sales order was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the sales order was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "orderNumber",
+        "accountId",
+        "orderDate",
+        "status",
+        "totalAmount",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SalesOrderLineItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SalesOrderLineItem",
+      "type": "object",
+      "description": "Represents an individual product item included in a Sales Order, specifying quantity and agreed-upon price.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SalesOrderLineItem entity."
+        },
+        "salesOrderId": {
+          "type": "string",
+          "description": "Reference to the SalesOrder this line item belongs to. (Relationship: SalesOrder 1:N SalesOrderLineItem)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product included in this line item. (Relationship: Product 1:N SalesOrderLineItem)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product ordered in this line item."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "The unit price of the product at the time the sales order was created."
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "The subtotal amount for this line item (quantity * unitPrice)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the sales order line item was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the sales order line item was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "salesOrderId",
+        "productId",
+        "quantity",
+        "unitPrice",
+        "subtotal",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PurchaseOrder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PurchaseOrder",
+      "type": "object",
+      "description": "An order placed by Arogya Bio to a supplier for acquiring products, raw materials, or other goods/services.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PurchaseOrder entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this purchase order belongs to (e.g., 'Operations Teamspace'), ensuring data isolation. (Relationship: Teamspace 1:N PurchaseOrder)"
+        },
+        "orderNumber": {
+          "type": "string",
+          "description": "A unique identifier or reference number for the purchase order."
+        },
+        "supplierName": {
+          "type": "string",
+          "description": "The name of the supplier from whom products or services are being purchased."
+        },
+        "orderDate": {
+          "type": "string",
+          "description": "The date and time the purchase order was placed.",
+          "format": "date-time"
+        },
+        "expectedDeliveryDate": {
+          "type": "string",
+          "description": "The anticipated date of delivery for the ordered items.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the purchase order (e.g., 'Pending', 'Ordered', 'Received', 'Cancelled')."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total monetary amount of the purchase order."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the User who created this purchase order. (Relationship: User 1:N PurchaseOrder)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the purchase order was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the purchase order was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "orderNumber",
+        "supplierName",
+        "orderDate",
+        "status",
+        "totalAmount",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PurchaseOrderLineItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PurchaseOrderLineItem",
+      "type": "object",
+      "description": "Represents an individual item included in a Purchase Order, detailing quantity and cost.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PurchaseOrderLineItem entity."
+        },
+        "purchaseOrderId": {
+          "type": "string",
+          "description": "Reference to the PurchaseOrder this line item belongs to. (Relationship: PurchaseOrder 1:N PurchaseOrderLineItem)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product being purchased in this line item. (Relationship: Product 1:N PurchaseOrderLineItem)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product ordered in this line item."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "The unit price of the product at the time the purchase order was created."
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "The subtotal amount for this line item (quantity * unitPrice)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the purchase order line item was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the purchase order line item was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "purchaseOrderId",
+        "productId",
+        "quantity",
+        "unitPrice",
+        "subtotal",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Invoice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Invoice",
+      "type": "object",
+      "description": "A bill issued to a customer for products or services provided, typically generated from a sales order.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Invoice entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this invoice belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Invoice)"
+        },
+        "invoiceNumber": {
+          "type": "string",
+          "description": "A unique, system-generated invoice number."
+        },
+        "salesOrderId": {
+          "type": "string",
+          "description": "Reference to the SalesOrder this invoice is generated from. (Relationship: SalesOrder 1:1 Invoice)"
+        },
+        "invoiceDate": {
+          "type": "string",
+          "description": "The date the invoice was issued.",
+          "format": "date-time"
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "The date by which the invoice payment is due.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The payment status of the invoice (e.g., 'Draft', 'Sent', 'Paid', 'Partially Paid', 'Overdue', 'Voided')."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total monetary amount of the invoice, including all line items, taxes, and shipping."
+        },
+        "paidAmount": {
+          "type": "number",
+          "description": "The total amount that has been paid towards this invoice."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the User who generated this invoice. (Relationship: User 1:N Invoice)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the invoice was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the invoice was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "invoiceNumber",
+        "salesOrderId",
+        "invoiceDate",
+        "dueDate",
+        "status",
+        "totalAmount",
+        "paidAmount",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "InvoiceLineItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InvoiceLineItem",
+      "type": "object",
+      "description": "Represents an individual product or service item included in an Invoice, detailing quantity and billed price.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the InvoiceLineItem entity."
+        },
+        "invoiceId": {
+          "type": "string",
+          "description": "Reference to the Invoice this line item belongs to. (Relationship: Invoice 1:N InvoiceLineItem)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product included in this line item. (Relationship: Product 1:N InvoiceLineItem)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product billed in this line item."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "The unit price of the product at the time the invoice was created."
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "The subtotal amount for this line item (quantity * unitPrice)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the invoice line item was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the invoice line item was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "invoiceId",
+        "productId",
+        "quantity",
+        "unitPrice",
+        "subtotal",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Stock": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Stock",
+      "type": "object",
+      "description": "Tracks the current inventory levels for a specific product at a given storage location.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Stock entity."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product whose stock is being tracked. (Relationship: Product 1:N Stock)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The current quantity of the product available in stock."
+        },
+        "location": {
+          "type": "string",
+          "description": "The physical or logical location where the stock is held (e.g., 'Main Warehouse', 'Returns Shelf')."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "Timestamp indicating when the stock quantity for this product and location was last updated.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the stock entry was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the stock entry was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "productId",
+        "quantity",
+        "location",
+        "lastUpdated",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Ticket": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Ticket",
+      "type": "object",
+      "description": "Represents a customer support ticket, used to track and manage customer inquiries or issues from inception to resolution.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Ticket entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this ticket belongs to (e.g., 'Support Teamspace'), ensuring data isolation. (Relationship: Teamspace 1:N Ticket)"
+        },
+        "subject": {
+          "type": "string",
+          "description": "A concise subject line that summarizes the customer's support request."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the customer's issue or inquiry."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the ticket (e.g., 'Open', 'In Progress', 'Awaiting Customer', 'Resolved', 'Closed')."
+        },
+        "priority": {
+          "type": "string",
+          "description": "The urgency level of the ticket (e.g., 'Low', 'Medium', 'High', 'Urgent')."
+        },
+        "contactId": {
+          "type": "string",
+          "description": "Reference to the Contact who raised this support ticket. (Relationship: Contact 1:N Ticket)"
+        },
+        "assignedToId": {
+          "type": "string",
+          "description": "Reference to the User (support agent) assigned to handle this ticket. (Relationship: User 1:N Ticket)"
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the ticket (e.g., 'Technical Support', 'Billing Inquiry', 'Product Information', 'Complaint')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the ticket was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the ticket was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "subject",
+        "description",
+        "status",
+        "priority",
+        "contactId",
+        "assignedToId",
+        "category",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Refund": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Refund",
+      "type": "object",
+      "description": "Tracks customer refund requests, detailing the reason, amount, and processing status.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Refund entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this refund request belongs to (e.g., 'Support Teamspace'), ensuring data isolation. (Relationship: Teamspace 1:N Refund)"
+        },
+        "salesOrderId": {
+          "type": "string",
+          "description": "Reference to the SalesOrder for which the refund is requested. (Relationship: SalesOrder 1:N Refund)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason provided by the customer or internal team for the refund request."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary amount requested for refund."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the refund request (e.g., 'Pending', 'Approved', 'Rejected', 'Processed', 'Cancelled')."
+        },
+        "requestedById": {
+          "type": "string",
+          "description": "Reference to the User or Contact who initiated the refund request. (Relationship: User/Contact 1:N Refund)"
+        },
+        "processedById": {
+          "type": "string",
+          "description": "Reference to the User (support agent or operations staff) who processed the refund. (Relationship: User 1:N Refund)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the refund request was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the refund request was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "salesOrderId",
+        "reason",
+        "amount",
+        "status",
+        "requestedById",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Complaint": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Complaint",
+      "type": "object",
+      "description": "Records and manages customer complaints, allowing for detailed tracking, assignment, and resolution processes.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Complaint entity."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace this complaint belongs to (e.g., 'Support Teamspace'), ensuring data isolation. (Relationship: Teamspace 1:N Complaint)"
+        },
+        "subject": {
+          "type": "string",
+          "description": "A concise subject line for the customer complaint."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the customer's complaint, including all relevant context."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the complaint (e.g., 'Received', 'Investigating', 'Action Taken', 'Resolved', 'Closed')."
+        },
+        "contactId": {
+          "type": "string",
+          "description": "Reference to the Contact who filed this complaint. (Relationship: Contact 1:N Complaint)"
+        },
+        "assignedToId": {
+          "type": "string",
+          "description": "Reference to the User (support agent) assigned to handle this complaint. (Relationship: User 1:N Complaint)"
+        },
+        "severity": {
+          "type": "string",
+          "description": "The severity level of the complaint (e.g., 'Minor', 'Moderate', 'Major', 'Critical')."
+        },
+        "relatedToEntityType": {
+          "type": "string",
+          "description": "Optional: The type of entity this complaint is related to (e.g., 'SalesOrder', 'Product', 'Service')."
+        },
+        "relatedToEntityId": {
+          "type": "string",
+          "description": "Optional: The unique identifier of the related entity."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the complaint was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the complaint was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "subject",
+        "description",
+        "status",
+        "contactId",
+        "assignedToId",
+        "severity",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ActivityLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ActivityLog",
+      "type": "object",
+      "description": "Records significant actions and changes within the CRM for audit trails, historical tracking, and activity timelines on specific entities.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ActivityLog entry."
+        },
+        "teamspaceId": {
+          "type": "string",
+          "description": "Reference to the Teamspace where the activity occurred. (Relationship: Teamspace 1:N ActivityLog)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who performed the action. (Relationship: User 1:N ActivityLog)"
+        },
+        "action": {
+          "type": "string",
+          "description": "A concise description of the action performed (e.g., 'Lead Created', 'Deal Stage Changed', 'Product Updated')."
+        },
+        "entityType": {
+          "type": "string",
+          "description": "The type of CRM entity that was affected by this action (e.g., 'Lead', 'Deal', 'Product', 'User')."
+        },
+        "entityId": {
+          "type": "string",
+          "description": "The unique identifier of the specific entity instance that was affected by the action."
+        },
+        "oldValue": {
+          "type": "string",
+          "description": "Optional: A JSON string representing the state of the entity's relevant fields before the action was performed."
+        },
+        "newValue": {
+          "type": "string",
+          "description": "Optional: A JSON string representing the state of the entity's relevant fields after the action was performed."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The date and time when the action was recorded.",
+          "format": "date-time"
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "The IP address from which the action originated, for security auditing purposes."
+        },
+        "userAgent": {
+          "type": "string",
+          "description": "The user agent string of the client performing the action, for security auditing purposes."
+        }
+      },
+      "required": [
+        "id",
+        "teamspaceId",
+        "userId",
+        "action",
+        "entityType",
+        "entityId",
+        "timestamp"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores individual user profiles, including their assigned role and the teamspaces they are members of. This document is crucial for role-based and teamspace-based authorization checks. Users can typically only read/write their own profile, while 'admin' users have broader management rights. Includes denormalized 'role' and 'teamspaceIds' array for authorization independence."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}",
+        "definition": {
+          "entityName": "Teamspace",
+          "schema": {
+            "$ref": "#/backend/entities/Teamspace"
+          },
+          "description": "Represents an isolated workspace for a team. This is the root for all team-specific data. It includes a 'memberIds' array for explicit team membership, enabling direct authorization checks. Only members of a teamspace can access its associated data."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/leads/{leadId}",
+        "definition": {
+          "entityName": "Lead",
+          "schema": {
+            "$ref": "#/backend/entities/Lead"
+          },
+          "description": "Stores potential customer leads, isolated per teamspace. Each lead document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToId' for authorization independence. Access is restricted to members of the respective teamspace and the assigned sales executive."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/contacts/{contactId}",
+        "definition": {
+          "entityName": "Contact",
+          "schema": {
+            "$ref": "#/backend/entities/Contact"
+          },
+          "description": "Stores established contacts, isolated per teamspace. Each contact document contains its 'teamspaceId' (matching the path wildcard) for authorization independence. Access is restricted to members of the respective teamspace."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/accounts/{accountId}",
+        "definition": {
+          "entityName": "Account",
+          "schema": {
+            "$ref": "#/backend/entities/Account"
+          },
+          "description": "Stores company or organization accounts, isolated per teamspace. Each account document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the account owner."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/deals/{dealId}",
+        "definition": {
+          "entityName": "Deal",
+          "schema": {
+            "$ref": "#/backend/entities/Deal"
+          },
+          "description": "Stores sales opportunities, isolated per teamspace. Each deal document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the deal owner."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Stores tasks, isolated per teamspace. Each task document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToId' for authorization independence. Access is restricted to members of the respective teamspace and the assigned user."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/meetings/{meetingId}",
+        "definition": {
+          "entityName": "Meeting",
+          "schema": {
+            "$ref": "#/backend/entities/Meeting"
+          },
+          "description": "Stores scheduled meetings, isolated per teamspace. Each meeting document contains its 'teamspaceId' (matching the path wildcard), 'organizerId', and 'attendeeIds' for authorization independence. Access is restricted to members of the respective teamspace, the organizer, and attendees."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/calls/{callId}",
+        "definition": {
+          "entityName": "Call",
+          "schema": {
+            "$ref": "#/backend/entities/Call"
+          },
+          "description": "Stores logged phone calls, isolated per teamspace. Each call document contains its 'teamspaceId' (matching the path wildcard) and 'callerId' for authorization independence. Access is restricted to members of the respective teamspace and the caller."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/documents/{documentId}",
+        "definition": {
+          "entityName": "Document",
+          "schema": {
+            "$ref": "#/backend/entities/Document"
+          },
+          "description": "Stores CRM documents and their metadata, isolated per teamspace. Each document contains its 'teamspaceId' (matching the path wildcard) and 'uploadedById' for authorization independence. Access is restricted to members of the respective teamspace and the uploader."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/campaigns/{campaignId}",
+        "definition": {
+          "entityName": "Campaign",
+          "schema": {
+            "$ref": "#/backend/entities/Campaign"
+          },
+          "description": "Stores marketing campaigns, isolated per teamspace. Each campaign document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the campaign owner (typically 'marketer' role)."
+        }
+      },
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores globally available product catalog information. Accessible to all relevant roles (e.g., sales, marketing for read, admin/ops for write)."
+        }
+      },
+      {
+        "path": "/priceBooks/{priceBookId}",
+        "definition": {
+          "entityName": "PriceBook",
+          "schema": {
+            "$ref": "#/backend/entities/PriceBook"
+          },
+          "description": "Stores different sets of prices for products, globally available. Accessible to relevant roles (e.g., sales_team_lead, sales_executive for read, admin/ops for write)."
+        }
+      },
+      {
+        "path": "/productPrices/{productPriceId}",
+        "definition": {
+          "entityName": "ProductPrice",
+          "schema": {
+            "$ref": "#/backend/entities/ProductPrice"
+          },
+          "description": "Links a specific product to a price book and defines its unit price within that price book. This is a global collection. Accessible to relevant roles (e.g., sales_team_lead, sales_executive for read, admin/ops for write)."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/quotes/{quoteId}",
+        "definition": {
+          "entityName": "Quote",
+          "schema": {
+            "$ref": "#/backend/entities/Quote"
+          },
+          "description": "Stores sales quotes, isolated per teamspace. Each quote document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the quote owner."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/quotes/{quoteId}/lineItems/{lineItemId}",
+        "definition": {
+          "entityName": "QuoteLineItem",
+          "schema": {
+            "$ref": "#/backend/entities/QuoteLineItem"
+          },
+          "description": "Stores individual line items for a quote. CRITICAL DENORMALIZATION: Each line item document MUST include the 'teamspaceId' directly from its parent quote for authorization independence, allowing security rules to check access without a 'get()' call to the parent quote document."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/salesOrders/{salesOrderId}",
+        "definition": {
+          "entityName": "SalesOrder",
+          "schema": {
+            "$ref": "#/backend/entities/SalesOrder"
+          },
+          "description": "Stores confirmed sales orders, isolated per teamspace. Each sales order document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the order owner."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/salesOrders/{salesOrderId}/lineItems/{lineItemId}",
+        "definition": {
+          "entityName": "SalesOrderLineItem",
+          "schema": {
+            "$ref": "#/backend/entities/SalesOrderLineItem"
+          },
+          "description": "Stores individual line items for a sales order. CRITICAL DENORMALIZATION: Each line item document MUST include the 'teamspaceId' directly from its parent sales order for authorization independence, allowing security rules to check access without a 'get()' call to the parent sales order document."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/purchaseOrders/{purchaseOrderId}",
+        "definition": {
+          "entityName": "PurchaseOrder",
+          "schema": {
+            "$ref": "#/backend/entities/PurchaseOrder"
+          },
+          "description": "Stores purchase orders, isolated per teamspace (e.g., 'Operations Teamspace'). Each purchase order document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the order owner."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/purchaseOrders/{purchaseOrderId}/lineItems/{lineItemId}",
+        "definition": {
+          "entityName": "PurchaseOrderLineItem",
+          "schema": {
+            "$ref": "#/backend/entities/PurchaseOrderLineItem"
+          },
+          "description": "Stores individual line items for a purchase order. CRITICAL DENORMALIZATION: Each line item document MUST include the 'teamspaceId' directly from its parent purchase order for authorization independence, allowing security rules to check access without a 'get()' call to the parent purchase order document."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/invoices/{invoiceId}",
+        "definition": {
+          "entityName": "Invoice",
+          "schema": {
+            "$ref": "#/backend/entities/Invoice"
+          },
+          "description": "Stores invoices issued to customers, isolated per teamspace. Each invoice document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the invoice owner."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/invoices/{invoiceId}/lineItems/{lineItemId}",
+        "definition": {
+          "entityName": "InvoiceLineItem",
+          "schema": {
+            "$ref": "#/backend/entities/InvoiceLineItem"
+          },
+          "description": "Stores individual line items for an invoice. CRITICAL DENORMALIZATION: Each line item document MUST include the 'teamspaceId' directly from its parent invoice for authorization independence, allowing security rules to check access without a 'get()' call to the parent invoice document."
+        }
+      },
+      {
+        "path": "/stock/{stockId}",
+        "definition": {
+          "entityName": "Stock",
+          "schema": {
+            "$ref": "#/backend/entities/Stock"
+          },
+          "description": "Tracks inventory levels for products, globally. Access is typically restricted by role (e.g., 'admin' or 'operations' for write access, 'sales' for read access)."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/tickets/{ticketId}",
+        "definition": {
+          "entityName": "Ticket",
+          "schema": {
+            "$ref": "#/backend/entities/Ticket"
+          },
+          "description": "Stores customer support tickets, isolated per teamspace (e.g., 'Support Teamspace'). Each ticket document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToId' for authorization independence. Access is restricted to members of the respective teamspace and the assigned support agent."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/refunds/{refundId}",
+        "definition": {
+          "entityName": "Refund",
+          "schema": {
+            "$ref": "#/backend/entities/Refund"
+          },
+          "description": "Stores customer refund requests, isolated per teamspace. Each refund document contains its 'teamspaceId' (matching the path wildcard), 'requestedById', and 'processedById' for authorization independence. Access is restricted to members of the respective teamspace and the relevant users."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/complaints/{complaintId}",
+        "definition": {
+          "entityName": "Complaint",
+          "schema": {
+            "$ref": "#/backend/entities/Complaint"
+          },
+          "description": "Records and manages customer complaints, isolated per teamspace. Each complaint document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToId' for authorization independence. Access is restricted to members of the respective teamspace and the assigned agent."
+        }
+      },
+      {
+        "path": "/teamspaces/{teamspaceId}/activityLogs/{activityLogId}",
+        "definition": {
+          "entityName": "ActivityLog",
+          "schema": {
+            "$ref": "#/backend/entities/ActivityLog"
+          },
+          "description": "Records significant actions and changes for audit trails, isolated per teamspace. Each activity log document contains its 'teamspaceId' (matching the path wildcard) and 'userId' for authorization independence. Access is restricted to members of the respective teamspace and the user who performed the action."
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure prioritizes secure, scalable, and debuggable authorization by adhering to the core design principles: Authorization Independence, Structural Segregation, and consistent Access Modeling. Most CRM data is organized under a 'Teamspace' hierarchy, ensuring strict data isolation per team, a key requirement for a SaaS-style CRM.\n\n**Authorization Independence:** This is achieved through extensive denormalization. For instance, every document within a teamspace-scoped subcollection (e.g., Leads, Contacts, Deals, Tasks, etc., and critically, all 'Line Item' sub-subcollections) will explicitly include its `teamspaceId`. This allows Firestore Security Rules to verify a user's access by checking if `request.auth.uid` is a member of the `teamspaceId` (by checking the `teamspaceIds` array on the user's own `/users/{userId}` document, which is a single `get()` operation per request for the user's profile, a standard and efficient practice for DBAC), rather than performing costly and complex `get()` operations on parent documents. Similarly, fields like `ownerId`, `assignedToId`, `uploadedById`, `organizerId`, `callerId`, `requestedById`, and `processedById` are stored directly on the respective documents, enabling direct authorization checks.\n\n**Structural Segregation (Homogeneous Security Posture):** Data is segregated into distinct collections based on its security requirements. Global catalog data (Products, PriceBooks, ProductPrices, Stock) resides at the root level, accessible based on a user's role. Most operational CRM data, however, is nested under `/teamspaces/{teamspaceId}/` to enforce strong data isolation. This means all documents within, for example, `/teamspaces/{teamspaceId}/leads` will share the same `teamspaceId` and thus the same primary access rules, simplifying security rule logic.\n\n**QAPs (Queries are not Filters):** The hierarchical structure `teamspaces/{teamspaceId}/<entity_plural_name>/{entityId}` inherently supports Query as a Security Primitive. When a user queries a collection like `db.collection('teamspaces').doc(myTeamspaceId).collection('leads')`, the results are naturally scoped to `myTeamspaceId`. Security rules then only need to verify that `request.auth.uid` has access to `myTeamspaceId` (i.e., is a member of that teamspace), and potentially other role-based or ownership-based conditions on the document itself. This prevents inefficient filtering of large result sets by security rules and ensures that only authorized data is ever returned.\n\n**Role-Based Access Control (DBAC):** User roles are stored explicitly in the `/users/{userId}` document. The `teamspaceIds` array on the user document also facilitates quick lookups for teamspace membership. Admin users are granted broad access based on their 'admin' role, while other roles (sales_team_lead, sales_executive, marketer, support) have access confined to their assigned teamspaces and/or documents where they are an `ownerId` or `assignedToId`.\n\nThis architecture provides a clean, predictable, and highly secure foundation for Arogya CRM, making security rules simpler to write, understand, and debug, while maintaining scalability and performance."
+  }
+}
