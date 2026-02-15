@@ -143,6 +143,16 @@ export function MainSidebar() {
                             <Users className="h-4 w-4" />
                             User Management
                         </Link>
+                        <Link
+                            href="/admin/teamspaces"
+                            className={cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                            pathname.startsWith('/admin/teamspaces') && 'bg-muted text-primary'
+                            )}
+                        >
+                            <Building2 className="h-4 w-4" />
+                            Teamspaces
+                        </Link>
                     </div>
                 </CollapsibleContent>
              </Collapsible>

@@ -17,6 +17,8 @@ export type UserProfile = {
 export type Teamspace = {
   id: string;
   name: string;
+  description: string;
+  ownerId: string;
   memberIds: string[];
 };
 

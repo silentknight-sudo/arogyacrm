@@ -186,7 +186,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                             <Skeleton className="h-4 w-[200px]" />
                         </div>
                         </div>
-                    ) : (
+                    ) : teamspaces.length > 0 ? (
                         teamspaces.map((item) => (
                         <FormField
                             key={item.id}
@@ -220,12 +220,16 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                             }}
                         />
                         ))
+                    ) : (
+                        <div className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
+                            No teamspaces found. Please create one in Admin &gt; Teamspaces first.
+                        </div>
                     )}
                     <FormMessage />
                     </FormItem>
                 )}
                 />
-                <Button type="submit" disabled={isSubmitting} className="w-full">
+                <Button type="submit" disabled={isSubmitting || isLoadingTeamspaces || teamspaces.length === 0} className="w-full">
                 {isSubmitting ? 'Creating User...' : 'Create User'}
                 </Button>
             </form>
