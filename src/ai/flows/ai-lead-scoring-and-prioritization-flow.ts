@@ -8,7 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const AiLeadScoringAndPrioritizationInputSchema = z.object({
   engagementScore: z.number().describe('A numerical score representing the lead\'s engagement with the product or company.'),
