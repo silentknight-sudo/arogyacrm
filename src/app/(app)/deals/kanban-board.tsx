@@ -6,7 +6,6 @@ import type { Deal, DealStage } from '@/types';
 import { deals as initialDeals } from '@/lib/data';
 import { useApp } from '@/context/app-context';
 import { DollarSign, User } from 'lucide-react';
-import { users } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -32,8 +31,6 @@ const stageColors: Record<DealStage, string> = {
 
 
 const DealCard = ({ deal }: { deal: Deal }) => {
-    const assignedUser = users.find(u => u.name === deal.contactName);
-
     return (
         <Card className="mb-4 bg-card/80 backdrop-blur-sm hover:bg-card transition-colors">
             <CardContent className="p-4">
@@ -48,21 +45,6 @@ const DealCard = ({ deal }: { deal: Deal }) => {
                 </p>
                 <div className="mt-4 flex items-center justify-between">
                      <span className="text-xs text-muted-foreground">Close: {deal.closeDate}</span>
-                     {assignedUser && (
-                         <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Avatar className="h-6 w-6">
-                                        <AvatarImage src={assignedUser.avatar} />
-                                        <AvatarFallback>{assignedUser.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>{assignedUser.name}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                     )}
                 </div>
             </CardContent>
         </Card>

@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Task, TaskStatus } from '@/types';
 import { tasks as initialTasks } from '@/lib/data';
-import { users } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PlusCircle } from 'lucide-react';
@@ -20,8 +19,6 @@ const statusColors: Record<TaskStatus, string> = {
 };
 
 const TaskCard = ({ task }: { task: Task }) => {
-    const assignedUser = users.find(u => u.name === task.assignedTo);
-
     return (
         <Card className="mb-4 bg-card/80 backdrop-blur-sm hover:bg-card transition-colors">
             <CardContent className="p-4">
@@ -30,21 +27,6 @@ const TaskCard = ({ task }: { task: Task }) => {
                      <span className="text-xs text-muted-foreground">
                         Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}
                      </span>
-                     {assignedUser && (
-                         <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Avatar className="h-6 w-6">
-                                        <AvatarImage src={assignedUser.avatar} />
-                                        <AvatarFallback>{assignedUser.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>{assignedUser.name}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                     )}
                 </div>
             </CardContent>
         </Card>

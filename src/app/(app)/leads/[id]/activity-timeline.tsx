@@ -6,7 +6,6 @@ import { Mail, Phone, Calendar, PenSquare, Plus, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { users } from '@/lib/data';
 import { formatDistanceToNow } from 'date-fns';
 
 const iconMap: { [key: string]: React.ReactNode } = {
@@ -17,8 +16,7 @@ const iconMap: { [key: string]: React.ReactNode } = {
 };
 
 const getAgentAvatar = (agentName: string) => {
-    const user = users.find(u => u.name === agentName);
-    return user ? user.avatar : `https://picsum.photos/seed/${agentName.replace(/\s+/g, '-')}/100/100`;
+    return `https://picsum.photos/seed/${agentName.replace(/\s+/g, '-')}/100/100`;
 }
 const getAgentFallback = (agentName: string) => {
     if (agentName === 'System') return 'S';
