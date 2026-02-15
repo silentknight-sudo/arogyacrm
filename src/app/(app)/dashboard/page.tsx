@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -23,12 +24,29 @@ import {
 } from 'recharts';
 import { revenueData, leads, deals } from '@/lib/data';
 import { useApp } from '@/context/app-context';
+import type { Lead } from '@/types';
 
 export default function Dashboard() {
     const { currentUser } = useApp();
 
-    const totalRevenue = deals.filter(d => d.stage === 'Won').reduce((acc, deal) => acc + deal.value, 0);
-    const conversionRate = (deals.filter(d => d.stage === 'Won').length / deals.length) * 100;
+    const [totalRevenue, setTotalRevenue] = useState<number | null>(null);
+    const [conversionRate, setConversionRate] = useState<number | null>(null);
+    const [newLeadsCount, setNewLeadsCount] = useState<number | null>(null);
+    const [dealsWonCount, setDealsWonCount] = useState<number | null>(null);
+    const [recentLeads, setRecentLeads] = useState<Lead[]>([]);
+
+    useEffect(() => {
+        const wonDeals = deals.filter(d => d.stage === 'Won');
+        const calculatedTotalRevenue = wonDeals.reduce((acc, deal) => acc + deal.value, 0);
+        const calculatedConversionRate = deals.length > 0 ? (wonDeals.length / deals.length) * 100 : 0;
+        const newLeads = leads.filter(l => l.status === 'New');
+
+        setTotalRevenue(calculatedTotalRevenue);
+        setConversionRate(calculatedConversionRate);
+        setNewLeadsCount(newLeads.length);
+        setDealsWonCount(wonDeals.length);
+        setRecentLeads(leads.slice(0, 5));
+    }, []);
 
     return (
         <div className="flex flex-1 flex-col gap-4">
@@ -43,7 +61,7 @@ export default function Dashboard() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{totalRevenue !== null ? `$${totalRevenue.toLocaleString()}` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+20.1% from last month</p>
                 </CardContent>
             </Card>
@@ -53,7 +71,7 @@ export default function Dashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">+{leads.filter(l => l.status === 'New').length}</div>
+                <div className="text-2xl font-bold">{newLeadsCount !== null ? `+${newLeadsCount}` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+180.1% from last month</p>
                 </CardContent>
             </Card>
@@ -63,7 +81,7 @@ export default function Dashboard() {
                 <Target className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{conversionRate.toFixed(1)}%</div>
+                <div className="text-2xl font-bold">{conversionRate !== null ? `${conversionRate.toFixed(1)}%` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+19% from last month</p>
                 </CardContent>
             </Card>
@@ -73,7 +91,7 @@ export default function Dashboard() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">+{deals.filter(d => d.stage === 'Won').length}</div>
+                <div className="text-2xl font-bold">{dealsWonCount !== null ? `+${dealsWonCount}` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+2 since last month</p>
                 </CardContent>
             </Card>
@@ -122,12 +140,12 @@ export default function Dashboard() {
                 <CardHeader>
                 <CardTitle>Recent Leads</CardTitle>
                 <CardDescription>
-                    You have {leads.filter(l => l.status === 'New').length} new leads this month.
+                    You have {newLeadsCount} new leads this month.
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {leads.slice(0, 5).map(lead => (
+                        {recentLeads.length > 0 ? recentLeads.map(lead => (
                             <div key={lead.id} className="flex items-center">
                                 <div className="ml-4 space-y-1">
                                     <p className="text-sm font-medium leading-none">{lead.name}</p>
@@ -135,7 +153,9 @@ export default function Dashboard() {
                                 </div>
                                 <div className="ml-auto font-medium">{lead.source}</div>
                             </div>
-                        ))}
+                        )) : (
+                           <p className="text-sm text-muted-foreground">Loading recent leads...</p>
+                        )}
                     </div>
                 </CardContent>
             </Card>
