@@ -1,5 +1,10 @@
-import { leads, interactionLogs as allLogs } from '@/lib/data';
-import { notFound } from 'next/navigation';
+'use client';
+
+import { notFound, useParams } from 'next/navigation';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useApp } from '@/context/app-context';
+import type { Lead } from '@/types';
 import { LeadDetails } from './lead-details';
 import { ActivityTimeline } from './activity-timeline';
 import { AiSummary } from './ai-summary';
@@ -7,9 +12,30 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Mail, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { interactionLogs as allLogs } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function LeadDetailPage({ params }: { params: { id: string } }) {
-  const lead = leads.find(l => l.id === params.id);
+export default function LeadDetailPage() {
+  const params = useParams();
+  const { id } = params;
+  const { currentTeamspace } = useApp();
+  const firestore = useFirestore();
+
+  const leadRef = useMemoFirebase(() => 
+    currentTeamspace && id
+      ? doc(firestore, 'teamspaces', currentTeamspace.id, 'leads', id as string)
+      : null
+  , [firestore, currentTeamspace, id]);
+  
+  const { data: lead, isLoading } = useDoc<Lead>(leadRef);
+
+  if (isLoading) {
+    return <div className="space-y-4">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+    </div>;
+  }
 
   if (!lead) {
     notFound();

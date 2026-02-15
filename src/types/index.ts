@@ -5,11 +5,11 @@ export type UserRole =
   | 'marketer'
   | 'support';
 
-export type User = {
+export type UserProfile = {
   id: string;
-  name: string;
+  displayName: string;
   email: string;
-  avatar: string;
+  avatar?: string;
   role: UserRole;
   teamspaceIds: string[];
 };
@@ -34,21 +34,24 @@ export type Lead = {
   company: string;
   status: LeadStatus;
   source: string;
-  assignedTo: string;
-  lastContacted: string;
+  assignedToId: string;
+  teamspaceId: string;
+  lastContacted: string; // Should be a timestamp string
   score?: number;
   priority?: 'High' | 'Medium' | 'Low';
   reasoning?: string;
-  engagementScore: number;
-  leadSource: string;
-  demographicData: {
+  // AI related fields - should match schema
+  engagementScore?: number;
+  leadSource?: string;
+  demographicData?: {
     industry: string,
     companySize: string,
     jobTitle: string,
     country: string,
   },
-  leadStatus: string,
-  notes: string,
+  notes?: string,
+  createdAt: any; // serverTimestamp
+  updatedAt: any; // serverTimestamp
 };
 
 export type InteractionLog = {

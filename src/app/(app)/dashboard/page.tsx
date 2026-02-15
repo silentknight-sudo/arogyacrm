@@ -22,36 +22,51 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { revenueData, leads, deals } from '@/lib/data';
+import { revenueData, deals } from '@/lib/data';
 import { useApp } from '@/context/app-context';
 import type { Lead } from '@/types';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+
 
 export default function Dashboard() {
-    const { currentUser } = useApp();
+    const { currentUser, currentTeamspace } = useApp();
+    const firestore = useFirestore();
+
+    const leadsQuery = useMemoFirebase(() => 
+        currentTeamspace 
+            ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'), where('status', '==', 'New'))
+            : null
+    , [firestore, currentTeamspace]);
+    
+    const { data: newLeads } = useCollection<Lead>(leadsQuery);
 
     const [totalRevenue, setTotalRevenue] = useState<number | null>(null);
     const [conversionRate, setConversionRate] = useState<number | null>(null);
-    const [newLeadsCount, setNewLeadsCount] = useState<number | null>(null);
     const [dealsWonCount, setDealsWonCount] = useState<number | null>(null);
     const [recentLeads, setRecentLeads] = useState<Lead[]>([]);
 
     useEffect(() => {
+        // Mock data for now, will be replaced with firestore queries
         const wonDeals = deals.filter(d => d.stage === 'Won');
         const calculatedTotalRevenue = wonDeals.reduce((acc, deal) => acc + deal.value, 0);
         const calculatedConversionRate = deals.length > 0 ? (wonDeals.length / deals.length) * 100 : 0;
-        const newLeads = leads.filter(l => l.status === 'New');
-
+        
         setTotalRevenue(calculatedTotalRevenue);
         setConversionRate(calculatedConversionRate);
-        setNewLeadsCount(newLeads.length);
         setDealsWonCount(wonDeals.length);
-        setRecentLeads(leads.slice(0, 5));
-    }, []);
+        
+        // This will be replaced with a query
+        if (newLeads) {
+            setRecentLeads(newLeads.slice(0, 5));
+        }
+
+    }, [newLeads]);
 
     return (
         <div className="flex flex-1 flex-col gap-4">
             <header>
-                <h1 className="text-3xl font-bold tracking-tight">Welcome, {currentUser?.name.split(' ')[0]}!</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Welcome, {currentUser?.displayName?.split(' ')[0]}!</h1>
                 <p className="text-muted-foreground">Here's a snapshot of your business performance.</p>
             </header>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -71,7 +86,7 @@ export default function Dashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{newLeadsCount !== null ? `+${newLeadsCount}` : 'Loading...'}</div>
+                <div className="text-2xl font-bold">{newLeads ? `+${newLeads.length}` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+180.1% from last month</p>
                 </CardContent>
             </Card>
@@ -140,7 +155,7 @@ export default function Dashboard() {
                 <CardHeader>
                 <CardTitle>Recent Leads</CardTitle>
                 <CardDescription>
-                    You have {newLeadsCount} new leads this month.
+                    You have {newLeads?.length || 0} new leads this month.
                 </CardDescription>
                 </CardHeader>
                 <CardContent>

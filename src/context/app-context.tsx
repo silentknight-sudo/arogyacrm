@@ -1,45 +1,62 @@
 'use client';
 
-import React, { createContext, useContext, useState, useMemo } from 'react';
-import type { User, Teamspace } from '@/types';
-import { users, teamspaces } from '@/lib/data';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import type { UserProfile, Teamspace } from '@/types';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, where } from 'firebase/firestore';
+
 
 interface AppContextType {
-  currentUser: User | null;
-  setCurrentUser: (user: User) => void;
+  currentUser: UserProfile | null;
+  isUserLoading: boolean;
   currentTeamspace: Teamspace | null;
   setCurrentTeamspace: (teamspace: Teamspace) => void;
   availableTeamspaces: Teamspace[];
+  logout: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(users[0]);
-  const [currentTeamspace, setCurrentTeamspace] = useState<Teamspace | null>(teamspaces[0]);
+  const { user: authUser, isUserLoading: isAuthLoading, auth } = useUser();
+  const firestore = useFirestore();
 
-  const availableTeamspaces = useMemo(() => {
-    if (!currentUser) return [];
-    return teamspaces.filter(ts => currentUser.teamspaceIds.includes(ts.id));
-  }, [currentUser]);
+  const userProfileRef = useMemoFirebase(() => 
+    authUser ? doc(firestore, 'users', authUser.uid) : null
+  , [firestore, authUser]);
+  const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  // Set initial teamspace when user changes
-  React.useEffect(() => {
-    if (currentUser) {
-      const firstTeamspace = teamspaces.find(ts => currentUser.teamspaceIds.includes(ts.id));
-      setCurrentTeamspace(firstTeamspace || null);
+  const teamspacesQuery = useMemoFirebase(() => 
+    currentUser?.teamspaceIds?.length 
+      ? query(collection(firestore, 'teamspaces'), where('id', 'in', currentUser.teamspaceIds)) 
+      : null
+  , [firestore, currentUser]);
+
+  const { data: availableTeamspaces } = useCollection<Teamspace>(teamspacesQuery);
+
+  const [currentTeamspace, setCurrentTeamspace] = useState<Teamspace | null>(null);
+
+  useEffect(() => {
+    if (availableTeamspaces && availableTeamspaces.length > 0) {
+      if (!currentTeamspace || !availableTeamspaces.some(ts => ts.id === currentTeamspace.id)) {
+        setCurrentTeamspace(availableTeamspaces[0]);
+      }
     } else {
-      setCurrentTeamspace(null);
+        setCurrentTeamspace(null);
     }
-  }, [currentUser]);
+  }, [availableTeamspaces, currentTeamspace]);
 
+  const logout = () => {
+    auth?.signOut();
+  };
 
   const value = {
-    currentUser,
-    setCurrentUser,
+    currentUser: currentUser ?? null,
+    isUserLoading: isAuthLoading || isProfileLoading,
     currentTeamspace,
-    setCurrentTeamspace,
-    availableTeamspaces
+    setCurrentTeamspace: (teamspace: Teamspace) => setCurrentTeamspace(teamspace),
+    availableTeamspaces: availableTeamspaces || [],
+    logout
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

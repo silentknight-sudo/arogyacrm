@@ -6,15 +6,15 @@ import type { Lead } from '@/types';
 export async function scoreLeadWithAI(lead: Lead) {
   try {
     const input: AiLeadScoringAndPrioritizationInput = {
-      engagementScore: lead.engagementScore,
-      leadSource: lead.leadSource,
+      engagementScore: lead.engagementScore || 0,
+      leadSource: lead.leadSource || 'Unknown',
       demographicData: {
-        industry: lead.demographicData.industry,
-        companySize: lead.demographicData.companySize,
-        jobTitle: lead.demographicData.jobTitle,
-        country: lead.demographicData.country,
+        industry: lead.demographicData?.industry,
+        companySize: lead.demographicData?.companySize,
+        jobTitle: lead.demographicData?.jobTitle,
+        country: lead.demographicData?.country,
       },
-      leadStatus: lead.leadStatus,
+      leadStatus: lead.status,
       notes: lead.notes,
     };
 

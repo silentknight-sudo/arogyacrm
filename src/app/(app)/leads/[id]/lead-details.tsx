@@ -28,21 +28,21 @@ export function LeadDetails({ lead }: { lead: Lead }) {
                     <Building className="h-4 w-4 text-muted-foreground" />
                     <span>{lead.company}</span>
                 </div>
-                <div className="flex items-center gap-3">
+                 {lead.demographicData?.jobTitle && <div className="flex items-center gap-3">
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
                     <span>{lead.demographicData.jobTitle}</span>
-                </div>
-                <div className="flex items-center gap-3">
+                </div>}
+                {lead.demographicData?.industry && <div className="flex items-center gap-3">
                     <Handshake className="h-4 w-4 text-muted-foreground" />
                     <span>{lead.demographicData.industry}</span>
-                </div>
-                <div className="flex items-center gap-3">
+                </div>}
+                {lead.demographicData?.country && <div className="flex items-center gap-3">
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     <span>{lead.demographicData.country}</span>
-                </div>
+                </div>}
                  <div className="flex items-center gap-3">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span>Assigned to: {lead.assignedTo}</span>
+                    <span>Assigned to ID: {lead.assignedToId}</span>
                 </div>
                 <div className="flex items-center gap-3">
                     <Flag className="h-4 w-4 text-muted-foreground" />

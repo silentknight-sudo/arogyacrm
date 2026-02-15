@@ -6,7 +6,8 @@ import {
   Users,
   Building,
   Menu,
-  ChevronDown
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,22 +17,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useApp } from '@/context/app-context';
-import { users, teamspaces } from '@/lib/data';
+import type { Teamspace } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { MainSidebar } from './main-sidebar';
-import type { User, Teamspace } from '@/types';
 
 export function MainHeader() {
-  const { currentUser, setCurrentUser, currentTeamspace, setCurrentTeamspace, availableTeamspaces } = useApp();
+  const { currentUser, currentTeamspace, setCurrentTeamspace, availableTeamspaces, logout } = useApp();
 
   return (
     <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
@@ -73,7 +70,7 @@ export function MainHeader() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Switch Teamspace</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={currentTeamspace.id} onValueChange={(id) => setCurrentTeamspace(teamspaces.find(ts => ts.id === id) as Teamspace)}>
+              <DropdownMenuRadioGroup value={currentTeamspace.id} onValueChange={(id) => setCurrentTeamspace(availableTeamspaces.find(ts => ts.id === id) as Teamspace)}>
                 {availableTeamspaces.map((ts) => (
                   <DropdownMenuRadioItem key={ts.id} value={ts.id}>{ts.name}</DropdownMenuRadioItem>
                 ))}
@@ -86,35 +83,22 @@ export function MainHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon" className="rounded-full">
               <Avatar>
-                <AvatarImage src={currentUser?.avatar} alt={currentUser?.name} />
-                <AvatarFallback>{currentUser?.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={currentUser?.avatar} alt={currentUser?.displayName} />
+                <AvatarFallback>{currentUser?.displayName?.charAt(0)}</AvatarFallback>
               </Avatar>
               <span className="sr-only">Toggle user menu</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
-                <p>{currentUser?.name}</p>
+                <p>{currentUser?.displayName}</p>
                 <p className="text-xs text-muted-foreground font-normal">{currentUser?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <Users className="mr-2 h-4 w-4" />
-                <span>Switch User</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                 <DropdownMenuRadioGroup value={currentUser?.id} onValueChange={(id) => setCurrentUser(users.find(u => u.id === id) as User)}>
-                    {users.map((user) => (
-                      <DropdownMenuRadioItem key={user.id} value={user.id}>
-                        {user.name} ({user.role})
-                      </DropdownMenuRadioItem>
-                    ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Logout</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
