@@ -15,7 +15,7 @@ import {
   Phone,
   Package,
   Book,
-  FileQuote,
+  FileQuestion,
   ShoppingCart,
   FilePlus2,
   Receipt,
@@ -71,7 +71,7 @@ const menuItems = [
         items: [
             { href: '/inventory/products', label: 'Products', icon: Package },
             { href: '/inventory/price-books', label: 'Price Books', icon: Book },
-            { href: '/inventory/quotes', label: 'Quotes', icon: FileQuote },
+            { href: '/inventory/quotes', label: 'Quotes', icon: FileQuestion },
             { href: '/inventory/sales-orders', label: 'Sales Orders', icon: ShoppingCart },
             { href: '/inventory/purchase-orders', label: 'Purchase Orders', icon: FilePlus2 },
             { href: '/inventory/invoices', label: 'Invoices', icon: Receipt },
