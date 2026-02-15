@@ -12,7 +12,7 @@ export async function generateLeadSummary(lead: Lead) {
     const input: LeadInteractionSummaryInput = {
       leadDetails: {
         id: lead.id,
-        name: lead.name,
+        name: `${lead.firstName} ${lead.lastName}`,
         email: lead.email,
         status: lead.status,
         source: lead.source,

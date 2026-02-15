@@ -103,7 +103,7 @@ const LeadActions = ({ lead }: { lead: Lead }) => {
 
   return (
     <>
-      <LeadScoringResultDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} result={result} leadName={lead.name} />
+      <LeadScoringResultDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} result={result} leadName={`${lead.firstName} ${lead.lastName}`} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -154,6 +154,7 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     accessorKey: 'name',
+    accessorFn: row => `${row.firstName} ${row.lastName}`,
     header: ({ column }) => {
       return (
         <Button
@@ -167,7 +168,7 @@ export const columns: ColumnDef<Lead>[] = [
     },
     cell: ({ row }) => (
       <Link href={`/leads/${row.original.id}`} className="font-medium text-primary hover:underline">
-        {row.getValue('name')}
+        {`${row.original.firstName} ${row.original.lastName}`}
       </Link>
     ),
   },

@@ -31,14 +31,15 @@ export type LeadStatus =
 
 export type Lead = {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   company: string;
   status: LeadStatus;
   source: string;
   assignedToId: string;
   teamspaceId: string;
-  lastContacted: string; // Should be a timestamp string
+  lastContacted?: string; // Should be a timestamp string
   score?: number;
   priority?: 'High' | 'Medium' | 'Low';
   reasoning?: string;
