@@ -1,14 +1,14 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for administrators to create new teamspaces.
- * This flow uses the Firebase Admin SDK to securely create a new teamspace document in Firestore.
+ * @fileOverview A server-side function for administrators to create new teamspaces.
+ * This function uses the Firebase Admin SDK to securely create a new teamspace document in Firestore.
+ * This is NOT a Genkit flow, but a regular server action helper.
  */
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { adminDb, serverTimestamp } from '@/firebase/admin';
 
-// Define the input schema for the flow
+// Define the input schema for validation
 const CreateTeamspaceInputSchema = z.object({
   name: z.string().min(2, 'Teamspace name must be at least 2 characters.'),
   description: z.string().optional(),
@@ -16,41 +16,29 @@ const CreateTeamspaceInputSchema = z.object({
 });
 export type CreateTeamspaceInput = z.infer<typeof CreateTeamspaceInputSchema>;
 
-const CreateTeamspaceOutputSchema = z.object({
-  teamspaceId: z.string(),
-});
-export type CreateTeamspaceOutput = z.infer<typeof CreateTeamspaceOutputSchema>;
+export type CreateTeamspaceOutput = {
+  teamspaceId: string,
+};
 
 // The exported wrapper function that the server action will call
 export async function adminCreateTeamspace(input: CreateTeamspaceInput): Promise<CreateTeamspaceOutput> {
-  // In a production app, you might add further server-side validation here
-  // to ensure the calling user has admin privileges, for example, by verifying a JWT.
-  return adminCreateTeamspaceFlow(input);
+  // Validate input against the schema
+  const validatedInput = CreateTeamspaceInputSchema.parse(input);
+
+  const newTeamspaceRef = adminDb.collection('teamspaces').doc();
+  const newTeamspaceId = newTeamspaceRef.id;
+
+  await newTeamspaceRef.set({
+      id: newTeamspaceId,
+      name: validatedInput.name,
+      description: validatedInput.description || '',
+      ownerId: validatedInput.ownerId,
+      memberIds: [validatedInput.ownerId], // The creator is the first member
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+  });
+
+  return {
+    teamspaceId: newTeamspaceId,
+  };
 }
-
-// The Genkit flow definition
-const adminCreateTeamspaceFlow = ai.defineFlow(
-  {
-    name: 'adminCreateTeamspaceFlow',
-    inputSchema: CreateTeamspaceInputSchema,
-    outputSchema: CreateTeamspaceOutputSchema,
-  },
-  async (input) => {
-    const newTeamspaceRef = adminDb.collection('teamspaces').doc();
-    const newTeamspaceId = newTeamspaceRef.id;
-
-    await newTeamspaceRef.set({
-        id: newTeamspaceId,
-        name: input.name,
-        description: input.description || '',
-        ownerId: input.ownerId,
-        memberIds: [input.ownerId], // The creator is the first member
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-    });
-
-    return {
-      teamspaceId: newTeamspaceId,
-    };
-  }
-);
