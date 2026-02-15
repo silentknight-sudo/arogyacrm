@@ -76,7 +76,7 @@ export default function Dashboard() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{totalRevenue !== null ? `$${totalRevenue.toLocaleString()}` : 'Loading...'}</div>
+                <div className="text-2xl font-bold">{totalRevenue !== null ? `₹${totalRevenue.toLocaleString('en-IN')}` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+20.1% from last month</p>
                 </CardContent>
             </Card>
@@ -131,7 +131,7 @@ export default function Dashboard() {
                         fontSize={12}
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={(value) => `$${value / 1000}K`}
+                        tickFormatter={(value) => `₹${value / 1000}K`}
                     />
                     <Tooltip
                         cursor={{ fill: 'hsl(var(--muted))' }}

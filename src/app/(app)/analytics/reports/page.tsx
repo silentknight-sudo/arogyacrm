@@ -69,7 +69,7 @@ export default function ReportsPage() {
                             fontSize={12}
                             tickLine={false}
                             axisLine={false}
-                            tickFormatter={(value) => `$${value / 1000}K`}
+                            tickFormatter={(value) => `₹${value / 1000}K`}
                         />
                         <Tooltip
                             cursor={{ fill: 'hsl(var(--muted))' }}

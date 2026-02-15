@@ -36,9 +36,9 @@ const DealCard = ({ deal }: { deal: Deal }) => {
         <Card className="mb-4 bg-card/80 backdrop-blur-sm hover:bg-card transition-colors">
             <CardContent className="p-4">
                 <h3 className="font-semibold">{deal.name}</h3>
-                <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                    <DollarSign className="h-3 w-3"/>
-                    {deal.amount.toLocaleString()}
+                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                    <span>₹</span>
+                    {deal.amount.toLocaleString('en-IN')}
                 </p>
                 <div className="mt-4 flex items-center justify-between">
                      <span className="text-xs text-muted-foreground">Close: {new Date(deal.closeDate).toLocaleDateString()}</span>
@@ -60,7 +60,7 @@ const KanbanColumn = ({ stage, deals, isLoading }: { stage: DealStage; deals: De
             <h2 className="font-semibold">{stage}</h2>
             <Badge variant="secondary">{isLoading ? '...' : deals.length}</Badge>
           </div>
-          <span className="text-sm font-medium text-muted-foreground">${stageTotalValue.toLocaleString()}</span>
+          <span className="text-sm font-medium text-muted-foreground">₹{stageTotalValue.toLocaleString('en-IN')}</span>
         </div>
         <div className="flex-1 p-4 pt-0 overflow-y-auto">
             {isLoading && (

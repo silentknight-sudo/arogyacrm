@@ -120,7 +120,7 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
                     <FormItem><FormLabel>Deal Name</FormLabel><FormControl><Input placeholder="Q3 Enterprise Contract" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="amount" render={({ field }) => (
-                    <FormItem><FormLabel>Amount ($)</FormLabel><FormControl><Input type="number" placeholder="25000" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="25000" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                  <FormField control={form.control} name="accountId" render={({ field }) => (
                     <FormItem><FormLabel>Account</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select an account"} /></SelectTrigger></FormControl><SelectContent>{accounts.map(account => (<SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
