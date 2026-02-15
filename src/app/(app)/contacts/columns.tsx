@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -61,6 +62,7 @@ export const columns: ColumnDef<Contact>[] = [
   },
   {
     accessorKey: 'name',
+    accessorFn: row => `${row.firstName} ${row.lastName}`,
     header: ({ column }) => {
       return (
         <Button
@@ -74,13 +76,14 @@ export const columns: ColumnDef<Contact>[] = [
     },
     cell: ({ row }) => {
         const contact = row.original;
+        const name = `${contact.firstName} ${contact.lastName}`;
         return (
             <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                    <AvatarImage src={contact.avatar} alt={contact.name} />
-                    <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={contact.avatar} alt={name} />
+                    <AvatarFallback>{name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <span className="font-medium">{contact.name}</span>
+                <span className="font-medium">{name}</span>
             </div>
         )
     }
@@ -94,12 +97,9 @@ export const columns: ColumnDef<Contact>[] = [
     header: 'Phone',
   },
   {
-    accessorKey: 'account',
-    header: 'Account',
-  },
-  {
-    accessorKey: 'jobTitle',
-    header: 'Job Title',
+    accessorKey: 'accountId',
+    header: 'Account ID',
+    cell: ({ row }) => <div className="text-xs text-muted-foreground truncate">{row.getValue('accountId')}</div>
   },
   {
     id: 'actions',

@@ -76,11 +76,16 @@ export type DealStage =
 
 export type Deal = {
   id: string;
-  title: string;
-  value: number;
+  teamspaceId: string;
+  name: string;
+  amount: number;
   stage: DealStage;
-  contactName: string;
   closeDate: string;
+  accountId: string;
+  contactId?: string;
+  ownerId: string;
+  createdAt: any;
+  updatedAt: any;
 };
 
 export type Product = {
@@ -104,51 +109,70 @@ export type Account = {
   ownerId: string;
   createdAt?: any;
   updatedAt?: any;
-  ownerName?: string; // For display
 };
 
 export type Contact = {
   id: string;
-  name: string;
+  teamspaceId: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  phone: string;
-  account: string;
-  jobTitle: string;
-  avatar: string;
+  phone?: string;
+  accountId: string;
+  leadId?: string;
+  createdAt: any;
+  updatedAt: any;
+  avatar?: string;
 };
 
 export type TaskStatus = 'Todo' | 'In Progress' | 'Done';
 
 export type Task = {
   id: string;
+  teamspaceId: string;
   title: string;
-  status: TaskStatus;
+  description?: string;
   dueDate: string;
-  assignedTo: string;
+  status: TaskStatus;
+  priority: 'Low' | 'Medium' | 'High';
+  assignedToId: string;
+  relatedToEntityType?: string;
+  relatedToEntityId?: string;
+  createdAt: any;
+  updatedAt: any;
 };
 
-export type CampaignStatus = 'Planning' | 'Active' | 'Completed' | 'Cancelled';
+export type CampaignStatus = 'Planned' | 'Active' | 'Completed' | 'Paused' | 'Cancelled';
 
 export type Campaign = {
   id: string;
+  teamspaceId: string;
   name: string;
+  type: string;
   status: CampaignStatus;
-  budget: number;
   startDate: string;
   endDate: string;
-  channel: 'Google Ads' | 'Facebook' | 'Email' | 'Content Marketing';
+  budget: number;
+  ownerId: string;
+  description?: string;
+  createdAt: any;
+  updatedAt: any;
 };
 
-export type TicketStatus = 'Open' | 'In Progress' | 'Closed';
+export type TicketStatus = 'Open' | 'In Progress' | 'Awaiting Customer' | 'Resolved' | 'Closed';
 
 export type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
 
 export type Ticket = {
   id: string;
+  teamspaceId: string;
   subject: string;
+  description: string;
   status: TicketStatus;
   priority: TicketPriority;
-  customer: string; // Contact name
-  assignedTo: string; // User name
-  createdAt: string;
+  contactId: string;
+  assignedToId: string;
+  category: string;
+  createdAt: any;
+  updatedAt: any;
 };

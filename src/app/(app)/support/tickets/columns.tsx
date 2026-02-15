@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -14,6 +15,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import type { Ticket } from '@/types';
+import { formatDistanceToNow } from 'date-fns';
 
 const TicketActions = ({ ticket }: { ticket: Ticket }) => {
   return (
@@ -79,9 +81,9 @@ export const columns: ColumnDef<Ticket>[] = [
     cell: ({ row }) => {
       const status = row.getValue('status') as string;
       const variant: 'default' | 'secondary' | 'destructive' | 'outline' =
-        status === 'Closed' ? 'secondary' :
+        status === 'Resolved' || status === 'Closed' ? 'secondary' :
         status === 'In Progress' ? 'default' : 'outline';
-      return <Badge variant={variant} className="capitalize">{status}</Badge>;
+      return <Badge variant={variant} className="capitalize">{status.replace(/_/g, ' ')}</Badge>;
     },
   },
   {
@@ -97,16 +99,20 @@ export const columns: ColumnDef<Ticket>[] = [
     },
   },
   {
-    accessorKey: 'customer',
-    header: 'Customer',
+    accessorKey: 'contactId',
+    header: 'Contact ID',
   },
   {
-    accessorKey: 'assignedTo',
-    header: 'Assigned To',
+    accessorKey: 'assignedToId',
+    header: 'Assigned To ID',
   },
   {
     accessorKey: 'createdAt',
     header: 'Created At',
+    cell: ({ row }) => {
+        const date = row.original.createdAt?.toDate();
+        return date ? formatDistanceToNow(date, { addSuffix: true }) : 'N/A';
+    },
   },
   {
     id: 'actions',

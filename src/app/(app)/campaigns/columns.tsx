@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -14,6 +15,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import type { Campaign } from '@/types';
+import { format } from 'date-fns';
 
 const CampaignActions = ({ campaign }: { campaign: Campaign }) => {
   return (
@@ -81,13 +83,13 @@ export const columns: ColumnDef<Campaign>[] = [
       const variant: 'default' | 'secondary' | 'destructive' | 'outline' =
         status === 'Active' ? 'default' :
         status === 'Completed' ? 'secondary' :
-        status === 'Planning' ? 'outline' : 'destructive';
+        status === 'Planned' ? 'outline' : 'destructive';
       return <Badge variant={variant} className="capitalize">{status}</Badge>;
     },
   },
   {
-    accessorKey: 'channel',
-    header: 'Channel',
+    accessorKey: 'type',
+    header: 'Type',
   },
   {
     accessorKey: 'budget',
@@ -105,10 +107,12 @@ export const columns: ColumnDef<Campaign>[] = [
   {
     accessorKey: 'startDate',
     header: 'Start Date',
+     cell: ({ row }) => format(new Date(row.getValue('startDate')), 'PP'),
   },
   {
     accessorKey: 'endDate',
     header: 'End Date',
+     cell: ({ row }) => format(new Date(row.getValue('endDate')), 'PP'),
   },
   {
     id: 'actions',
