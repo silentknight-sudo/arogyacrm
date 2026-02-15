@@ -1,3 +1,64 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user-1",
+      "description": "Avatar for Alex Johnson",
+      "imageUrl": "https://images.unsplash.com/photo-1675355291178-2d129f22c740?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cGVyc29uJTIwZmFjZXxlbnwwfHx8fDE3NzExMzE4NTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person face"
+    },
+    {
+      "id": "user-2",
+      "description": "Avatar for Maria Garcia",
+      "imageUrl": "https://images.unsplash.com/photo-1626526804650-7118ac691b7a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwZXJzb24lMjBmYWNlfGVufDB8fHx8MTc3MTEzMTg1MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person face"
+    },
+    {
+      "id": "user-3",
+      "description": "Avatar for Chen Wei",
+      "imageUrl": "https://images.unsplash.com/flagged/photo-1570612861542-284f4c12e75f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwZXJzb24lMjBmYWNlfGVufDB8fHx8MTc3MTEzMTg1MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person face"
+    },
+    {
+      "id": "user-4",
+      "description": "Avatar for Sarah Miller",
+      "imageUrl": "https://images.unsplash.com/photo-1626526804650-7118ac691b7a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwZXJzb24lMjBmYWNlfGVufDB8fHx8MTc3MTEzMTg1MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person face"
+    },
+    {
+      "id": "user-5",
+      "description": "Avatar for David Smith",
+      "imageUrl": "https://images.unsplash.com/photo-1530268729831-4b0b9e170218?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwZXJzb24lMjBmYWNlfGVufDB8fHx8MTc3MTEzMTg1MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person face"
+    },
+    {
+      "id": "product-1",
+      "description": "Ashwagandha capsules for stress relief.",
+      "imageUrl": "https://images.unsplash.com/photo-1763668331599-487470fb85b2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzdXBwbGVtZW50JTIwYm90dGxlfGVufDB8fHx8MTc3MTE2MTQ5N3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "supplement bottle"
+    },
+    {
+      "id": "product-2",
+      "description": "Turmeric capsules for inflammation support.",
+      "imageUrl": "https://images.unsplash.com/photo-1693996047008-1b6210099be1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzdXBwbGVtZW50JTIwYm90dGxlfGVufDB8fHx8MTc3MTE2MTQ5N3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "supplement bottle"
+    },
+    {
+      "id": "product-3",
+      "description": "Brahmi oil for hair and scalp health.",
+      "imageUrl": "https://images.unsplash.com/photo-1608571424634-58ae03e6edcf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxvaWwlMjBib3R0bGV8ZW58MHx8fHwxNzcxMDQwMzgwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "oil bottle"
+    },
+    {
+      "id": "product-4",
+      "description": "Triphala powder for digestive health.",
+      "imageUrl": "https://images.unsplash.com/photo-1761023717430-e486492e80fd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxwb3dkZXIlMjBqYXJ8ZW58MHx8fHwxNzcxMTYxNDk3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "powder jar"
+    },
+    {
+      "id": "product-5",
+      "description": "Chyawanprash for immunity boost.",
+      "imageUrl": "https://images.unsplash.com/photo-1651352367033-5fa0a1a14d26?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxqYXIlMjBwcm9kdWN0fGVufDB8fHx8MTc3MTE2MTQ5N3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "jar product"
+    }
+  ]
 }

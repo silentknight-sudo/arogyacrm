@@ -1,0 +1,65 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import type { Lead } from "@/types";
+import { AtSign, Building, Globe, Star, Flag, User, CaseUpper, Briefcase, Handshake } from 'lucide-react';
+
+const statusVariantMap: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
+  Qualified: 'default',
+  New: 'outline',
+  Contacted: 'secondary',
+  Lost: 'destructive',
+  Unqualified: 'destructive',
+};
+
+export function LeadDetails({ lead }: { lead: Lead }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Lead Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+                <div className="flex items-center gap-3">
+                    <AtSign className="h-4 w-4 text-muted-foreground" />
+                    <a href={`mailto:${lead.email}`} className="text-primary hover:underline break-all">
+                        {lead.email}
+                    </a>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span>{lead.company}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    <span>{lead.demographicData.jobTitle}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Handshake className="h-4 w-4 text-muted-foreground" />
+                    <span>{lead.demographicData.industry}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <span>{lead.demographicData.country}</span>
+                </div>
+                 <div className="flex items-center gap-3">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>Assigned to: {lead.assignedTo}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Flag className="h-4 w-4 text-muted-foreground" />
+                    <span>Source: {lead.source}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Star className="h-4 w-4 text-muted-foreground" />
+                    <span>AI Score: {lead.score ?? 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <CaseUpper className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                        <span>Status:</span>
+                        <Badge variant={statusVariantMap[lead.status] || 'secondary'} className="capitalize">{lead.status}</Badge>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
