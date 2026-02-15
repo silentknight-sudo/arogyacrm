@@ -35,6 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createUser } from './actions';
 import type { Teamspace, UserRole } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const roles: UserRole[] = ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'];
 
@@ -98,137 +99,141 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
             Fill out the form to create a new user and assign their role and teamspaces.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="displayName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Display Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="john.doe@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {roles.map(role => (
-                        <SelectItem key={role} value={role} className="capitalize">
-                          {role.replace(/_/g, ' ')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="teamspaceIds"
-              render={() => (
-                <FormItem>
-                  <div className="mb-4">
-                    <FormLabel className="text-base">Teamspaces</FormLabel>
-                    <FormDescription>
-                      Select the teamspaces this user will belong to.
-                    </FormDescription>
-                  </div>
-                  {isLoadingTeamspaces ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Skeleton className="h-4 w-4" />
-                        <Skeleton className="h-4 w-[250px]" />
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Skeleton className="h-4 w-4" />
-                        <Skeleton className="h-4 w-[200px]" />
-                      </div>
-                    </div>
-                  ) : (
-                    teamspaces.map((item) => (
-                      <FormField
-                        key={item.id}
-                        control={form.control}
-                        name="teamspaceIds"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={item.id}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(item.id)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...field.value, item.id])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== item.id
-                                          )
-                                        )
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {item.name}
-                              </FormLabel>
-                            </FormItem>
-                          )
-                        }}
-                      />
-                    ))
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? 'Creating User...' : 'Create User'}
-            </Button>
-          </form>
-        </Form>
+        <ScrollArea className="max-h-[60vh] pr-6">
+            <div className="pr-2">
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                    control={form.control}
+                    name="displayName"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Display Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                            <Input type="email" placeholder="john.doe@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                            <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {roles.map(role => (
+                                <SelectItem key={role} value={role} className="capitalize">
+                                {role.replace(/_/g, ' ')}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="teamspaceIds"
+                    render={() => (
+                        <FormItem>
+                        <div className="mb-4">
+                            <FormLabel className="text-base">Teamspaces</FormLabel>
+                            <FormDescription>
+                            Select the teamspaces this user will belong to.
+                            </FormDescription>
+                        </div>
+                        {isLoadingTeamspaces ? (
+                            <div className="space-y-3">
+                            <div className="flex items-center space-x-2">
+                                <Skeleton className="h-4 w-4" />
+                                <Skeleton className="h-4 w-[250px]" />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Skeleton className="h-4 w-4" />
+                                <Skeleton className="h-4 w-[200px]" />
+                            </div>
+                            </div>
+                        ) : (
+                            teamspaces.map((item) => (
+                            <FormField
+                                key={item.id}
+                                control={form.control}
+                                name="teamspaceIds"
+                                render={({ field }) => {
+                                return (
+                                    <FormItem
+                                    key={item.id}
+                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                    <FormControl>
+                                        <Checkbox
+                                        checked={field.value?.includes(item.id)}
+                                        onCheckedChange={(checked) => {
+                                            return checked
+                                            ? field.onChange([...field.value, item.id])
+                                            : field.onChange(
+                                                field.value?.filter(
+                                                    (value) => value !== item.id
+                                                )
+                                                )
+                                        }}
+                                        />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                        {item.name}
+                                    </FormLabel>
+                                    </FormItem>
+                                )
+                                }}
+                            />
+                            ))
+                        )}
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <Button type="submit" disabled={isSubmitting} className="w-full">
+                    {isSubmitting ? 'Creating User...' : 'Create User'}
+                    </Button>
+                </form>
+                </Form>
+            </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
