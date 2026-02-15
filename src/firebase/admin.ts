@@ -1,13 +1,8 @@
 import * as admin from 'firebase-admin';
 
+// This pattern ensures the app is initialized only once.
 if (!admin.apps.length) {
-    try {
-        admin.initializeApp();
-    } catch (e: any) {
-        if (e.code !== 'app/duplicate-app') {
-            console.error('Firebase admin initialization error', e);
-        }
-    }
+    admin.initializeApp();
 }
 
 export const adminAuth = admin.auth();

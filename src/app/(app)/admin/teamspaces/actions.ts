@@ -21,7 +21,8 @@ export async function createTeamspace(values: CreateTeamspaceInput): Promise<Cre
         return { success: true, teamspaceId: result.teamspaceId };
     } catch(error: any) {
         console.error('Error creating teamspace via flow:', error);
-        // Provide a more user-friendly error message
-        return { success: false, error: `Failed to create teamspace. Error: ${error.message}` };
+        // Provide a more user-friendly and detailed error message
+        const errorMessage = error.cause?.message || error.message || 'An unknown server error occurred.';
+        return { success: false, error: `Failed to create teamspace: ${errorMessage}` };
     }
 }
