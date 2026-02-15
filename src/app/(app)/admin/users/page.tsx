@@ -8,9 +8,12 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import type { UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CreateUserDialog } from './create-user-dialog';
+import { useApp } from '@/context/app-context';
 
 export default function UserManagementPage() {
   const firestore = useFirestore();
+  const { availableTeamspaces } = useApp();
 
   const usersQuery = useMemoFirebase(() => 
     query(collection(firestore, 'users'))
@@ -27,14 +30,14 @@ export default function UserManagementPage() {
                     Create and manage users and their roles.
                 </p>
             </div>
-            {/*
             <div className="flex items-center space-x-2">
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create User
-                </Button>
+                <CreateUserDialog teamspaces={availableTeamspaces || []}>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create User
+                    </Button>
+                </CreateUserDialog>
             </div>
-            */}
         </div>
         {isLoading && (
             <div className="space-y-2">
