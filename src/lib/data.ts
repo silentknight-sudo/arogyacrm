@@ -1,4 +1,4 @@
-import type { User, Teamspace, Lead, Deal, Product, InteractionLog, Account, Contact, Task, Campaign } from '@/types';
+import type { User, Teamspace, Lead, Deal, Product, InteractionLog, Account, Contact, Task, Campaign, Ticket } from '@/types';
 import { format } from 'date-fns';
 
 export const users: User[] = [
@@ -156,4 +156,14 @@ export const campaigns: Campaign[] = Array.from({ length: 8 }, (_, i) => ({
   startDate: new Date(Date.now() - (i * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   endDate: new Date(Date.now() + ((15 - i) * 15) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   channel: (['Google Ads', 'Facebook', 'Email', 'Content Marketing'] as const)[i % 4],
+}));
+
+export const tickets: Ticket[] = Array.from({ length: 15 }, (_, i) => ({
+    id: `ticket-${i + 1}`,
+    subject: `Issue with order #${(i + 1) * 7}`,
+    status: (['Open', 'In Progress', 'Closed'] as const)[i % 3],
+    priority: (['Low', 'Medium', 'High', 'Urgent'] as const)[i % 4],
+    customer: contacts[i % contacts.length].name,
+    assignedTo: users.find(u => u.role === 'support')?.name || 'Unassigned',
+    createdAt: new Date(Date.now() - i * 3 * 60 * 60 * 1000).toISOString().split('T')[0],
 }));

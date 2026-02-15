@@ -1,5 +1,27 @@
-import { PlaceholderPage } from "@/components/placeholder-page";
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
+import { columns } from './columns';
+import { DataTable } from './data-table';
+import { tickets } from '@/lib/data';
 
 export default function TicketsPage() {
-    return <PlaceholderPage title="Tickets" />;
+  return (
+    <div className="space-y-4">
+        <div className="flex items-center justify-between">
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight">Support Tickets</h1>
+                <p className="text-muted-foreground">
+                    Manage and resolve customer issues.
+                </p>
+            </div>
+            <div className="flex items-center space-x-2">
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create Ticket
+                </Button>
+            </div>
+        </div>
+        <DataTable columns={columns} data={tickets} />
+    </div>
+  );
 }

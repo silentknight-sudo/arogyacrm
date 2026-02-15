@@ -127,3 +127,17 @@ export type Campaign = {
   endDate: string;
   channel: 'Google Ads' | 'Facebook' | 'Email' | 'Content Marketing';
 };
+
+export type TicketStatus = 'Open' | 'In Progress' | 'Closed';
+
+export type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
+
+export type Ticket = {
+  id: string;
+  subject: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  customer: string; // Contact name
+  assignedTo: string; // User name
+  createdAt: string;
+};
