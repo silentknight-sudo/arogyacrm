@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import {
   Search,
-  Users,
   Building,
   Menu,
   ChevronDown,
-  LogOut
+  LogOut,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -94,6 +94,13 @@ export function MainHeader() {
                 <p>{currentUser?.displayName}</p>
                 <p className="text-xs text-muted-foreground font-normal">{currentUser?.email}</p>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout}>
               <LogOut className="mr-2 h-4 w-4" />

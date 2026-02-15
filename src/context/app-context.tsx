@@ -5,6 +5,7 @@ import type { UserProfile, Teamspace } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 
+export type Theme = 'light' | 'dark' | 'system';
 
 interface AppContextType {
   currentUser: UserProfile | null;
@@ -14,6 +15,8 @@ interface AppContextType {
   availableTeamspaces: Teamspace[];
   areTeamspacesLoading: boolean;
   logout: () => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -45,17 +48,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const { data: availableTeamspaces, isLoading: areTeamspacesLoading } = useCollection<Teamspace>(teamspacesQuery);
 
-  const [currentTeamspace, setCurrentTeamspace] = useState<Teamspace | null>(null);
+  const [currentTeamspace, setCurrentTeamspaceState] = useState<Teamspace | null>(null);
+  const [theme, setThemeState] = useState<Theme>('system');
 
   useEffect(() => {
     if (availableTeamspaces && availableTeamspaces.length > 0) {
       if (!currentTeamspace || !availableTeamspaces.some(ts => ts.id === currentTeamspace.id)) {
-        setCurrentTeamspace(availableTeamspaces[0]);
+        setCurrentTeamspaceState(availableTeamspaces[0]);
       }
     } else {
-        setCurrentTeamspace(null);
+        setCurrentTeamspaceState(null);
     }
   }, [availableTeamspaces, currentTeamspace]);
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('arogya-crm-theme') as Theme | null;
+    if (storedTheme && ['light', 'dark', 'system'].includes(storedTheme)) {
+      setThemeState(storedTheme);
+    }
+  }, []);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+
+    if (theme === 'system') {
+        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        root.classList.add(systemTheme);
+    } else {
+        root.classList.add(theme);
+    }
+  }, [theme]);
+
+  const setCurrentTeamspace = (teamspace: Teamspace) => {
+    setCurrentTeamspaceState(teamspace);
+  };
+  
+  const setTheme = (theme: Theme) => {
+    localStorage.setItem('arogya-crm-theme', theme);
+    setThemeState(theme);
+  };
 
   const logout = () => {
     auth?.signOut();
@@ -65,10 +97,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     currentUser: currentUser ?? null,
     isUserLoading: isAuthLoading || isProfileLoading,
     currentTeamspace,
-    setCurrentTeamspace: (teamspace: Teamspace) => setCurrentTeamspace(teamspace),
+    setCurrentTeamspace,
     availableTeamspaces: availableTeamspaces || [],
     areTeamspacesLoading,
-    logout
+    logout,
+    theme,
+    setTheme
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
