@@ -95,12 +95,12 @@ const menuItems = [
     },
 ];
 
-export function MainSidebar() {
+export function MainSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { currentUser } = useApp();
 
   return (
-    <aside className="hidden w-64 flex-col border-r bg-background lg:flex">
+    <aside className={cn("flex-col border-r bg-background", className)}>
       <div className="flex h-16 items-center border-b px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold">
            <svg

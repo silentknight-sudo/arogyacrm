@@ -39,7 +39,7 @@ export default function AppLayout({
 
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[256px_1fr]">
-      <MainSidebar />
+      <MainSidebar className="hidden w-64 lg:flex" />
       <div className="flex flex-col">
         <MainHeader />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">

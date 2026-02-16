@@ -21,7 +21,7 @@ import {
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useApp } from '@/context/app-context';
 import type { Teamspace } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -40,7 +40,8 @@ export function MainHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-[250px] p-0">
-          <MainSidebar />
+          <SheetTitle className="sr-only">Main Navigation</SheetTitle>
+          <MainSidebar className="flex h-full w-full" />
         </SheetContent>
       </Sheet>
 
