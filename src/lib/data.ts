@@ -21,11 +21,15 @@ export const revenueData = [
 // Mock data below will be replaced with Firestore data gradually.
 export const deals: Deal[] = Array.from({ length: 10 }, (_, i) => ({
   id: `deal-${i + 1}`,
-  title: `Deal with Company ${String.fromCharCode(65 + (i % 5))}`,
-  value: (Math.floor(Math.random() * 20) + 5) * 1000,
+  teamspaceId: 'mock-teamspace',
+  name: `Deal with Company ${String.fromCharCode(65 + (i % 5))}`,
+  amount: (Math.floor(Math.random() * 20) + 5) * 1000,
   stage: (['New', 'Qualified', 'Demo', 'Negotiation', 'Won', 'Lost'] as const)[i % 6],
-  contactName: `Lead User ${i + 1}`,
+  accountId: `account-${i+1}`,
+  ownerId: `user-${i+1}`,
   closeDate: new Date(Date.now() + i * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  createdAt: new Date(),
+  updatedAt: new Date(),
 }));
 
 

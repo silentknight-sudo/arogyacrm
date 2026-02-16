@@ -22,9 +22,9 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { revenueData, deals } from '@/lib/data';
+import { revenueData } from '@/lib/data';
 import { useApp } from '@/context/app-context';
-import type { Lead } from '@/types';
+import type { Lead, Deal } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
@@ -33,13 +33,30 @@ export default function Dashboard() {
     const { currentUser, currentTeamspace } = useApp();
     const firestore = useFirestore();
 
-    const leadsQuery = useMemoFirebase(() => 
+    // Query for new leads
+    const newLeadsQuery = useMemoFirebase(() => 
         currentTeamspace 
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'), where('status', '==', 'New'))
             : null
     , [firestore, currentTeamspace]);
-    
-    const { data: newLeads } = useCollection<Lead>(leadsQuery);
+    const { data: newLeads, isLoading: isLoadingLeads } = useCollection<Lead>(newLeadsQuery);
+
+    // Query for won deals to calculate revenue
+    const wonDealsQuery = useMemoFirebase(() => 
+        currentTeamspace 
+            ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'), where('stage', '==', 'Won'))
+            : null
+    , [firestore, currentTeamspace]);
+    const { data: wonDeals, isLoading: isLoadingWonDeals } = useCollection<Deal>(wonDealsQuery);
+
+    // Query for all deals to calculate conversion rate
+    const allDealsQuery = useMemoFirebase(() => 
+        currentTeamspace 
+            ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'))
+            : null
+    , [firestore, currentTeamspace]);
+    const { data: allDeals, isLoading: isLoadingAllDeals } = useCollection<Deal>(allDealsQuery);
+
 
     const [totalRevenue, setTotalRevenue] = useState<number | null>(null);
     const [conversionRate, setConversionRate] = useState<number | null>(null);
@@ -47,21 +64,24 @@ export default function Dashboard() {
     const [recentLeads, setRecentLeads] = useState<Lead[]>([]);
 
     useEffect(() => {
-        // Mock data for now, will be replaced with firestore queries
-        const wonDeals = deals.filter(d => d.stage === 'Won');
-        const calculatedTotalRevenue = wonDeals.reduce((acc, deal) => acc + deal.value, 0);
-        const calculatedConversionRate = deals.length > 0 ? (wonDeals.length / deals.length) * 100 : 0;
+        if (wonDeals) {
+            const calculatedTotalRevenue = wonDeals.reduce((acc, deal) => acc + deal.amount, 0);
+            setTotalRevenue(calculatedTotalRevenue);
+            setDealsWonCount(wonDeals.length);
+        }
+
+        if (allDeals && wonDeals) {
+             const calculatedConversionRate = allDeals.length > 0 ? (wonDeals.length / allDeals.length) * 100 : 0;
+             setConversionRate(calculatedConversionRate);
+        }
         
-        setTotalRevenue(calculatedTotalRevenue);
-        setConversionRate(calculatedConversionRate);
-        setDealsWonCount(wonDeals.length);
-        
-        // This will be replaced with a query
         if (newLeads) {
             setRecentLeads(newLeads.slice(0, 5));
         }
 
-    }, [newLeads]);
+    }, [newLeads, wonDeals, allDeals]);
+    
+    const isLoadingMetrics = isLoadingLeads || isLoadingWonDeals || isLoadingAllDeals;
 
     return (
         <div className="flex flex-1 flex-col gap-4">
@@ -76,7 +96,7 @@ export default function Dashboard() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{totalRevenue !== null ? `₹${totalRevenue.toLocaleString('en-IN')}` : 'Loading...'}</div>
+                <div className="text-2xl font-bold">{!isLoadingMetrics && totalRevenue !== null ? `₹${totalRevenue.toLocaleString('en-IN')}` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+20.1% from last month</p>
                 </CardContent>
             </Card>
@@ -86,7 +106,7 @@ export default function Dashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{newLeads ? `+${newLeads.length}` : 'Loading...'}</div>
+                <div className="text-2xl font-bold">{!isLoadingMetrics && newLeads ? `+${newLeads.length}` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+180.1% from last month</p>
                 </CardContent>
             </Card>
@@ -96,7 +116,7 @@ export default function Dashboard() {
                 <Target className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{conversionRate !== null ? `${conversionRate.toFixed(1)}%` : 'Loading...'}</div>
+                <div className="text-2xl font-bold">{!isLoadingMetrics && conversionRate !== null ? `${conversionRate.toFixed(1)}%` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+19% from last month</p>
                 </CardContent>
             </Card>
@@ -106,7 +126,7 @@ export default function Dashboard() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{dealsWonCount !== null ? `+${dealsWonCount}` : 'Loading...'}</div>
+                <div className="text-2xl font-bold">{!isLoadingMetrics && dealsWonCount !== null ? `+${dealsWonCount}` : 'Loading...'}</div>
                 <p className="text-xs text-muted-foreground">+2 since last month</p>
                 </CardContent>
             </Card>
@@ -160,7 +180,9 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {recentLeads.length > 0 ? recentLeads.map(lead => (
+                        {isLoadingLeads ? (
+                           <p className="text-sm text-muted-foreground">Loading recent leads...</p>
+                        ) : recentLeads.length > 0 ? recentLeads.map(lead => (
                             <div key={lead.id} className="flex items-center">
                                 <div className="ml-4 space-y-1">
                                     <p className="text-sm font-medium leading-none">{`${lead.firstName} ${lead.lastName}`}</p>
@@ -169,7 +191,7 @@ export default function Dashboard() {
                                 <div className="ml-auto font-medium">{lead.source}</div>
                             </div>
                         )) : (
-                           <p className="text-sm text-muted-foreground">Loading recent leads...</p>
+                           <p className="text-sm text-muted-foreground">No new leads this month.</p>
                         )}
                     </div>
                 </CardContent>
