@@ -1,5 +1,4 @@
-
 'use server';
-// This file is intentionally left blank to resolve a build issue.
-// The logic has been moved to src/app/(app)/admin/teamspaces/actions.ts
-    
+// This file is deprecated and intentionally left blank.
+// The logic for creating teamspaces has been moved to a direct server action
+// in src/app/(app)/admin/teamspaces/actions.ts to resolve a persistent bug.

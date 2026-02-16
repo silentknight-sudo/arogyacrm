@@ -25,7 +25,7 @@ type CreateTeamspaceResult = {
     teamspaceId?: string;
 };
 
-export async function createTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
+export async function createTeamspaceAction(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
     try {
         // Validate the incoming values
         const validatedInput = CreateTeamspaceInputSchema.parse(values);
