@@ -1,7 +1,7 @@
 
 'use server';
 
-import { adminDb, serverTimestamp } from '@/firebase/admin';
+import { getAdminInstances } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -20,6 +20,7 @@ type CreateTaskResult = { success: boolean; error?: string; taskId?: string };
 
 export async function createTask(values: CreateTaskInput): Promise<CreateTaskResult> {
     try {
+        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateTaskSchema.parse(values);
 
         const newTaskRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('tasks').doc();

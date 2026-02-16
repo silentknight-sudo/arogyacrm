@@ -3,7 +3,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { adminDb, serverTimestamp } from '@/firebase/admin';
+import { getAdminInstances } from '@/firebase/admin';
 
 // This type is used by the calling component, so we export it.
 export type CreateTeamspaceInput = {
@@ -27,6 +27,7 @@ type CreateTeamspaceResult = {
 
 export async function createTeamspaceAction(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
     try {
+        const { adminDb, serverTimestamp } = getAdminInstances();
         // Validate the incoming values
         const validatedInput = CreateTeamspaceInputSchema.parse(values);
 

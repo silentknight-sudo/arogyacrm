@@ -1,7 +1,7 @@
 
 'use server';
 
-import { adminDb, serverTimestamp } from '@/firebase/admin';
+import { getAdminInstances } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -19,6 +19,7 @@ type CreateContactResult = { success: boolean; error?: string; contactId?: strin
 
 export async function createContact(values: CreateContactInput): Promise<CreateContactResult> {
     try {
+        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateContactSchema.parse(values);
 
         const newContactRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('contacts').doc();

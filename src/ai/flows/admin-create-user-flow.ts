@@ -7,7 +7,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { adminAuth, adminDb, serverTimestamp } from '@/firebase/admin';
+import { getAdminInstances } from '@/firebase/admin';
 
 // Define the input schema for the flow
 const CreateUserInputSchema = z.object({
@@ -41,6 +41,7 @@ const adminCreateUserFlow = ai.defineFlow(
     outputSchema: CreateUserOutputSchema,
   },
   async (input) => {
+    const { adminAuth, adminDb, serverTimestamp } = getAdminInstances();
     // Step 1: Create user in Firebase Authentication
     const userRecord = await adminAuth.createUser({
       email: input.email,

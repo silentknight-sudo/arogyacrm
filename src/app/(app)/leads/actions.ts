@@ -2,7 +2,7 @@
 
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
 import type { Lead } from '@/types';
-import { adminDb, serverTimestamp } from '@/firebase/admin';
+import { getAdminInstances } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -45,6 +45,7 @@ type CreateLeadResult = { success: boolean; error?: string; leadId?: string };
 
 export async function createLead(values: CreateLeadInput): Promise<CreateLeadResult> {
     try {
+        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateLeadSchema.parse(values);
 
         const newLeadRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('leads').doc();

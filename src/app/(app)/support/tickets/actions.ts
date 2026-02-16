@@ -1,7 +1,7 @@
 
 'use server';
 
-import { adminDb, serverTimestamp } from '@/firebase/admin';
+import { getAdminInstances } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -21,6 +21,7 @@ type CreateTicketResult = { success: boolean; error?: string; ticketId?: string 
 
 export async function createTicket(values: CreateTicketInput): Promise<CreateTicketResult> {
     try {
+        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateTicketSchema.parse(values);
 
         const newTicketRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('tickets').doc();
