@@ -5,3 +5,10 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+  # Set a 2-minute timeout for server actions, useful for long-running GenAI tasks
+  timeoutSeconds: 120
+
+# Link the backend to your Firebase project to automatically provide
+# server-side credentials and configuration.
+firebase:
+  projectId: studio-3238704164-621f1
