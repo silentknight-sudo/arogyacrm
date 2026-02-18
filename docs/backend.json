@@ -752,6 +752,14 @@
           "type": "string",
           "description": "The category the product belongs to (e.g., 'Immunity Boosters', 'Digestive Health', 'Herbal Teas')."
         },
+        "price": {
+          "type": "number",
+          "description": "The retail price of the product."
+        },
+        "stock": {
+          "type": "number",
+          "description": "The current inventory level of the product."
+        },
         "imageUrl": {
           "type": "string",
           "description": "URL to the main product image stored in Firebase Storage.",
@@ -774,89 +782,8 @@
         "description",
         "sku",
         "category",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "PriceBook": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PriceBook",
-      "type": "object",
-      "description": "Manages different sets of prices for products, enabling varied pricing strategies for different customer segments or promotions.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the PriceBook entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the price book (e.g., 'Standard Retail Price', 'Wholesale Price', 'Seasonal Discount')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the pricing strategy or target audience for this price book."
-        },
-        "isActive": {
-          "type": "boolean",
-          "description": "Indicates if this price book is currently active and can be used for pricing products."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the price book was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the price book was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "isActive",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "ProductPrice": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ProductPrice",
-      "type": "object",
-      "description": "Links a specific product to a price book and defines its unit price within that particular price book.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ProductPrice entity."
-        },
-        "priceBookId": {
-          "type": "string",
-          "description": "Reference to the PriceBook this specific price entry belongs to. (Relationship: PriceBook 1:N ProductPrice)"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to the Product for which this price is defined. (Relationship: Product 1:N ProductPrice)"
-        },
-        "price": {
-          "type": "number",
-          "description": "The unit price of the product within the specified price book."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the product price entry was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the product price entry was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "priceBookId",
-        "productId",
         "price",
+        "stock",
         "createdAt",
         "updatedAt"
       ]
@@ -900,6 +827,21 @@
           "type": "number",
           "description": "The total monetary amount of the quote, including all line items, taxes, and discounts."
         },
+        "lineItems": {
+          "type": "array",
+          "description": "An array of line items included in the quote.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": {"type": "string"},
+              "productName": {"type": "string"},
+              "quantity": {"type": "number"},
+              "unitPrice": {"type": "number"},
+              "subtotal": {"type": "number"}
+            },
+            "required": ["productId", "productName", "quantity", "unitPrice", "subtotal"]
+          }
+        },
         "ownerId": {
           "type": "string",
           "description": "Reference to the User (sales executive) who created this quote. (Relationship: User 1:N Quote)"
@@ -924,58 +866,6 @@
         "status",
         "totalAmount",
         "ownerId",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "QuoteLineItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "QuoteLineItem",
-      "type": "object",
-      "description": "Represents an individual product or service item included in a sales Quote, specifying quantity and price.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the QuoteLineItem entity."
-        },
-        "quoteId": {
-          "type": "string",
-          "description": "Reference to the Quote this line item belongs to. (Relationship: Quote 1:N QuoteLineItem)"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to the Product included in this line item. (Relationship: Product 1:N QuoteLineItem)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the product specified in this line item."
-        },
-        "unitPrice": {
-          "type": "number",
-          "description": "The unit price of the product at the time the quote was created."
-        },
-        "subtotal": {
-          "type": "number",
-          "description": "The subtotal amount for this line item (quantity * unitPrice)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the quote line item was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the quote line item was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "quoteId",
-        "productId",
-        "quantity",
-        "unitPrice",
-        "subtotal",
         "createdAt",
         "updatedAt"
       ]
@@ -1019,6 +909,21 @@
           "type": "number",
           "description": "The total monetary amount of the sales order, including all line items, taxes, and shipping."
         },
+        "lineItems": {
+          "type": "array",
+          "description": "An array of line items included in the sales order.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": {"type": "string"},
+              "productName": {"type": "string"},
+              "quantity": {"type": "number"},
+              "unitPrice": {"type": "number"},
+              "subtotal": {"type": "number"}
+            },
+            "required": ["productId", "productName", "quantity", "unitPrice", "subtotal"]
+          }
+        },
         "quoteId": {
           "type": "string",
           "description": "Optional reference to the Quote from which this sales order was generated. (Relationship: Quote 1:1 SalesOrder)"
@@ -1047,58 +952,6 @@
         "status",
         "totalAmount",
         "ownerId",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "SalesOrderLineItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SalesOrderLineItem",
-      "type": "object",
-      "description": "Represents an individual product item included in a Sales Order, specifying quantity and agreed-upon price.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SalesOrderLineItem entity."
-        },
-        "salesOrderId": {
-          "type": "string",
-          "description": "Reference to the SalesOrder this line item belongs to. (Relationship: SalesOrder 1:N SalesOrderLineItem)"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to the Product included in this line item. (Relationship: Product 1:N SalesOrderLineItem)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the product ordered in this line item."
-        },
-        "unitPrice": {
-          "type": "number",
-          "description": "The unit price of the product at the time the sales order was created."
-        },
-        "subtotal": {
-          "type": "number",
-          "description": "The subtotal amount for this line item (quantity * unitPrice)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the sales order line item was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the sales order line item was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "salesOrderId",
-        "productId",
-        "quantity",
-        "unitPrice",
-        "subtotal",
         "createdAt",
         "updatedAt"
       ]
@@ -1143,6 +996,21 @@
           "type": "number",
           "description": "The total monetary amount of the purchase order."
         },
+         "lineItems": {
+          "type": "array",
+          "description": "An array of line items included in the purchase order.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": {"type": "string"},
+              "productName": {"type": "string"},
+              "quantity": {"type": "number"},
+              "unitPrice": {"type": "number"},
+              "subtotal": {"type": "number"}
+            },
+            "required": ["productId", "productName", "quantity", "unitPrice", "subtotal"]
+          }
+        },
         "ownerId": {
           "type": "string",
           "description": "Reference to the User who created this purchase order. (Relationship: User 1:N PurchaseOrder)"
@@ -1167,58 +1035,6 @@
         "status",
         "totalAmount",
         "ownerId",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "PurchaseOrderLineItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PurchaseOrderLineItem",
-      "type": "object",
-      "description": "Represents an individual item included in a Purchase Order, detailing quantity and cost.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the PurchaseOrderLineItem entity."
-        },
-        "purchaseOrderId": {
-          "type": "string",
-          "description": "Reference to the PurchaseOrder this line item belongs to. (Relationship: PurchaseOrder 1:N PurchaseOrderLineItem)"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to the Product being purchased in this line item. (Relationship: Product 1:N PurchaseOrderLineItem)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the product ordered in this line item."
-        },
-        "unitPrice": {
-          "type": "number",
-          "description": "The unit price of the product at the time the purchase order was created."
-        },
-        "subtotal": {
-          "type": "number",
-          "description": "The subtotal amount for this line item (quantity * unitPrice)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the purchase order line item was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the purchase order line item was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "purchaseOrderId",
-        "productId",
-        "quantity",
-        "unitPrice",
-        "subtotal",
         "createdAt",
         "updatedAt"
       ]
@@ -1267,6 +1083,21 @@
           "type": "number",
           "description": "The total amount that has been paid towards this invoice."
         },
+        "lineItems": {
+          "type": "array",
+          "description": "An array of line items included in the invoice.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": {"type": "string"},
+              "productName": {"type": "string"},
+              "quantity": {"type": "number"},
+              "unitPrice": {"type": "number"},
+              "subtotal": {"type": "number"}
+            },
+            "required": ["productId", "productName", "quantity", "unitPrice", "subtotal"]
+          }
+        },
         "ownerId": {
           "type": "string",
           "description": "Reference to the User who generated this invoice. (Relationship: User 1:N Invoice)"
@@ -1293,106 +1124,6 @@
         "totalAmount",
         "paidAmount",
         "ownerId",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "InvoiceLineItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "InvoiceLineItem",
-      "type": "object",
-      "description": "Represents an individual product or service item included in an Invoice, detailing quantity and billed price.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the InvoiceLineItem entity."
-        },
-        "invoiceId": {
-          "type": "string",
-          "description": "Reference to the Invoice this line item belongs to. (Relationship: Invoice 1:N InvoiceLineItem)"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to the Product included in this line item. (Relationship: Product 1:N InvoiceLineItem)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the product billed in this line item."
-        },
-        "unitPrice": {
-          "type": "number",
-          "description": "The unit price of the product at the time the invoice was created."
-        },
-        "subtotal": {
-          "type": "number",
-          "description": "The subtotal amount for this line item (quantity * unitPrice)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the invoice line item was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the invoice line item was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "invoiceId",
-        "productId",
-        "quantity",
-        "unitPrice",
-        "subtotal",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Stock": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Stock",
-      "type": "object",
-      "description": "Tracks the current inventory levels for a specific product at a given storage location.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Stock entity."
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to the Product whose stock is being tracked. (Relationship: Product 1:N Stock)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The current quantity of the product available in stock."
-        },
-        "location": {
-          "type": "string",
-          "description": "The physical or logical location where the stock is held (e.g., 'Main Warehouse', 'Returns Shelf')."
-        },
-        "lastUpdated": {
-          "type": "string",
-          "description": "Timestamp indicating when the stock quantity for this product and location was last updated.",
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the stock entry was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the stock entry was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "productId",
-        "quantity",
-        "location",
-        "lastUpdated",
         "createdAt",
         "updatedAt"
       ]
@@ -1783,27 +1514,7 @@
           "schema": {
             "$ref": "#/backend/entities/Product"
           },
-          "description": "Stores globally available product catalog information. Accessible to all relevant roles (e.g., sales, marketing for read, admin/ops for write)."
-        }
-      },
-      {
-        "path": "/priceBooks/{priceBookId}",
-        "definition": {
-          "entityName": "PriceBook",
-          "schema": {
-            "$ref": "#/backend/entities/PriceBook"
-          },
-          "description": "Stores different sets of prices for products, globally available. Accessible to relevant roles (e.g., sales_team_lead, sales_executive for read, admin/ops for write)."
-        }
-      },
-      {
-        "path": "/productPrices/{productPriceId}",
-        "definition": {
-          "entityName": "ProductPrice",
-          "schema": {
-            "$ref": "#/backend/entities/ProductPrice"
-          },
-          "description": "Links a specific product to a price book and defines its unit price within that price book. This is a global collection. Accessible to relevant roles (e.g., sales_team_lead, sales_executive for read, admin/ops for write)."
+          "description": "Stores globally available product catalog information, with denormalized price and stock for performance. Accessible to all relevant roles (e.g., sales, marketing for read, admin/ops for write)."
         }
       },
       {
@@ -1817,16 +1528,6 @@
         }
       },
       {
-        "path": "/teamspaces/{teamspaceId}/quotes/{quoteId}/lineItems/{lineItemId}",
-        "definition": {
-          "entityName": "QuoteLineItem",
-          "schema": {
-            "$ref": "#/backend/entities/QuoteLineItem"
-          },
-          "description": "Stores individual line items for a quote. CRITICAL DENORMALIZATION: Each line item document MUST include the 'teamspaceId' directly from its parent quote for authorization independence, allowing security rules to check access without a 'get()' call to the parent quote document."
-        }
-      },
-      {
         "path": "/teamspaces/{teamspaceId}/salesOrders/{salesOrderId}",
         "definition": {
           "entityName": "SalesOrder",
@@ -1834,16 +1535,6 @@
             "$ref": "#/backend/entities/SalesOrder"
           },
           "description": "Stores confirmed sales orders, isolated per teamspace. Each sales order document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the order owner."
-        }
-      },
-      {
-        "path": "/teamspaces/{teamspaceId}/salesOrders/{salesOrderId}/lineItems/{lineItemId}",
-        "definition": {
-          "entityName": "SalesOrderLineItem",
-          "schema": {
-            "$ref": "#/backend/entities/SalesOrderLineItem"
-          },
-          "description": "Stores individual line items for a sales order. CRITICAL DENORMALIZATION: Each line item document MUST include the 'teamspaceId' directly from its parent sales order for authorization independence, allowing security rules to check access without a 'get()' call to the parent sales order document."
         }
       },
       {
@@ -1857,16 +1548,6 @@
         }
       },
       {
-        "path": "/teamspaces/{teamspaceId}/purchaseOrders/{purchaseOrderId}/lineItems/{lineItemId}",
-        "definition": {
-          "entityName": "PurchaseOrderLineItem",
-          "schema": {
-            "$ref": "#/backend/entities/PurchaseOrderLineItem"
-          },
-          "description": "Stores individual line items for a purchase order. CRITICAL DENORMALIZATION: Each line item document MUST include the 'teamspaceId' directly from its parent purchase order for authorization independence, allowing security rules to check access without a 'get()' call to the parent purchase order document."
-        }
-      },
-      {
         "path": "/teamspaces/{teamspaceId}/invoices/{invoiceId}",
         "definition": {
           "entityName": "Invoice",
@@ -1874,26 +1555,6 @@
             "$ref": "#/backend/entities/Invoice"
           },
           "description": "Stores invoices issued to customers, isolated per teamspace. Each invoice document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the invoice owner."
-        }
-      },
-      {
-        "path": "/teamspaces/{teamspaceId}/invoices/{invoiceId}/lineItems/{lineItemId}",
-        "definition": {
-          "entityName": "InvoiceLineItem",
-          "schema": {
-            "$ref": "#/backend/entities/InvoiceLineItem"
-          },
-          "description": "Stores individual line items for an invoice. CRITICAL DENORMALIZATION: Each line item document MUST include the 'teamspaceId' directly from its parent invoice for authorization independence, allowing security rules to check access without a 'get()' call to the parent invoice document."
-        }
-      },
-      {
-        "path": "/stock/{stockId}",
-        "definition": {
-          "entityName": "Stock",
-          "schema": {
-            "$ref": "#/backend/entities/Stock"
-          },
-          "description": "Tracks inventory levels for products, globally. Access is typically restricted by role (e.g., 'admin' or 'operations' for write access, 'sales' for read access)."
         }
       },
       {
@@ -1940,3 +1601,4 @@
     "reasoning": "The recommended Firestore structure prioritizes secure, scalable, and debuggable authorization by adhering to the core design principles: Authorization Independence, Structural Segregation, and consistent Access Modeling. Most CRM data is organized under a 'Teamspace' hierarchy, ensuring strict data isolation per team, a key requirement for a SaaS-style CRM.\n\n**Authorization Independence:** This is achieved through extensive denormalization. For instance, every document within a teamspace-scoped subcollection (e.g., Leads, Contacts, Deals, Tasks, etc., and critically, all 'Line Item' sub-subcollections) will explicitly include its `teamspaceId`. This allows Firestore Security Rules to verify a user's access by checking if `request.auth.uid` is a member of the `teamspaceId` (by checking the `teamspaceIds` array on the user's own `/users/{userId}` document, which is a single `get()` operation per request for the user's profile, a standard and efficient practice for DBAC), rather than performing costly and complex `get()` operations on parent documents. Similarly, fields like `ownerId`, `assignedToId`, `uploadedById`, `organizerId`, `callerId`, `requestedById`, and `processedById` are stored directly on the respective documents, enabling direct authorization checks.\n\n**Structural Segregation (Homogeneous Security Posture):** Data is segregated into distinct collections based on its security requirements. Global catalog data (Products, PriceBooks, ProductPrices, Stock) resides at the root level, accessible based on a user's role. Most operational CRM data, however, is nested under `/teamspaces/{teamspaceId}/` to enforce strong data isolation. This means all documents within, for example, `/teamspaces/{teamspaceId}/leads` will share the same `teamspaceId` and thus the same primary access rules, simplifying security rule logic.\n\n**QAPs (Queries are not Filters):** The hierarchical structure `teamspaces/{teamspaceId}/<entity_plural_name>/{entityId}` inherently supports Query as a Security Primitive. When a user queries a collection like `db.collection('teamspaces').doc(myTeamspaceId).collection('leads')`, the results are naturally scoped to `myTeamspaceId`. Security rules then only need to verify that `request.auth.uid` has access to `myTeamspaceId` (i.e., is a member of that teamspace), and potentially other role-based or ownership-based conditions on the document itself. This prevents inefficient filtering of large result sets by security rules and ensures that only authorized data is ever returned.\n\n**Role-Based Access Control (DBAC):** User roles are stored explicitly in the `/users/{userId}` document. The `teamspaceIds` array on the user document also facilitates quick lookups for teamspace membership. Admin users are granted broad access based on their 'admin' role, while other roles (sales_team_lead, sales_executive, marketer, support) have access confined to their assigned teamspaces and/or documents where they are an `ownerId` or `assignedToId`.\n\nThis architecture provides a clean, predictable, and highly secure foundation for Arogya CRM, making security rules simpler to write, understand, and debug, while maintaining scalability and performance."
   }
 }
+    

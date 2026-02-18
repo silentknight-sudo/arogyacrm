@@ -91,11 +91,14 @@ export type Deal = {
 export type Product = {
   id: string;
   name: string;
+  description: string;
   sku: string;
   category: string;
   price: number;
   stock: number;
   imageUrl: string;
+  createdAt: any;
+  updatedAt: any;
 };
 
 export type Account = {
@@ -176,3 +179,146 @@ export type Ticket = {
   createdAt: any;
   updatedAt: any;
 };
+
+
+export type LineItem = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+};
+
+export type QuoteStatus = 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
+export type Quote = {
+  id: string;
+  teamspaceId: string;
+  name: string;
+  accountId: string;
+  contactId?: string;
+  validUntil: string;
+  status: QuoteStatus;
+  totalAmount: number;
+  lineItems: LineItem[];
+  ownerId: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type SalesOrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Completed' | 'Cancelled';
+export type SalesOrder = {
+  id: string;
+  teamspaceId: string;
+  orderNumber: string;
+  accountId: string;
+  contactId?: string;
+  orderDate: string;
+  status: SalesOrderStatus;
+  totalAmount: number;
+  lineItems: LineItem[];
+  quoteId?: string;
+  ownerId: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type PurchaseOrderStatus = 'Pending' | 'Ordered' | 'Received' | 'Cancelled';
+export type PurchaseOrder = {
+    id: string;
+    teamspaceId: string;
+    orderNumber: string;
+    supplierName: string;
+    orderDate: string;
+    expectedDeliveryDate: string;
+    status: PurchaseOrderStatus;
+    totalAmount: number;
+    lineItems: LineItem[];
+    ownerId: string;
+    createdAt: any;
+    updatedAt: any;
+};
+
+export type InvoiceStatus = 'Draft' | 'Sent' | 'Paid' | 'Partially Paid' | 'Overdue' | 'Voided';
+export type Invoice = {
+    id: string;
+    teamspaceId: string;
+    invoiceNumber: string;
+    salesOrderId: string;
+    invoiceDate: string;
+    dueDate: string;
+    status: InvoiceStatus;
+    totalAmount: number;
+    paidAmount: number;
+    lineItems: LineItem[];
+    ownerId: string;
+    createdAt: any;
+    updatedAt: any;
+};
+
+export type CallStatus = 'Completed' | 'No Answer' | 'Voicemail' | 'Busy';
+export type CallType = 'Outbound' | 'Inbound';
+export type Call = {
+    id: string;
+    teamspaceId: string;
+    subject: string;
+    notes?: string;
+    callDate: string;
+    callDurationMinutes: number;
+    callType: CallType;
+    status: CallStatus;
+    callerId: string; // User who made the call
+    relatedToEntityType?: string;
+    relatedToEntityId?: string;
+    createdAt: any;
+    updatedAt: any;
+};
+
+export type Meeting = {
+    id: string;
+    teamspaceId: string;
+    title: string;
+    description?: string;
+    startTime: string;
+    endTime: string;
+    location: string;
+    organizerId: string;
+    attendeeIds: string[];
+    relatedToEntityType?: string;
+    relatedToEntityId?: string;
+    createdAt: any;
+    updatedAt: any;
+};
+
+
+export type RefundStatus = 'Pending' | 'Approved' | 'Rejected' | 'Processed' | 'Cancelled';
+export type Refund = {
+    id: string;
+    teamspaceId: string;
+    salesOrderId: string;
+    reason: string;
+    amount: number;
+    status: RefundStatus;
+    requestedById: string;
+    processedById?: string;
+    createdAt: any;
+    updatedAt: any;
+};
+
+export type ComplaintStatus = 'Received' | 'Investigating' | 'Action Taken' | 'Resolved' | 'Closed';
+export type ComplaintSeverity = 'Minor' | 'Moderate' | 'Major' | 'Critical';
+export type Complaint = {
+    id: string;
+    teamspaceId: string;
+    subject: string;
+    description: string;
+    status: ComplaintStatus;
+    contactId: string;
+    assignedToId: string;
+    severity: ComplaintSeverity;
+    relatedToEntityType?: string;
+    relatedToEntityId?: string;
+    createdAt: any;
+    updatedAt: any;
+};
+
+    

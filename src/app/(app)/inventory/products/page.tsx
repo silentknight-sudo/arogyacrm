@@ -1,6 +1,7 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { PlusCircle, ListFilter } from 'lucide-react';
-import { products } from '@/lib/data';
 import type { Product } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -13,27 +14,39 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CreateProductDialog } from './create-product-dialog';
+import { useState } from 'react';
 
 function ProductCard({ product }: { product: Product }) {
   return (
     <Card>
       <CardHeader className="p-0">
         <div className="relative h-40 w-full">
-            <Image src={product.imageUrl} alt={product.name} fill style={{objectFit: 'cover'}} className="rounded-t-lg" />
+            <Image 
+              src={product.imageUrl} 
+              alt={product.name} 
+              fill 
+              style={{objectFit: 'cover'}} 
+              className="rounded-t-lg"
+              unoptimized
+            />
         </div>
       </CardHeader>
       <CardContent className="p-4">
         <CardTitle className="text-lg font-semibold tracking-tight">{product.name}</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">{product.category}</p>
         <div className="flex items-center justify-between mt-4">
-            <span className="text-xl font-bold">${product.price.toFixed(2)}</span>
+            <span className="text-xl font-bold">₹{product.price.toFixed(2)}</span>
             <Badge variant={product.stock > 0 ? 'secondary' : 'destructive'}>
                 {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
             </Badge>
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full">Add to Cart</Button>
+        <Button className="w-full" disabled>Add to Cart</Button>
       </CardFooter>
     </Card>
   );
@@ -41,7 +54,28 @@ function ProductCard({ product }: { product: Product }) {
 
 
 export default function ProductsPage() {
-  const categories = [...new Set(products.map(p => p.category))];
+  const firestore = useFirestore();
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  
+  const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
+  const { data: products, isLoading } = useCollection<Product>(productsQuery);
+
+  const categories = useMemoFirebase(() => {
+    if (!products) return [];
+    return [...new Set(products.map(p => p.category))];
+  }, [products]);
+
+  const handleCategoryChange = (category: string, checked: boolean) => {
+    setSelectedCategories(prev => 
+      checked ? [...prev, category] : prev.filter(c => c !== category)
+    );
+  };
+
+  const filteredProducts = useMemoFirebase(() => {
+    if (!products) return [];
+    if (selectedCategories.length === 0) return products;
+    return products.filter(p => selectedCategories.includes(p.category));
+  }, [products, selectedCategories]);
 
   return (
     <div className="space-y-4">
@@ -62,23 +96,49 @@ export default function ProductsPage() {
                     <DropdownMenuLabel>Categories</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {categories.map(category => (
-                         <DropdownMenuCheckboxItem key={category}>
+                         <DropdownMenuCheckboxItem 
+                            key={category}
+                            checked={selectedCategories.includes(category)}
+                            onCheckedChange={(checked) => handleCategoryChange(category, !!checked)}
+                         >
                             {category}
                         </DropdownMenuCheckboxItem>
                     ))}
                 </DropdownMenuContent>
             </DropdownMenu>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
+          <CreateProductDialog>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
+          </CreateProductDialog>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {products.map(product => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+
+       {isLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-80 w-full" />)}
+        </div>
+      )}
+
+      {!isLoading && filteredProducts && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
+            ))}
+        </div>
+      )}
+       {!isLoading && filteredProducts?.length === 0 && (
+         <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-24">
+            <div className="flex flex-col items-center gap-1 text-center">
+                <h3 className="text-2xl font-bold tracking-tight">No products found</h3>
+                <p className="text-sm text-muted-foreground">
+                    Create a new product to get started.
+                </p>
+            </div>
+        </div>
+      )}
     </div>
   );
 }
+    
