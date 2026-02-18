@@ -9,6 +9,7 @@ import { LogOut, Shield } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { EditProfileDialog } from './edit-profile-dialog';
 
 function ProfileDetailRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
@@ -84,7 +85,9 @@ export default function ProfilePage() {
                     <CardTitle className="text-3xl">{currentUser.displayName}</CardTitle>
                     <CardDescription className="mt-1">{currentUser.email}</CardDescription>
                 </div>
-                <Button variant="outline" disabled>Edit Profile</Button>
+                <EditProfileDialog>
+                  <Button variant="outline">Edit Profile</Button>
+                </EditProfileDialog>
             </div>
         </CardHeader>
         <CardContent className="space-y-6">
