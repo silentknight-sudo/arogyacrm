@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import type { UserProfile, Teamspace } from '@/types';
-import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 
 export type Theme = 'light' | 'dark' | 'system';
@@ -22,7 +22,8 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { user: authUser, isUserLoading: isAuthLoading, auth } = useUser();
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
+  const auth = useAuth();
   const firestore = useFirestore();
 
   const userProfileRef = useMemoFirebase(() => 
