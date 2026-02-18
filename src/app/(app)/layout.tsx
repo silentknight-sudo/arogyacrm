@@ -21,22 +21,12 @@ export default function AppLayout({
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || !user) {
-    // Show a full-page loading skeleton while we determine auth state
-    // or before the redirect to /login happens.
-    // This avoids rendering the main layout and its children, which prevents
-    // the "rendered more hooks" error and avoids a flash of the UI.
-    return (
-       <div className="flex h-screen w-full items-center justify-center bg-background">
-         <div className="space-y-4 text-center">
-            {/* You can add a spinner or a more elaborate skeleton here */}
-            <p className="text-muted-foreground">Loading Application...</p>
-         </div>
-      </div>
-    );
-  }
-
-
+  // To prevent the "Rendered more hooks" error, we must always render the
+  // children components to maintain a consistent component structure across renders.
+  // The `useEffect` above will handle redirecting unauthenticated users.
+  // While the user state is loading, the children components will receive
+  // `isUserLoading: true` from the `useApp` context and will correctly
+  // render their own loading states (e.g., skeletons), preventing a crash.
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[256px_1fr]">
       <MainSidebar className="hidden w-64 lg:flex" />

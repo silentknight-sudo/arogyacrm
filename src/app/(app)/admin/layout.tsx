@@ -3,26 +3,22 @@
 import { useApp } from '@/context/app-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { currentUser, isUserLoading } = useApp();
   const router = useRouter();
 
   useEffect(() => {
+    // This effect handles redirecting non-admin users away from this section.
     if (!isUserLoading && currentUser?.role !== 'admin') {
       router.replace('/dashboard'); 
     }
   }, [currentUser, isUserLoading, router]);
 
-  if (isUserLoading || currentUser?.role !== 'admin') {
-    return (
-        <div className="flex flex-col h-full space-y-4">
-            <Skeleton className="h-12 w-48" />
-            <Skeleton className="h-32 w-full" />
-        </div>
-    );
-  }
-
+  // To prevent the "Rendered more hooks" error, we must maintain a consistent
+  // component structure. The children are always rendered.
+  // If the user is not an admin, the `useEffect` will redirect them away.
+  // While loading, the admin pages inside `children` will get the loading state
+  // from the `useApp` context and show their own loading indicators.
   return <>{children}</>;
 }
