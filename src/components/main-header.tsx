@@ -22,7 +22,7 @@ import {
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetTitle, SheetHeader } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/components/ui/sheet';
 import { useApp } from '@/context/app-context';
 import type { Teamspace } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
