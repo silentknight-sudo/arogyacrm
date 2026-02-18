@@ -7,7 +7,8 @@ import {
   Menu,
   ChevronDown,
   LogOut,
-  Settings
+  Settings,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +22,7 @@ import {
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetTitle, SheetTrigger, SheetHeader } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetHeader } from '@/components/ui/sheet';
 import { useApp } from '@/context/app-context';
 import type { Teamspace } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -98,6 +99,12 @@ export function MainHeader() {
                 <p className="text-xs text-muted-foreground font-normal">{currentUser?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+             <DropdownMenuItem asChild>
+              <Link href="/profile">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/settings">
                 <Settings className="mr-2 h-4 w-4" />
