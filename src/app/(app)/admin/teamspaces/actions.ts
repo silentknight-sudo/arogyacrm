@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -25,7 +26,7 @@ type CreateTeamspaceResult = {
     teamspaceId?: string;
 };
 
-export async function createTeamspaceAction(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
+export async function createNewTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
     try {
         const { adminDb, serverTimestamp } = getAdminInstances();
         // Validate the incoming values
