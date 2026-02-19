@@ -1,4 +1,7 @@
+'use server';
+
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export function getAdminInstances() {
     if (!admin.apps.length) {
@@ -11,6 +14,7 @@ export function getAdminInstances() {
     return {
         adminAuth: admin.auth(),
         adminDb: admin.firestore(),
+        FieldValue: admin.firestore.FieldValue,
         serverTimestamp: admin.firestore.FieldValue.serverTimestamp,
     };
 }

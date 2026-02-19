@@ -13,7 +13,7 @@ type CreateTeamspaceResult = { success: boolean; error?: string; teamspaceId?: s
 
 export async function createNewTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
+        const { adminDb, serverTimestamp, FieldValue } = getAdminInstances();
         
         if (!values.name || values.name.length < 2) {
             throw new Error('Teamspace name must be at least 2 characters.');
@@ -25,10 +25,15 @@ export async function createNewTeamspace(values: CreateTeamspaceInput): Promise<
         const newTeamspaceRef = adminDb.collection('teamspaces').doc();
         const newTeamspaceId = newTeamspaceRef.id;
 
-        // Also add the new teamspace to the owner's user profile
         const userDocRef = adminDb.collection('users').doc(values.ownerId);
 
         await adminDb.runTransaction(async (transaction) => {
+            const userDoc = await transaction.get(userDocRef);
+            if (!userDoc.exists) {
+                throw new Error("User profile does not exist. Cannot create teamspace.");
+            }
+
+            // 1. Create the new teamspace document
             transaction.set(newTeamspaceRef, {
                 id: newTeamspaceId,
                 name: values.name,
@@ -39,8 +44,9 @@ export async function createNewTeamspace(values: CreateTeamspaceInput): Promise<
                 updatedAt: serverTimestamp()
             });
 
+            // 2. Update the user's document with the new teamspace ID
             transaction.update(userDocRef, {
-                teamspaceIds: adminDb.FieldValue.arrayUnion(newTeamspaceId)
+                teamspaceIds: FieldValue.arrayUnion(newTeamspaceId)
             });
         });
         
