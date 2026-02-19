@@ -15,8 +15,28 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import type { Quote } from '@/types';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const QuoteActions = ({ quote }: { quote: Quote }) => {
+  const { toast } = useToast();
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(quote.id);
+      toast({
+        title: 'Copied!',
+        description: 'Quote ID copied to clipboard.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: 'Could not copy ID to clipboard.',
+      });
+      console.error('Failed to copy ID: ', err);
+    }
+  };
+
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -27,7 +47,7 @@ const QuoteActions = ({ quote }: { quote: Quote }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(quote.id)}>
+          <DropdownMenuItem onClick={handleCopyId}>
             Copy quote ID
           </DropdownMenuItem>
           <DropdownMenuSeparator />

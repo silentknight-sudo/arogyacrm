@@ -16,8 +16,28 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import type { Ticket } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const TicketActions = ({ ticket }: { ticket: Ticket }) => {
+  const { toast } = useToast();
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(ticket.id);
+      toast({
+        title: 'Copied!',
+        description: 'Ticket ID copied to clipboard.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: 'Could not copy ID to clipboard.',
+      });
+      console.error('Failed to copy ID: ', err);
+    }
+  };
+
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -28,7 +48,7 @@ const TicketActions = ({ ticket }: { ticket: Ticket }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(ticket.id)}>
+          <DropdownMenuItem onClick={handleCopyId}>
             Copy ticket ID
           </DropdownMenuItem>
           <DropdownMenuSeparator />

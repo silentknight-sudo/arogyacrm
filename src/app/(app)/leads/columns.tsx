@@ -100,6 +100,23 @@ const LeadActions = ({ lead }: { lead: Lead }) => {
     }
     setIsLoading(false);
   };
+  
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(lead.id);
+      toast({
+        title: 'Copied!',
+        description: 'Lead ID copied to clipboard.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: 'Could not copy ID to clipboard.',
+      });
+      console.error('Failed to copy ID: ', err);
+    }
+  };
 
   return (
     <>
@@ -113,7 +130,7 @@ const LeadActions = ({ lead }: { lead: Lead }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(lead.id)}>
+          <DropdownMenuItem onClick={handleCopyId}>
             Copy lead ID
           </DropdownMenuItem>
           <DropdownMenuSeparator />

@@ -13,8 +13,28 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Teamspace } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 const TeamspaceActions = ({ teamspace }: { teamspace: Teamspace }) => {
+  const { toast } = useToast();
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(teamspace.id);
+      toast({
+        title: 'Copied!',
+        description: 'Teamspace ID copied to clipboard.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: 'Could not copy ID to clipboard.',
+      });
+      console.error('Failed to copy ID: ', err);
+    }
+  };
+
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -25,7 +45,7 @@ const TeamspaceActions = ({ teamspace }: { teamspace: Teamspace }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(teamspace.id)}>
+          <DropdownMenuItem onClick={handleCopyId}>
             Copy teamspace ID
           </DropdownMenuItem>
           <DropdownMenuSeparator />

@@ -15,8 +15,28 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import type { Invoice } from '@/types';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const InvoiceActions = ({ invoice }: { invoice: Invoice }) => {
+  const { toast } = useToast();
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(invoice.id);
+      toast({
+        title: 'Copied!',
+        description: 'Invoice ID copied to clipboard.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: 'Could not copy ID to clipboard.',
+      });
+      console.error('Failed to copy ID: ', err);
+    }
+  };
+
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -27,7 +47,7 @@ const InvoiceActions = ({ invoice }: { invoice: Invoice }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(invoice.id)}>
+          <DropdownMenuItem onClick={handleCopyId}>
             Copy invoice ID
           </DropdownMenuItem>
           <DropdownMenuSeparator />

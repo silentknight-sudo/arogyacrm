@@ -16,8 +16,28 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import type { PurchaseOrder } from '@/types';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const PurchaseOrderActions = ({ purchaseOrder }: { purchaseOrder: PurchaseOrder }) => {
+  const { toast } = useToast();
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(purchaseOrder.id);
+      toast({
+        title: 'Copied!',
+        description: 'Purchase Order ID copied to clipboard.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: 'Could not copy ID to clipboard.',
+      });
+      console.error('Failed to copy ID: ', err);
+    }
+  };
+
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -28,7 +48,7 @@ const PurchaseOrderActions = ({ purchaseOrder }: { purchaseOrder: PurchaseOrder 
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(purchaseOrder.id)}>
+          <DropdownMenuItem onClick={handleCopyId}>
             Copy order ID
           </DropdownMenuItem>
           <DropdownMenuSeparator />

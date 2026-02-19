@@ -15,9 +15,29 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Contact } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 
 const ContactActions = ({ contact }: { contact: Contact }) => {
+  const { toast } = useToast();
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(contact.id);
+      toast({
+        title: 'Copied!',
+        description: 'Contact ID copied to clipboard.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: 'Could not copy ID to clipboard.',
+      });
+      console.error('Failed to copy ID: ', err);
+    }
+  };
+
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -28,7 +48,7 @@ const ContactActions = ({ contact }: { contact: Contact }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(contact.id)}>
+          <DropdownMenuItem onClick={handleCopyId}>
             Copy contact ID
           </DropdownMenuItem>
           <DropdownMenuSeparator />

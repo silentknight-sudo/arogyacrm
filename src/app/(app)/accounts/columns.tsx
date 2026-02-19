@@ -13,8 +13,28 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Account } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 const AccountActions = ({ account }: { account: Account }) => {
+  const { toast } = useToast();
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(account.id);
+      toast({
+        title: 'Copied!',
+        description: 'Account ID copied to clipboard.',
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: 'Could not copy ID to clipboard.',
+      });
+      console.error('Failed to copy ID: ', err);
+    }
+  };
+  
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -25,7 +45,7 @@ const AccountActions = ({ account }: { account: Account }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(account.id)}>
+          <DropdownMenuItem onClick={handleCopyId}>
             Copy account ID
           </DropdownMenuItem>
           <DropdownMenuSeparator />
