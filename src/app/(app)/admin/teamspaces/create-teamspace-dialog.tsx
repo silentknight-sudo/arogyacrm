@@ -21,16 +21,15 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { createNewTeamspace } from './actions';
+import { handleCreateTeamspace } from './actions';
 import { useApp } from '@/context/app-context';
 
-const formSchema = z.object({
-  name: z.string().min(2, 'Teamspace name must be at least 2 characters.'),
-  description: z.string().optional(),
-});
+
+type FormValues = {
+  name: string;
+  description?: string;
+};
 
 type CreateTeamspaceDialogProps = {
   children: React.ReactNode;
@@ -42,21 +41,20 @@ export function CreateTeamspaceDialog({ children }: CreateTeamspaceDialogProps) 
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<FormValues>({
     defaultValues: {
       name: '',
       description: '',
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     if (!currentUser) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a teamspace.' });
         return;
     }
     setIsSubmitting(true);
-    const result = await createNewTeamspace({ ...values, ownerId: currentUser.id });
+    const result = await handleCreateTeamspace({ ...values, ownerId: currentUser.id });
     
     if (result.success) {
       toast({
