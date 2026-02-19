@@ -13,7 +13,7 @@ const CreateTeamspaceSchema = z.object({
 export type CreateTeamspaceInput = z.infer<typeof CreateTeamspaceSchema>;
 type CreateTeamspaceResult = { success: boolean; error?: string; teamspaceId?: string; name?: string; };
 
-export async function adminCreateTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
+export async function createNewTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
     try {
         const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateTeamspaceSchema.parse(values);

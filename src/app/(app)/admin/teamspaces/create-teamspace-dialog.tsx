@@ -24,7 +24,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { adminCreateTeamspace } from './actions';
+import { createNewTeamspace } from './actions';
 import { useApp } from '@/context/app-context';
 
 const formSchema = z.object({
@@ -56,7 +56,7 @@ export function CreateTeamspaceDialog({ children }: CreateTeamspaceDialogProps) 
         return;
     }
     setIsSubmitting(true);
-    const result = await adminCreateTeamspace({ ...values, ownerId: currentUser.id });
+    const result = await createNewTeamspace({ ...values, ownerId: currentUser.id });
     
     if (result.success) {
       toast({
