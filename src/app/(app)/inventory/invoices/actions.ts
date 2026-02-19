@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { LineItemSchema } from '../schemas';
@@ -22,7 +22,6 @@ type CreateInvoiceResult = { success: boolean; error?: string; invoiceId?: strin
 
 export async function createInvoice(values: CreateInvoiceInput): Promise<CreateInvoiceResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateInvoiceSchema.parse(values);
         
         const newInvoiceRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('invoices').doc();

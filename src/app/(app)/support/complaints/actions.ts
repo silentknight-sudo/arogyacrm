@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -19,7 +19,6 @@ type CreateComplaintResult = { success: boolean; error?: string; complaintId?: s
 
 export async function createComplaint(values: CreateComplaintInput): Promise<CreateComplaintResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateComplaintSchema.parse(values);
 
         const newComplaintRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('complaints').doc();

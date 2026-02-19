@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -19,7 +19,6 @@ type CreateAccountResult = { success: boolean; error?: string; accountId?: strin
 
 export async function createAccount(values: CreateAccountInput): Promise<CreateAccountResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateAccountSchema.parse(values);
 
         const newAccountRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('accounts').doc();

@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -18,7 +18,6 @@ type CreateRefundResult = { success: boolean; error?: string; refundId?: string 
 
 export async function createRefund(values: CreateRefundInput): Promise<CreateRefundResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateRefundSchema.parse(values);
 
         const newRefundRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('refunds').doc();

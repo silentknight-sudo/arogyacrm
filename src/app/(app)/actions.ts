@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, FieldValue, serverTimestamp } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 
 // Teamspace Creation
@@ -13,8 +13,6 @@ type CreateTeamspaceResult = { success: boolean; error?: string; teamspaceId?: s
 
 export async function createNewTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
     try {
-        const { adminDb, serverTimestamp, FieldValue } = getAdminInstances();
-        
         if (!values.name || values.name.length < 2) {
             throw new Error('Teamspace name must be at least 2 characters.');
         }

@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -20,7 +20,6 @@ type CreateMeetingResult = { success: boolean; error?: string; meetingId?: strin
 
 export async function createMeeting(values: CreateMeetingInput): Promise<CreateMeetingResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateMeetingSchema.parse(values);
 
         const newMeetingRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('meetings').doc();

@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -22,7 +22,6 @@ type CreateCallResult = { success: boolean; error?: string; callId?: string };
 
 export async function createCall(values: CreateCallInput): Promise<CreateCallResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateCallSchema.parse(values);
 
         const newCallRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('calls').doc();

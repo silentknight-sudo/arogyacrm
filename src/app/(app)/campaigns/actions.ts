@@ -1,7 +1,7 @@
 
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -22,7 +22,6 @@ type CreateCampaignResult = { success: boolean; error?: string; campaignId?: str
 
 export async function createCampaign(values: CreateCampaignInput): Promise<CreateCampaignResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateCampaignSchema.parse(values);
 
         const newCampaignRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('campaigns').doc();

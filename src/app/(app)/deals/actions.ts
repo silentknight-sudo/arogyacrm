@@ -1,7 +1,7 @@
 
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -21,7 +21,6 @@ type CreateDealResult = { success: boolean; error?: string; dealId?: string };
 
 export async function createDeal(values: CreateDealInput): Promise<CreateDealResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateDealSchema.parse(values);
 
         const newDealRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('deals').doc();

@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminAuth, adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -15,7 +15,6 @@ type UpdateProfileResult = { success: boolean; error?: string };
 
 export async function updateUserProfile(values: UpdateProfileInput): Promise<UpdateProfileResult> {
   try {
-    const { adminAuth, adminDb, serverTimestamp } = getAdminInstances();
     const validatedInput = UpdateProfileSchema.parse(values);
 
     const { userId, displayName, avatar } = validatedInput;

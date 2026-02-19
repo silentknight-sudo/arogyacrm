@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -19,7 +19,6 @@ type CreateProductResult = { success: boolean; error?: string; productId?: strin
 
 export async function createProduct(values: CreateProductInput): Promise<CreateProductResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateProductSchema.parse(values);
 
         const newProductRef = adminDb.collection('products').doc();

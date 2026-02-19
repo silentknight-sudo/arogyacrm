@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { LineItemSchema } from '../schemas';
@@ -21,7 +21,6 @@ type CreateQuoteResult = { success: boolean; error?: string; quoteId?: string };
 
 export async function createQuote(values: CreateQuoteInput): Promise<CreateQuoteResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreateQuoteSchema.parse(values);
 
         const newQuoteRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('quotes').doc();

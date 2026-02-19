@@ -1,7 +1,7 @@
 
 'use server';
 
-import { getAdminInstances } from '@/firebase/admin';
+import { adminDb, serverTimestamp } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { LineItemSchema } from '../schemas';
@@ -21,7 +21,6 @@ type CreatePurchaseOrderResult = { success: boolean; error?: string; purchaseOrd
 
 export async function createPurchaseOrder(values: CreatePurchaseOrderInput): Promise<CreatePurchaseOrderResult> {
     try {
-        const { adminDb, serverTimestamp } = getAdminInstances();
         const validatedInput = CreatePurchaseOrderSchema.parse(values);
 
         const newPurchaseOrderRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('purchaseOrders').doc();

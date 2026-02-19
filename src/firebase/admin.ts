@@ -1,18 +1,14 @@
 import * as admin from 'firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
 
-export function getAdminInstances() {
-    if (!admin.apps.length) {
-        try {
-            admin.initializeApp();
-        } catch (e) {
-            console.error('Firebase admin initialization error', e);
-        }
+if (!admin.apps.length) {
+    try {
+        admin.initializeApp();
+    } catch (e) {
+        console.error('Firebase admin initialization error. Ensure server environment is set up correctly.', e);
     }
-    return {
-        adminAuth: admin.auth(),
-        adminDb: admin.firestore(),
-        FieldValue: admin.firestore.FieldValue,
-        serverTimestamp: admin.firestore.FieldValue.serverTimestamp,
-    };
 }
+
+export const adminDb = admin.firestore();
+export const adminAuth = admin.auth();
+export const FieldValue = admin.firestore.FieldValue;
+export const serverTimestamp = admin.firestore.FieldValue.serverTimestamp;
