@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { useToast } from '@/hooks/use-toast';
-import { handleCreateTeamspace } from './actions';
+import { createNewTeamspace } from '@/app/(app)/actions';
 import { useApp } from '@/context/app-context';
 
 
@@ -54,7 +54,7 @@ export function CreateTeamspaceDialog({ children }: CreateTeamspaceDialogProps) 
         return;
     }
     setIsSubmitting(true);
-    const result = await handleCreateTeamspace({ ...values, ownerId: currentUser.id });
+    const result = await createNewTeamspace({ ...values, ownerId: currentUser.id });
     
     if (result.success) {
       toast({

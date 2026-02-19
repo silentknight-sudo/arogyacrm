@@ -3,15 +3,15 @@
 import { getAdminInstances } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 
-// Simplified types to remove Zod dependency for debugging
-type HandleCreateTeamspaceInput = {
+// Teamspace Creation
+type CreateTeamspaceInput = {
   name: string;
   description?: string;
   ownerId: string;
 };
 type CreateTeamspaceResult = { success: boolean; error?: string; teamspaceId?: string; name?: string; };
 
-export async function handleCreateTeamspace(values: HandleCreateTeamspaceInput): Promise<CreateTeamspaceResult> {
+export async function createNewTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
     try {
         const { adminDb, serverTimestamp } = getAdminInstances();
         
@@ -25,18 +25,28 @@ export async function handleCreateTeamspace(values: HandleCreateTeamspaceInput):
         const newTeamspaceRef = adminDb.collection('teamspaces').doc();
         const newTeamspaceId = newTeamspaceRef.id;
 
-        await newTeamspaceRef.set({
-            id: newTeamspaceId,
-            name: values.name,
-            description: values.description || '',
-            ownerId: values.ownerId,
-            memberIds: [values.ownerId],
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
+        // Also add the new teamspace to the owner's user profile
+        const userDocRef = adminDb.collection('users').doc(values.ownerId);
+
+        await adminDb.runTransaction(async (transaction) => {
+            transaction.set(newTeamspaceRef, {
+                id: newTeamspaceId,
+                name: values.name,
+                description: values.description || '',
+                ownerId: values.ownerId,
+                memberIds: [values.ownerId],
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+
+            transaction.update(userDocRef, {
+                teamspaceIds: adminDb.FieldValue.arrayUnion(newTeamspaceId)
+            });
         });
         
         revalidatePath('/admin/teamspaces');
         revalidatePath('/admin/users');
+        revalidatePath('/(app)', 'layout'); // Revalidate layout to update teamspace list
 
         return { success: true, teamspaceId: newTeamspaceId, name: values.name };
 
