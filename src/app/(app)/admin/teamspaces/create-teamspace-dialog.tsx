@@ -24,7 +24,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { createNewTeamspace } from './actions';
+import { adminCreateTeamspace } from '@/ai/flows/admin-create-teamspace-flow';
 import { useApp } from '@/context/app-context';
 
 const formSchema = z.object({
@@ -56,22 +56,23 @@ export function CreateTeamspaceDialog({ children }: CreateTeamspaceDialogProps) 
         return;
     }
     setIsSubmitting(true);
-    const result = await createNewTeamspace({...values, ownerId: currentUser.id });
-    if (result.success) {
+    try {
+      const result = await adminCreateTeamspace({ ...values, ownerId: currentUser.id });
       toast({
         title: 'Teamspace Created',
-        description: `Successfully created teamspace "${values.name}".`,
+        description: `Successfully created teamspace "${result.name}".`,
       });
       setOpen(false);
       form.reset();
-    } else {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Error Creating Teamspace',
-        description: result.error,
+        description: error.message || 'An unexpected error occurred.',
       });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
