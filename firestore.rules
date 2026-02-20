@@ -202,14 +202,15 @@ service cloud.firestore {
       allow delete: if isAdmin() && isExistingDoc();
 
       /**
-       * @description Generic rule for all teamspace subcollections. Access requires being a team member. Writes are further restricted to document owners/assignees.
+       * @description Generic rule for all teamspace subcollections. Access requires being a team member, with an admin override for read operations. Writes are further restricted to document owners/assignees.
        * @path /teamspaces/{teamspaceId}/{subcollection}/{docId}
        * @allow (get) A user in `team_abc`'s `memberIds` list gets a lead document at `/teamspaces/team_abc/leads/lead_123`.
-       * @deny (update) A member of `team_abc` tries to update a lead assigned to another user.
-       * @principle Combines team membership with document ownership for granular control within a team.
+       * @allow (get) An admin can read a document from any teamspace.
+       * @deny (update) A member of `team_abc` tries to update a lead assigned to another user. An admin cannot write to these documents directly unless they are also the owner/assignee.
+       * @principle Combines team membership with document ownership for granular control within a team, with a read-only admin override.
        */
       match /{collection}/{docId} {
-        allow get, list: if isTeamspaceMember(teamspaceId);
+        allow get, list: if isTeamspaceMember(teamspaceId) || isAdmin();
         allow create: if isTeamspaceMember(teamspaceId) && hasValidId(docId) && hasValidTeamspaceId(teamspaceId);
         allow update: if isTeamspaceMember(teamspaceId) && (isExistingOwner(resource.data.ownerId) || isExistingOwner(resource.data.assignedToId) || isExistingOwner(resource.data.callerId) || isExistingOwner(resource.data.uploadedById) || isExistingOwner(resource.data.organizerId) || isExistingOwner(resource.data.requestedById) || isExistingOwner(resource.data.processedById)) && isIdImmutable() && isTeamspaceIdImmutable();
         allow delete: if isTeamspaceMember(teamspaceId) && (isExistingOwner(resource.data.ownerId) || isExistingOwner(resource.data.assignedToId) || isExistingOwner(resource.data.callerId) || isExistingOwner(resource.data.uploadedById) || isExistingOwner(resource.data.organizerId) || isExistingOwner(resource.data.requestedById) || isExistingOwner(resource.data.processedById));
