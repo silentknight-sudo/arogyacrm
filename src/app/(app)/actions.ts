@@ -25,27 +25,26 @@ export async function createNewTeamspace(values: CreateTeamspaceInput): Promise<
 
         const userDocRef = adminDb.collection('users').doc(values.ownerId);
 
-        await adminDb.runTransaction(async (transaction) => {
-            const userDoc = await transaction.get(userDocRef);
-            if (!userDoc.exists) {
-                throw new Error("User profile does not exist. Cannot create teamspace.");
-            }
+        // First, ensure the user profile exists before attempting to write.
+        const userDoc = await userDocRef.get();
+        if (!userDoc.exists) {
+            throw new Error("User profile does not exist. Cannot create teamspace.");
+        }
+        
+        // Step 1: Create the new teamspace document.
+        await newTeamspaceRef.set({
+            id: newTeamspaceId,
+            name: values.name,
+            description: values.description || '',
+            ownerId: values.ownerId,
+            memberIds: [values.ownerId], // Add the owner as the first member.
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
 
-            // 1. Create the new teamspace document
-            transaction.set(newTeamspaceRef, {
-                id: newTeamspaceId,
-                name: values.name,
-                description: values.description || '',
-                ownerId: values.ownerId,
-                memberIds: [values.ownerId],
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-            });
-
-            // 2. Update the user's document with the new teamspace ID
-            transaction.update(userDocRef, {
-                teamspaceIds: FieldValue.arrayUnion(newTeamspaceId)
-            });
+        // Step 2: Atomically add the new teamspace ID to the user's list of teamspaces.
+        await userDocRef.update({
+            teamspaceIds: FieldValue.arrayUnion(newTeamspaceId)
         });
         
         revalidatePath('/admin/teamspaces');
