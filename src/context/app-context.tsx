@@ -31,23 +31,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   , [firestore, authUser]);
   const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const teamspacesQuery = useMemoFirebase(() => {
-    if (!firestore || !currentUser) return null;
+  // WORKAROUND: The teamspace creation and fetching has been unstable.
+  // Using a static list of teamspaces to unblock development.
+  const staticTeamspaces = useMemo(() => {
+    if (!authUser?.uid) return [];
+    return [
+      { id: 'sales-team-1', name: 'Sales Team 1', description: 'Default teamspace for Sales Team 1.', ownerId: authUser.uid, memberIds: [authUser.uid] },
+      { id: 'sales-team-2', name: 'Sales Team 2', description: 'Default teamspace for Sales Team 2.', ownerId: authUser.uid, memberIds: [authUser.uid] },
+      { id: 'sales-team-3', name: 'Sales Team 3', description: 'Default teamspace for Sales Team 3.', ownerId: authUser.uid, memberIds: [authUser.uid] },
+      { id: 'sales-team-4', name: 'Sales Team 4', description: 'Default teamspace for Sales Team 4.', ownerId: authUser.uid, memberIds: [authUser.uid] },
+    ];
+  }, [authUser?.uid]);
 
-    if (currentUser.role === 'admin') {
-      // Admins should see all teamspaces
-      return query(collection(firestore, 'teamspaces'));
-    }
-    
-    // Regular users see only their teamspaces
-    if (currentUser.teamspaceIds?.length) {
-      return query(collection(firestore, 'teamspaces'), where(documentId(), 'in', currentUser.teamspaceIds));
-    }
-    
-    return null;
-  }, [firestore, currentUser]);
-
-  const { data: availableTeamspaces, isLoading: areTeamspacesLoading } = useCollection<Teamspace>(teamspacesQuery);
+  const availableTeamspaces = staticTeamspaces;
+  const areTeamspacesLoading = false;
 
   const [currentTeamspace, setCurrentTeamspaceState] = useState<Teamspace | null>(null);
   const [theme, setThemeState] = useState<Theme>('system');
