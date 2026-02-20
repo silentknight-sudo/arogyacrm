@@ -18,21 +18,20 @@ import { useToast } from '@/hooks/use-toast';
 const AccountActions = ({ account }: { account: Account }) => {
   const { toast } = useToast();
 
-  const handleCopyId = async () => {
-    try {
-      await navigator.clipboard.writeText(account.id);
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(account.id).then(() => {
       toast({
         title: 'Copied!',
         description: 'Account ID copied to clipboard.',
       });
-    } catch (err) {
-      toast({
+    }).catch(err => {
+        toast({
         variant: 'destructive',
         title: 'Copy Failed',
         description: 'Could not copy ID to clipboard.',
       });
       console.error('Failed to copy ID: ', err);
-    }
+    });
   };
   
   return (
@@ -48,9 +47,6 @@ const AccountActions = ({ account }: { account: Account }) => {
           <DropdownMenuItem onClick={handleCopyId}>
             Copy account ID
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuItem>Edit account</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );

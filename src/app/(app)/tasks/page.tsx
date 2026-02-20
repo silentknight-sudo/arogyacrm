@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useApp } from '@/context/app-context';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateTaskDialog } from './create-task-dialog';
 
@@ -80,7 +80,11 @@ export default function TasksPage() {
   
   const { data: tasks, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+  const usersQuery = useMemoFirebase(() => {
+    if (!currentTeamspace || !currentTeamspace.memberIds?.length) return null;
+    return query(collection(firestore, 'users'), where('id', 'in', currentTeamspace.memberIds));
+  }, [firestore, currentTeamspace]);
+  
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const isLoading = isLoadingTasks || isLoadingUsers;

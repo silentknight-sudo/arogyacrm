@@ -6,7 +6,7 @@ import { PlusCircle } from 'lucide-react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Ticket, Contact, UserProfile } from '@/types';
 import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,9 +31,10 @@ export default function TicketsPage() {
   , [firestore, currentTeamspace]);
   const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
 
-  const usersQuery = useMemoFirebase(() =>
-    query(collection(firestore, 'users'))
-  , [firestore]);
+  const usersQuery = useMemoFirebase(() => {
+    if (!currentTeamspace || !currentTeamspace.memberIds?.length) return null;
+    return query(collection(firestore, 'users'), where('id', 'in', currentTeamspace.memberIds));
+  }, [firestore, currentTeamspace]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const isLoading = isLoadingTickets || isLoadingContacts || isLoadingUsers;

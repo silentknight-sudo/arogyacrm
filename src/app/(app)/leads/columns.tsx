@@ -101,21 +101,20 @@ const LeadActions = ({ lead }: { lead: Lead }) => {
     setIsLoading(false);
   };
   
-  const handleCopyId = async () => {
-    try {
-      await navigator.clipboard.writeText(lead.id);
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(lead.id).then(() => {
       toast({
         title: 'Copied!',
         description: 'Lead ID copied to clipboard.',
       });
-    } catch (err) {
+    }).catch(err => {
       toast({
         variant: 'destructive',
         title: 'Copy Failed',
         description: 'Could not copy ID to clipboard.',
       });
       console.error('Failed to copy ID: ', err);
-    }
+    });
   };
 
   return (
@@ -130,18 +129,17 @@ const LeadActions = ({ lead }: { lead: Lead }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={handleCopyId}>
-            Copy lead ID
+           <DropdownMenuItem asChild>
+            <Link href={`/leads/${lead.id}`}>View details</Link>
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleScoreLead} disabled={isLoading}>
             <Bot className="mr-2 h-4 w-4" />
             {isLoading ? 'Scoring...' : 'Score with AI'}
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href={`/leads/${lead.id}`}>View details</Link>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleCopyId}>
+            Copy lead ID
           </DropdownMenuItem>
-          <DropdownMenuItem>Edit lead</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </>

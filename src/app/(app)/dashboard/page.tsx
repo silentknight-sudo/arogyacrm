@@ -22,18 +22,17 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { revenueData } from '@/lib/data';
 import { useApp } from '@/context/app-context';
 import type { Lead, Deal } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
+import { subMonths, format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 
 
 export default function Dashboard() {
     const { currentUser, currentTeamspace } = useApp();
     const firestore = useFirestore();
 
-    // Query for new leads
     const newLeadsQuery = useMemoFirebase(() => 
         currentTeamspace 
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'), where('status', '==', 'New'))
@@ -41,7 +40,6 @@ export default function Dashboard() {
     , [firestore, currentTeamspace]);
     const { data: newLeads, isLoading: isLoadingLeads } = useCollection<Lead>(newLeadsQuery);
 
-    // Query for won deals to calculate revenue
     const wonDealsQuery = useMemoFirebase(() => 
         currentTeamspace 
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'), where('stage', '==', 'Won'))
@@ -49,7 +47,6 @@ export default function Dashboard() {
     , [firestore, currentTeamspace]);
     const { data: wonDeals, isLoading: isLoadingWonDeals } = useCollection<Deal>(wonDealsQuery);
 
-    // Query for all deals to calculate conversion rate
     const allDealsQuery = useMemoFirebase(() => 
         currentTeamspace 
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'))
@@ -57,17 +54,47 @@ export default function Dashboard() {
     , [firestore, currentTeamspace]);
     const { data: allDeals, isLoading: isLoadingAllDeals } = useCollection<Deal>(allDealsQuery);
 
-
     const [totalRevenue, setTotalRevenue] = useState<number | null>(null);
     const [conversionRate, setConversionRate] = useState<number | null>(null);
     const [dealsWonCount, setDealsWonCount] = useState<number | null>(null);
     const [recentLeads, setRecentLeads] = useState<Lead[]>([]);
+    const [monthlyRevenue, setMonthlyRevenue] = useState<Array<{ month: string, revenue: number }>>([]);
 
     useEffect(() => {
         if (wonDeals) {
             const calculatedTotalRevenue = wonDeals.reduce((acc, deal) => acc + deal.amount, 0);
             setTotalRevenue(calculatedTotalRevenue);
             setDealsWonCount(wonDeals.length);
+
+            // Calculate monthly revenue for the last 12 months
+            const twelveMonthsAgo = subMonths(new Date(), 11);
+            const today = new Date();
+            const interval = { start: startOfMonth(twelveMonthsAgo), end: endOfMonth(today) };
+            
+            const months = eachMonthOfInterval(interval).map(d => ({
+                month: format(d, 'MMM'),
+                revenue: 0,
+            }));
+
+            const revenueByMonth = months.reduce((acc, monthData) => {
+                acc[monthData.month] = 0;
+                return acc;
+            }, {} as Record<string, number>);
+
+            wonDeals.forEach(deal => {
+                const closeDate = new Date(deal.closeDate);
+                if (closeDate >= interval.start && closeDate <= interval.end) {
+                    const month = format(closeDate, 'MMM');
+                    revenueByMonth[month] = (revenueByMonth[month] || 0) + deal.amount;
+                }
+            });
+
+            const chartData = months.map(m => ({
+                month: m.month,
+                revenue: revenueByMonth[m.month] || 0,
+            }));
+
+            setMonthlyRevenue(chartData);
         }
 
         if (allDeals && wonDeals) {
@@ -138,7 +165,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="pl-2">
                 <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={revenueData}>
+                    <BarChart data={monthlyRevenue}>
                     <XAxis
                         dataKey="month"
                         stroke="#888888"

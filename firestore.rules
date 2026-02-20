@@ -241,8 +241,8 @@ service cloud.firestore {
       match /{collection}/{docId} {
         allow get, list: if isTeamspaceMember(teamspaceId);
         allow create: if isTeamspaceMember(teamspaceId) && hasValidId(docId) && hasValidTeamspaceId(teamspaceId);
-        allow update: if isTeamspaceMember(teamspaceId) && isExistingOwner(resource.data.ownerId) || isExistingOwner(resource.data.assignedToId) || isExistingOwner(resource.data.callerId) || isExistingOwner(resource.data.uploadedById) || isExistingOwner(resource.data.organizerId) || isExistingOwner(resource.data.requestedById) || isExistingOwner(resource.data.processedById) && isIdImmutable() && isTeamspaceIdImmutable();
-        allow delete: if isTeamspaceMember(teamspaceId) && isExistingOwner(resource.data.ownerId) || isExistingOwner(resource.data.assignedToId) || isExistingOwner(resource.data.callerId) || isExistingOwner(resource.data.uploadedById) || isExistingOwner(resource.data.organizerId) || isExistingOwner(resource.data.requestedById) || isExistingOwner(resource.data.processedById);
+        allow update: if isTeamspaceMember(teamspaceId) && (isExistingOwner(resource.data.ownerId) || isExistingOwner(resource.data.assignedToId) || isExistingOwner(resource.data.callerId) || isExistingOwner(resource.data.uploadedById) || isExistingOwner(resource.data.organizerId) || isExistingOwner(resource.data.requestedById) || isExistingOwner(resource.data.processedById)) && isIdImmutable() && isTeamspaceIdImmutable();
+        allow delete: if isTeamspaceMember(teamspaceId) && (isExistingOwner(resource.data.ownerId) || isExistingOwner(resource.data.assignedToId) || isExistingOwner(resource.data.callerId) || isExistingOwner(resource.data.uploadedById) || isExistingOwner(resource.data.organizerId) || isExistingOwner(resource.data.requestedById) || isExistingOwner(resource.data.processedById));
       }
 
       /**

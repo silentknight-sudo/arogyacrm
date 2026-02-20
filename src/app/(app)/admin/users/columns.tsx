@@ -21,21 +21,20 @@ import { useToast } from '@/hooks/use-toast';
 const UserActions = ({ user }: { user: UserProfile }) => {
   const { toast } = useToast();
 
-  const handleCopyId = async () => {
-    try {
-      await navigator.clipboard.writeText(user.id);
-      toast({
-        title: 'Copied!',
-        description: 'User ID copied to clipboard.',
-      });
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Copy Failed',
-        description: 'Could not copy ID to clipboard.',
-      });
-      console.error('Failed to copy ID: ', err);
-    }
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(user.id).then(() => {
+        toast({
+            title: 'Copied!',
+            description: 'User ID copied to clipboard.',
+        });
+    }).catch(err => {
+        toast({
+            variant: 'destructive',
+            title: 'Copy Failed',
+            description: 'Could not copy ID to clipboard.',
+        });
+        console.error('Failed to copy ID: ', err);
+    });
   };
 
   return (
@@ -51,9 +50,6 @@ const UserActions = ({ user }: { user: UserProfile }) => {
           <DropdownMenuItem onClick={handleCopyId}>
             Copy user ID
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Edit user</DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive">Delete user</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );

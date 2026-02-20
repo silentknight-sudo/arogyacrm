@@ -48,14 +48,14 @@ const menuItems = [
             { href: '/contacts', label: 'Contacts', icon: Contact },
             { href: '/accounts', label: 'Accounts', icon: Building2 },
             { href: '/deals', label: 'Deals', icon: Handshake },
-            { href: '/forecasts', label: 'Forecasts', icon: TrendingUp },
+            // { href: '/forecasts', label: 'Forecasts', icon: TrendingUp },
         ],
     },
     {
         title: 'Marketing',
         items: [
             { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
-            { href: '/documents', label: 'Documents', icon: FileText },
+            // { href: '/documents', label: 'Documents', icon: FileText },
         ],
     },
     {
@@ -70,7 +70,7 @@ const menuItems = [
         title: 'Inventory',
         items: [
             { href: '/inventory/products', label: 'Products', icon: Package },
-            { href: '/inventory/price-books', label: 'Price Books', icon: Book },
+            // { href: '/inventory/price-books', label: 'Price Books', icon: Book },
             { href: '/inventory/quotes', label: 'Quotes', icon: FileQuestion },
             { href: '/inventory/sales-orders', label: 'Sales Orders', icon: ShoppingCart },
             { href: '/inventory/purchase-orders', label: 'Purchase Orders', icon: FilePlus2 },
@@ -89,8 +89,8 @@ const menuItems = [
         title: 'Analytics',
         items: [
             { href: '/analytics/reports', label: 'Reports', icon: BarChart3 },
-            { href: '/analytics/revenue-dashboard', label: 'Revenue Dashboard', icon: TrendingUp },
-            { href: '/analytics/marketing-roi', label: 'Marketing ROI', icon: Target },
+            // { href: '/analytics/revenue-dashboard', label: 'Revenue Dashboard', icon: TrendingUp },
+            // { href: '/analytics/marketing-roi', label: 'Marketing ROI', icon: Target },
         ],
     },
 ];

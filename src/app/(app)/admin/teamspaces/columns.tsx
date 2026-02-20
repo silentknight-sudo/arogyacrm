@@ -18,21 +18,20 @@ import { useToast } from '@/hooks/use-toast';
 const TeamspaceActions = ({ teamspace }: { teamspace: Teamspace }) => {
   const { toast } = useToast();
 
-  const handleCopyId = async () => {
-    try {
-      await navigator.clipboard.writeText(teamspace.id);
-      toast({
-        title: 'Copied!',
-        description: 'Teamspace ID copied to clipboard.',
-      });
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Copy Failed',
-        description: 'Could not copy ID to clipboard.',
-      });
-      console.error('Failed to copy ID: ', err);
-    }
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(teamspace.id).then(() => {
+        toast({
+            title: 'Copied!',
+            description: 'Teamspace ID copied to clipboard.',
+        });
+    }).catch(err => {
+        toast({
+            variant: 'destructive',
+            title: 'Copy Failed',
+            description: 'Could not copy ID to clipboard.',
+        });
+        console.error('Failed to copy ID: ', err);
+    });
   };
 
   return (
@@ -48,9 +47,6 @@ const TeamspaceActions = ({ teamspace }: { teamspace: Teamspace }) => {
           <DropdownMenuItem onClick={handleCopyId}>
             Copy teamspace ID
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Edit teamspace</DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive">Delete teamspace</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );
