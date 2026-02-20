@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import type { UserProfile, Teamspace } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
+import { doc, collection, query, where, documentId } from 'firebase/firestore';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -41,7 +41,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     // Regular users see only their teamspaces
     if (currentUser.teamspaceIds?.length) {
-      return query(collection(firestore, 'teamspaces'), where('id', 'in', currentUser.teamspaceIds));
+      return query(collection(firestore, 'teamspaces'), where(documentId(), 'in', currentUser.teamspaceIds));
     }
     
     return null;

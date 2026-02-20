@@ -135,6 +135,18 @@ service cloud.firestore {
       return request.resource.data.teamspaceId == resource.data.teamspaceId;
     }
 
+    /**
+     * Checks if the requesting user and the user of the document being accessed
+     * share at least one common teamspace.
+     */
+    function hasSharedTeamspace(targetUserId) {
+      let requestUserTeamspaces = getUserData().teamspaceIds;
+      let targetUserTeamspaces = get(/databases/$(database)/documents/users/$(targetUserId)).data.teamspaceIds;
+      // .hasAny() checks if any element in the first list exists in the second list.
+      // This is efficient for checking for any overlap.
+      return isSignedIn() && requestUserTeamspaces.hasAny(targetUserTeamspaces);
+    }
+
     // -------------------------------------------------------------------------
     // User Profiles
     // -------------------------------------------------------------------------
@@ -147,7 +159,7 @@ service cloud.firestore {
      * @principle Restricts access to a user's own data tree and grants admin override for management.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow get: if isOwner(userId) || isAdmin() || hasSharedTeamspace(userId);
       allow list: if isAdmin();
       allow create: if isAdmin() && hasValidId(userId); // Admins create users
       allow update: if (isOwner(userId) || isAdmin()) && isExistingDoc() && isIdImmutable();
@@ -172,48 +184,6 @@ service cloud.firestore {
       allow delete: if isAdmin() && isExistingDoc();
     }
     
-    /**
-     * @description Manages price books. Any signed-in user can read, but only admins can modify.
-     * @path /priceBooks/{priceBookId}
-     * @allow (list) Any signed-in user lists the `/priceBooks` collection.
-     * @deny (update) A non-admin user attempts to update a price book.
-     * @principle Provides public read access for pricing data while securing writes for administrators.
-     */
-    match /priceBooks/{priceBookId} {
-      allow get, list: if isSignedIn();
-      allow create: if isAdmin() && hasValidId(priceBookId);
-      allow update: if isAdmin() && isExistingDoc() && isIdImmutable();
-      allow delete: if isAdmin() && isExistingDoc();
-    }
-
-    /**
-     * @description Manages individual product prices. Any signed-in user can read, but only admins can modify.
-     * @path /productPrices/{productPriceId}
-     * @allow (get) Any signed-in user requests `/productPrices/pp_123`.
-     * @deny (delete) A non-admin user attempts to delete a product price.
-     * @principle Provides public read access for pricing data while securing writes for administrators.
-     */
-    match /productPrices/{productPriceId} {
-      allow get, list: if isSignedIn();
-      allow create: if isAdmin() && hasValidId(productPriceId);
-      allow update: if isAdmin() && isExistingDoc() && isIdImmutable();
-      allow delete: if isAdmin() && isExistingDoc();
-    }
-    
-    /**
-     * @description Manages product inventory levels. Any signed-in user can read, but only admins can modify.
-     * @path /stock/{stockId}
-     * @allow (list) Any signed-in user lists the `/stock` collection.
-     * @deny (create) A non-admin user attempts to create a new stock record.
-     * @principle Provides public read access for inventory data while securing writes for administrators.
-     */
-    match /stock/{stockId} {
-      allow get, list: if isSignedIn();
-      allow create: if isAdmin() && hasValidId(stockId);
-      allow update: if isAdmin() && isExistingDoc() && isIdImmutable();
-      allow delete: if isAdmin() && isExistingDoc();
-    }
-
     // -------------------------------------------------------------------------
     // Teamspace & Scoped Data
     // -------------------------------------------------------------------------
@@ -258,10 +228,6 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if false;
       }
-
-      // -------------------------------------------------------------------------
-      // Line Item Sub-Subcollections
-      // -------------------------------------------------------------------------
 
       /**
        * @description Generic rule for all line item sub-subcollections. Access is granted based on teamspace membership.
