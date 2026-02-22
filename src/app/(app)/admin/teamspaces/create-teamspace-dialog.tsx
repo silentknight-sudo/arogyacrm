@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { useToast } from '@/hooks/use-toast';
-import { createNewTeamspace } from '@/app/(app)/actions';
+import { createTeamspace } from './actions';
 import { useApp } from '@/context/app-context';
 
 
@@ -39,7 +40,7 @@ export function CreateTeamspaceDialog({ children }: CreateTeamspaceDialogProps) 
   const { toast } = useToast();
   const { currentUser } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<FormValues>({
     defaultValues: {
@@ -48,29 +49,29 @@ export function CreateTeamspaceDialog({ children }: CreateTeamspaceDialogProps) 
     },
   });
 
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = (values: FormValues) => {
     if (!currentUser) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a teamspace.' });
         return;
     }
-    setIsSubmitting(true);
-    const result = await createNewTeamspace({ ...values, ownerId: currentUser.id });
-    
-    if (result.success) {
-      toast({
-        title: 'Teamspace Created',
-        description: `Successfully created teamspace "${result.name}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Teamspace',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+    startTransition(async () => {
+        const result = await createTeamspace({ ...values, ownerId: currentUser.id });
+        
+        if (result.success) {
+        toast({
+            title: 'Teamspace Created',
+            description: `Successfully created teamspace "${result.name}".`,
+        });
+        setOpen(false);
+        form.reset();
+        } else {
+        toast({
+            variant: 'destructive',
+            title: 'Error Creating Teamspace',
+            description: result.error,
+        });
+        }
+    });
   };
 
   return (
@@ -111,8 +112,8 @@ export function CreateTeamspaceDialog({ children }: CreateTeamspaceDialogProps) 
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? 'Creating...' : 'Create Teamspace'}
+            <Button type="submit" disabled={isPending} className="w-full">
+              {isPending ? 'Creating...' : 'Create Teamspace'}
             </Button>
           </form>
         </Form>
