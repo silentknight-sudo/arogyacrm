@@ -20,16 +20,16 @@ export async function createNewTeamspace(values: CreateTeamspaceInput): Promise<
             throw new Error('Owner ID is required.');
         }
 
-        const newTeamspaceRef = adminDb.collection('teamspaces').doc();
-        const newTeamspaceId = newTeamspaceRef.id;
-
         const userDocRef = adminDb.collection('users').doc(values.ownerId);
-
+        
         // First, ensure the user profile exists before attempting to write.
         const userDoc = await userDocRef.get();
         if (!userDoc.exists) {
             throw new Error("User profile does not exist. Cannot create teamspace.");
         }
+        
+        const newTeamspaceRef = adminDb.collection('teamspaces').doc();
+        const newTeamspaceId = newTeamspaceRef.id;
         
         // Step 1: Create the new teamspace document.
         await newTeamspaceRef.set({

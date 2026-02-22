@@ -80,18 +80,20 @@ export default function Dashboard() {
                 acc[monthData.month] = 0;
                 return acc;
             }, {} as Record<string, number>);
-
+            
             wonDeals.forEach(deal => {
                 const closeDate = new Date(deal.closeDate);
                 if (closeDate >= interval.start && closeDate <= interval.end) {
                     const month = format(closeDate, 'MMM');
-                    revenueByMonth[month] = (revenueByMonth[month] || 0) + deal.amount;
+                    if (revenueByMonth[month] !== undefined) {
+                      revenueByMonth[month] += deal.amount;
+                    }
                 }
             });
 
-            const chartData = months.map(m => ({
-                month: m.month,
-                revenue: revenueByMonth[m.month] || 0,
+            const chartData = Object.keys(revenueByMonth).map(month => ({
+                month: month,
+                revenue: revenueByMonth[month] || 0,
             }));
 
             setMonthlyRevenue(chartData);
@@ -124,7 +126,6 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                 <div className="text-2xl font-bold">{!isLoadingMetrics && totalRevenue !== null ? `₹${totalRevenue.toLocaleString('en-IN')}` : 'Loading...'}</div>
-                <p className="text-xs text-muted-foreground">+20.1% from last month</p>
                 </CardContent>
             </Card>
             <Card>
@@ -134,7 +135,6 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                 <div className="text-2xl font-bold">{!isLoadingMetrics && newLeads ? `+${newLeads.length}` : 'Loading...'}</div>
-                <p className="text-xs text-muted-foreground">+180.1% from last month</p>
                 </CardContent>
             </Card>
             <Card>
@@ -144,7 +144,6 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                 <div className="text-2xl font-bold">{!isLoadingMetrics && conversionRate !== null ? `${conversionRate.toFixed(1)}%` : 'Loading...'}</div>
-                <p className="text-xs text-muted-foreground">+19% from last month</p>
                 </CardContent>
             </Card>
             <Card>
@@ -154,7 +153,6 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                 <div className="text-2xl font-bold">{!isLoadingMetrics && dealsWonCount !== null ? `+${dealsWonCount}` : 'Loading...'}</div>
-                <p className="text-xs text-muted-foreground">+2 since last month</p>
                 </CardContent>
             </Card>
             </div>
