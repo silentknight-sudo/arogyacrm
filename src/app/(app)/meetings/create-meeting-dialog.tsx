@@ -129,39 +129,46 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
               <FormField control={form.control} name="location" render={({ field }) => (
                 <FormItem><FormLabel>Location</FormLabel><FormControl><Input placeholder="Zoom Link / Conference Room" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              <FormField control={form.control} name="attendeeIds" render={() => (
-                <FormItem>
+              <FormField
+                control={form.control}
+                name="attendeeIds"
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel>Attendees</FormLabel>
                     <div className="max-h-40 overflow-y-auto space-y-2 rounded-md border p-2">
-                        {allAttendees.map((item) => (
-                        <FormField
-                            key={item.id}
-                            control={form.control}
-                            name="attendeeIds"
-                            render={({ field }) => {
-                            return (
-                                <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-y-0">
-                                <FormControl>
-                                    <Checkbox
-                                    checked={(field.value || []).includes(item.id)}
-                                    onCheckedChange={(checked) => {
-                                        return checked
-                                        ? field.onChange([...(field.value || []), item.id])
-                                        : field.onChange( (field.value || []).filter( (value) => value !== item.id))
-                                    }}
-                                    />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                    {'displayName' in item ? item.displayName : `${item.firstName} ${item.lastName}`}
-                                </FormLabel>
-                                </FormItem>
-                            )
-                            }}
-                        />
-                        ))}
+                      {allAttendees.map((item) => (
+                        <FormItem
+                          key={item.id}
+                          className="flex flex-row items-start space-x-3 space-y-0"
+                        >
+                          <FormControl>
+                            <Checkbox
+                              checked={(field.value || []).includes(item.id)}
+                              onCheckedChange={(checked) => {
+                                return checked
+                                  ? field.onChange([
+                                      ...(field.value || []),
+                                      item.id,
+                                    ])
+                                  : field.onChange(
+                                      (field.value || []).filter(
+                                        (value) => value !== item.id
+                                      )
+                                    );
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            {'displayName' in item
+                              ? item.displayName
+                              : `${item.firstName} ${item.lastName}`}
+                          </FormLabel>
+                        </FormItem>
+                      ))}
                     </div>
-                </FormItem>
-              )}
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
 
               <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
@@ -174,4 +181,3 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
     </Dialog>
   );
 }
-    

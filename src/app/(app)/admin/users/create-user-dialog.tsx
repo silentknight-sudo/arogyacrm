@@ -165,69 +165,63 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 )}
                 />
                 <FormField
-                control={form.control}
-                name="teamspaceIds"
-                render={() => (
+                  control={form.control}
+                  name="teamspaceIds"
+                  render={({ field }) => (
                     <FormItem>
-                    <div className="mb-4">
+                      <div className="mb-4">
                         <FormLabel className="text-base">Teamspaces</FormLabel>
                         <FormDescription>
-                        Select the teamspaces this user will belong to.
+                          Select the teamspaces this user will belong to.
                         </FormDescription>
-                    </div>
-                    {isLoadingTeamspaces ? (
+                      </div>
+                      {isLoadingTeamspaces ? (
                         <div className="space-y-3">
-                        <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2">
                             <Skeleton className="h-4 w-4" />
                             <Skeleton className="h-4 w-[250px]" />
-                        </div>
-                        <div className="flex items-center space-x-2">
+                          </div>
+                          <div className="flex items-center space-x-2">
                             <Skeleton className="h-4 w-4" />
                             <Skeleton className="h-4 w-[200px]" />
+                          </div>
                         </div>
-                        </div>
-                    ) : teamspaces.length > 0 ? (
+                      ) : teamspaces.length > 0 ? (
                         teamspaces.map((item) => (
-                        <FormField
+                          <FormItem
                             key={item.id}
-                            control={form.control}
-                            name="teamspaceIds"
-                            render={({ field }) => {
-                            return (
-                                <FormItem
-                                key={item.id}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                                >
-                                <FormControl>
-                                    <Checkbox
-                                    checked={(field.value || []).includes(item.id)}
-                                    onCheckedChange={(checked) => {
-                                        return checked
-                                        ? field.onChange([...(field.value || []), item.id])
-                                        : field.onChange(
-                                            (field.value || []).filter(
-                                                (value) => value !== item.id
-                                            )
-                                            )
-                                    }}
-                                    />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                    {item.name}
-                                </FormLabel>
-                                </FormItem>
-                            )
-                            }}
-                        />
+                            className="flex flex-row items-start space-x-3 space-y-0"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={(field.value || []).includes(item.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([
+                                        ...(field.value || []),
+                                        item.id,
+                                      ])
+                                    : field.onChange(
+                                        (field.value || []).filter(
+                                          (value) => value !== item.id
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              {item.name}
+                            </FormLabel>
+                          </FormItem>
                         ))
-                    ) : (
+                      ) : (
                         <div className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
-                            No teamspaces found. Please create one in Admin &gt; Teamspaces first.
+                          No teamspaces found. Please create one first.
                         </div>
-                    )}
-                    <FormMessage />
+                      )}
+                      <FormMessage />
                     </FormItem>
-                )}
+                  )}
                 />
                 <Button type="submit" disabled={isSubmitting || isLoadingTeamspaces || teamspaces.length === 0} className="w-full">
                 {isSubmitting ? 'Creating User...' : 'Create User'}
