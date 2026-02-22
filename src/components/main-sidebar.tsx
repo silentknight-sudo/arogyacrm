@@ -21,6 +21,7 @@ import {
   BarChart3,
   LayoutDashboard,
   ChevronDown,
+  FileQuestion,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
