@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +43,7 @@ export function CreateAccountDialog({ children }: CreateAccountDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,33 +56,34 @@ export function CreateAccountDialog({ children }: CreateAccountDialogProps) {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace to create an account.' });
         return;
     }
-    setIsSubmitting(true);
-    const result = await createAccount({
-        ...values,
-        ownerId: currentUser.id,
-        teamspaceId: currentTeamspace.id,
-    });
+    
+    startTransition(async () => {
+        const result = await createAccount({
+            ...values,
+            ownerId: currentUser.id,
+            teamspaceId: currentTeamspace.id,
+        });
 
-    if (result.success) {
-      toast({
-        title: 'Account Created',
-        description: `Successfully created account "${values.name}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Account',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+        if (result.success) {
+        toast({
+            title: 'Account Created',
+            description: `Successfully created account "${values.name}".`,
+        });
+        setOpen(false);
+        form.reset();
+        } else {
+        toast({
+            variant: 'destructive',
+            title: 'Error Creating Account',
+            description: result.error,
+        });
+        }
+    });
   };
 
   return (
@@ -114,8 +115,8 @@ export function CreateAccountDialog({ children }: CreateAccountDialogProps) {
                     <FormItem><FormLabel>Address (Optional)</FormLabel><FormControl><Textarea placeholder="123 Main St, Anytown, USA" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
 
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                <Button type="submit" disabled={isPending} className="w-full">
+                    {isPending ? 'Creating Account...' : 'Create Account'}
                 </Button>
             </form>
             </Form>
