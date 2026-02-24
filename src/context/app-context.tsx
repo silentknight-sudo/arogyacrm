@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useMemo, useEffect } from '
 import { useRouter } from 'next/navigation';
 import type { UserProfile, Teamspace } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, query, where, documentId } from 'firebase/firestore';
+import { doc, collection, query, where, documentId, getDoc } from 'firebase/firestore';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -33,13 +33,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   , [firestore, authUser]);
   const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const teamspacesQuery = useMemoFirebase(() =>
-      currentUser && currentUser.teamspaceIds && currentUser.teamspaceIds.length > 0
-      ? query(collection(firestore, 'teamspaces'), where(documentId(), 'in', currentUser.teamspaceIds))
+  // New logic for fetching teamspaces
+  const [availableTeamspaces, setAvailableTeamspaces] = useState<Teamspace[]>([]);
+  const [areTeamspacesLoading, setAreTeamspacesLoading] = useState(true);
+
+  // Admin users can subscribe to all teamspaces in real-time
+  const adminTeamspacesQuery = useMemoFirebase(() =>
+    currentUser?.role === 'admin'
+      ? query(collection(firestore, 'teamspaces'))
       : null
   , [firestore, currentUser]);
+  const { data: adminTeamspaces, isLoading: isAdminTeamspacesLoading } = useCollection<Teamspace>(adminTeamspacesQuery);
+  
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      setAvailableTeamspaces(adminTeamspaces || []);
+      setAreTeamspacesLoading(isAdminTeamspacesLoading);
+    }
+  }, [adminTeamspaces, isAdminTeamspacesLoading, currentUser?.role]);
+  
+  // Non-admin users must fetch their teamspaces individually to comply with security rules
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'admin') {
+      const teamspaceIds = currentUser.teamspaceIds;
+      if (!teamspaceIds || teamspaceIds.length === 0) {
+        setAvailableTeamspaces([]);
+        setAreTeamspacesLoading(false);
+        return;
+      }
 
-  const { data: availableTeamspaces, isLoading: areTeamspacesLoading } = useCollection<Teamspace>(teamspacesQuery);
+      setAreTeamspacesLoading(true);
+      const fetchTeamspaces = async () => {
+        try {
+          // This avoids a 'list' operation by fetching each document directly.
+          const promises = teamspaceIds.map(id => getDoc(doc(firestore, 'teamspaces', id)));
+          const docSnapshots = await Promise.all(promises);
+          const teams = docSnapshots
+            .filter(snap => snap.exists())
+            .map(snap => ({ id: snap.id, ...snap.data() } as Teamspace));
+          setAvailableTeamspaces(teams);
+        } catch (error) {
+          console.error("Error fetching user's teamspaces:", error);
+          setAvailableTeamspaces([]);
+        } finally {
+          setAreTeamspacesLoading(false);
+        }
+      };
+
+      fetchTeamspaces();
+    }
+  }, [currentUser, firestore]);
 
 
   const [currentTeamspace, setCurrentTeamspaceState] = useState<Teamspace | null>(null);
@@ -50,10 +93,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!currentTeamspace || !availableTeamspaces.some(ts => ts.id === currentTeamspace.id)) {
         setCurrentTeamspaceState(availableTeamspaces[0]);
       }
-    } else {
+    } else if (!areTeamspacesLoading) {
         setCurrentTeamspaceState(null);
     }
-  }, [availableTeamspaces, currentTeamspace]);
+  }, [availableTeamspaces, currentTeamspace, areTeamspacesLoading]);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('arogya-crm-theme') as Theme | null;
@@ -83,10 +126,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setThemeState(theme);
   };
 
-  const logout = () => {
-    auth.signOut().then(() => {
-      router.push('/login');
-    });
+  const logout = async () => {
+    await auth.signOut();
+    router.push('/login');
   };
 
   const value = {
