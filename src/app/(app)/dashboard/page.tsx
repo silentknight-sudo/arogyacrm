@@ -31,7 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function Dashboard() {
-    const { currentUser, currentTeamspace } = useApp();
+    const { currentUser, currentTeamspace, isUserLoading } = useApp();
     const firestore = useFirestore();
 
     const newLeadsQuery = useMemoFirebase(() => 
