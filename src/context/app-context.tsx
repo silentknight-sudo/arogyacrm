@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { UserProfile, Teamspace } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { doc, collection, query, where, documentId } from 'firebase/firestore';
@@ -25,6 +26,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const auth = useAuth();
   const firestore = useFirestore();
+  const router = useRouter();
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, 'users', authUser.uid) : null
@@ -82,7 +84,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    auth?.signOut();
+    auth.signOut().then(() => {
+      router.push('/login');
+    });
   };
 
   const value = {
