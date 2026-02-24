@@ -13,13 +13,17 @@ import { useApp } from '@/context/app-context';
 
 export default function UserManagementPage() {
   const firestore = useFirestore();
-  const { availableTeamspaces, areTeamspacesLoading } = useApp();
+  const { availableTeamspaces, areTeamspacesLoading, currentUser } = useApp();
 
   const usersQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'users'))
-  , [firestore]);
+    currentUser?.role === 'admin'
+      ? query(collection(firestore, 'users'))
+      : null
+  , [firestore, currentUser]);
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+
+  const displayLoadingState = isLoading || !currentUser || currentUser.role !== 'admin';
 
   return (
     <div className="space-y-4">
@@ -42,14 +46,14 @@ export default function UserManagementPage() {
                 </CreateUserDialog>
             </div>
         </div>
-        {isLoading && (
+        {displayLoadingState && (
             <div className="space-y-2">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
             </div>
         )}
-        {!isLoading && <DataTable columns={columns} data={users || []} />}
+        {!displayLoadingState && <DataTable columns={columns} data={users || []} />}
     </div>
   );
 }

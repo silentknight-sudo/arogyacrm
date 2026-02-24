@@ -9,15 +9,21 @@ import { collection, query } from 'firebase/firestore';
 import type { Teamspace } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateTeamspaceDialog } from './create-teamspace-dialog';
+import { useApp } from '@/context/app-context';
 
 export default function TeamspaceManagementPage() {
   const firestore = useFirestore();
+  const { currentUser } = useApp();
 
   const teamspacesQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'teamspaces'))
-  , [firestore]);
+    currentUser?.role === 'admin'
+      ? query(collection(firestore, 'teamspaces'))
+      : null
+  , [firestore, currentUser]);
 
   const { data: teamspaces, isLoading } = useCollection<Teamspace>(teamspacesQuery);
+
+  const displayLoadingState = isLoading || !currentUser || currentUser.role !== 'admin';
 
   return (
     <div className="space-y-4">
@@ -37,14 +43,14 @@ export default function TeamspaceManagementPage() {
                 </CreateTeamspaceDialog>
             </div>
         </div>
-        {isLoading && (
+        {displayLoadingState && (
             <div className="space-y-2">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
             </div>
         )}
-        {!isLoading && <DataTable columns={columns} data={teamspaces || []} />}
+        {!displayLoadingState && <DataTable columns={columns} data={teamspaces || []} />}
     </div>
   );
 }
