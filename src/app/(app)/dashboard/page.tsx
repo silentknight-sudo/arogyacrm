@@ -33,6 +33,7 @@ export default function Dashboard() {
     const { currentUser, currentTeamspace } = useApp();
     const firestore = useFirestore();
 
+    // Query for all new leads to get an accurate count
     const newLeadsQuery = useMemoFirebase(() => 
         currentTeamspace 
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'), where('status', '==', 'New'))
@@ -66,37 +67,31 @@ export default function Dashboard() {
             setTotalRevenue(calculatedTotalRevenue);
             setDealsWonCount(wonDeals.length);
 
-            // Calculate monthly revenue for the last 12 months
-            const twelveMonthsAgo = subMonths(new Date(), 11);
+            // Calculate monthly revenue for the last 12 months, ensuring correct chronological order.
             const today = new Date();
-            const interval = { start: startOfMonth(twelveMonthsAgo), end: endOfMonth(today) };
+            const twelveMonthsAgo = startOfMonth(subMonths(today, 11));
+            const interval = { start: twelveMonthsAgo, end: endOfMonth(today) };
             
-            const months = eachMonthOfInterval(interval).map(d => ({
-                month: format(d, 'MMM'),
+            const monthIntervals = eachMonthOfInterval(interval);
+            const revenueByMonth = monthIntervals.map(monthStart => ({
+                month: format(monthStart, 'MMM'),
                 revenue: 0,
             }));
 
-            const revenueByMonth = months.reduce((acc, monthData) => {
-                acc[monthData.month] = 0;
-                return acc;
-            }, {} as Record<string, number>);
-            
             wonDeals.forEach(deal => {
-                const closeDate = new Date(deal.closeDate);
-                if (closeDate >= interval.start && closeDate <= interval.end) {
-                    const month = format(closeDate, 'MMM');
-                    if (revenueByMonth[month] !== undefined) {
-                      revenueByMonth[month] += deal.amount;
+                // Ensure closeDate is valid and can be converted to a Date object.
+                // Firestore timestamps will have a toDate() method.
+                const closeDate = deal.closeDate && (typeof deal.closeDate === 'string' ? new Date(deal.closeDate) : deal.closeDate.toDate());
+                if (closeDate && closeDate >= interval.start && closeDate <= interval.end) {
+                    const monthStr = format(closeDate, 'MMM');
+                    const monthEntry = revenueByMonth.find(m => m.month === monthStr);
+                    if (monthEntry) {
+                      monthEntry.revenue += deal.amount;
                     }
                 }
             });
 
-            const chartData = Object.keys(revenueByMonth).map(month => ({
-                month: month,
-                revenue: revenueByMonth[month] || 0,
-            }));
-
-            setMonthlyRevenue(chartData);
+            setMonthlyRevenue(revenueByMonth);
         }
 
         if (allDeals && wonDeals) {
@@ -105,7 +100,13 @@ export default function Dashboard() {
         }
         
         if (newLeads) {
-            setRecentLeads(newLeads.slice(0, 5));
+            // Sort leads by creation date to get the most recent ones.
+            const sortedLeads = [...newLeads].sort((a, b) => {
+                const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+                const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+                return dateB - dateA;
+            });
+            setRecentLeads(sortedLeads.slice(0, 5));
         }
 
     }, [newLeads, wonDeals, allDeals]);
@@ -200,7 +201,7 @@ export default function Dashboard() {
                 <CardHeader>
                 <CardTitle>Recent Leads</CardTitle>
                 <CardDescription>
-                    You have {newLeads?.length || 0} new leads this month.
+                    You have {newLeads?.length || 0} new leads in total.
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -216,7 +217,7 @@ export default function Dashboard() {
                                 <div className="ml-auto font-medium">{lead.source}</div>
                             </div>
                         )) : (
-                           <p className="text-sm text-muted-foreground">No new leads this month.</p>
+                           <p className="text-sm text-muted-foreground">No new leads. Great job!</p>
                         )}
                     </div>
                 </CardContent>
