@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +79,31 @@ export function CreateQuoteDialog({ children, accounts, contacts, products, isLo
     name: 'lineItems',
   });
 
+  const handleProductChange = (index: number, productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      const currentItem = fields[index];
+      update(index, {
+        ...currentItem,
+        productId: product.id,
+        productName: product.name,
+        unitPrice: product.price,
+        subtotal: product.price * (currentItem.quantity || 1),
+      });
+    }
+  };
+
+  const handleQuantityChange = (index: number, quantity: number) => {
+    const currentItem = fields[index];
+    if (currentItem) {
+      update(index, {
+        ...currentItem,
+        quantity,
+        subtotal: currentItem.unitPrice * quantity,
+      });
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
@@ -147,10 +172,13 @@ export function CreateQuoteDialog({ children, accounts, contacts, products, isLo
                     {fields.map((field, index) => (
                       <div key={field.id} className="flex items-center gap-2 p-2 border rounded-lg">
                         <div className="grid grid-cols-3 gap-2 flex-grow">
-                           <p className="text-sm font-medium col-span-3">{field.productName}</p>
-                           <p className="text-xs text-muted-foreground">Qty: {field.quantity}</p>
-                           <p className="text-xs text-muted-foreground">Price: ₹{field.unitPrice.toFixed(2)}</p>
-                           <p className="text-xs text-muted-foreground">Subtotal: ₹{field.subtotal.toFixed(2)}</p>
+                            <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
+                                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
+                                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
+                            <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
+                            <Input type="number" placeholder="Subtotal" value={field.subtotal} readOnly/>
                         </div>
                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -158,8 +186,8 @@ export function CreateQuoteDialog({ children, accounts, contacts, products, isLo
                       </div>
                     ))}
                   </div>
-                  <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({productId: '', productName: 'New Item', quantity: 1, unitPrice: 0, subtotal: 0})}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item (WIP)
+                  <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
                   </Button>
                   <FormMessage>{form.formState.errors.lineItems?.message}</FormMessage>
                 </div>
