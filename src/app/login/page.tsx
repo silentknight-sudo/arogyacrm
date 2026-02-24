@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, redirect } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -31,6 +32,12 @@ export default function LoginPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.replace('/dashboard');
+    }
+  }, [user, isUserLoading, router]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -61,12 +68,16 @@ export default function LoginPage() {
     }
   }
 
-  if (isUserLoading) {
-      return <div>Loading...</div>
-  }
-
-  if (user) {
-      return redirect('/dashboard');
+  if (isUserLoading || user) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center bg-muted/40">
+            <div className="flex flex-col items-center space-y-4">
+                <Skeleton className="h-24 w-24 rounded-full" />
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-8 w-32" />
+            </div>
+        </div>
+    );
   }
 
   return (
