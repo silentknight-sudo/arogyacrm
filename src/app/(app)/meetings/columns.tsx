@@ -49,9 +49,6 @@ const MeetingActions = ({ meeting }: { meeting: Meeting }) => {
           <DropdownMenuItem onClick={handleCopyId}>
             Copy meeting ID
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuItem>Edit meeting</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );
@@ -111,5 +108,3 @@ export const columns: ColumnDef<Meeting>[] = [
     cell: ({ row }) => <MeetingActions meeting={row.original} />,
   },
 ];
-
-    

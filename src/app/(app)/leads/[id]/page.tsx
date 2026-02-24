@@ -4,7 +4,7 @@ import { notFound, useParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
-import type { Lead } from '@/types';
+import type { Lead, InteractionLog } from '@/types';
 import { LeadDetails } from './lead-details';
 import { ActivityTimeline } from './activity-timeline';
 import { AiSummary } from './ai-summary';
@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Mail, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { interactionLogs as allLogs } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function LeadDetailPage() {
@@ -41,7 +40,7 @@ export default function LeadDetailPage() {
     notFound();
   }
 
-  const interactionLogs = allLogs[lead.id] || [];
+  const interactionLogs: InteractionLog[] = []; // Replace with actual data fetching if available
 
   return (
     <div className="flex flex-col gap-6">

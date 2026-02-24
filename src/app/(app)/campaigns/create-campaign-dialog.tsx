@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -62,7 +61,7 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -74,35 +73,35 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
         return;
     }
-    setIsSubmitting(true);
-    const result = await createCampaign({
-        ...values,
-        startDate: values.startDate.toISOString(),
-        endDate: values.endDate.toISOString(),
-        ownerId: currentUser.id,
-        teamspaceId: currentTeamspace.id,
-    });
+    startTransition(async () => {
+      const result = await createCampaign({
+          ...values,
+          startDate: values.startDate.toISOString(),
+          endDate: values.endDate.toISOString(),
+          ownerId: currentUser.id,
+          teamspaceId: currentTeamspace.id,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Campaign Created',
-        description: `Successfully created campaign "${values.name}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Campaign',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Campaign Created',
+          description: `Successfully created campaign "${values.name}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Creating Campaign',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -139,8 +138,8 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
                  <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Objectives, target audience, etc." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? 'Creating Campaign...' : 'Create Campaign'}
+                <Button type="submit" disabled={isPending} className="w-full">
+                    {isPending ? 'Creating Campaign...' : 'Create Campaign'}
                 </Button>
             </form>
             </Form>

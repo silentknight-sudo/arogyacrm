@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
   const { toast } = useToast();
   const { currentUser } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,31 +59,31 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
   }, [currentUser, form, open]);
 
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to edit your profile.' });
         return;
     }
-    setIsSubmitting(true);
-    const result = await updateUserProfile({
-        ...values,
-        userId: currentUser.id,
-    });
+    startTransition(async () => {
+      const result = await updateUserProfile({
+          ...values,
+          userId: currentUser.id,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Profile Updated',
-        description: 'Your profile has been successfully updated.',
-      });
-      setOpen(false);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Updating Profile',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Profile Updated',
+          description: 'Your profile has been successfully updated.',
+        });
+        setOpen(false);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Updating Profile',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -104,8 +104,8 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
              <FormField control={form.control} name="avatar" render={({ field }) => (
                 <FormItem><FormLabel>Avatar URL (Optional)</FormLabel><FormControl><Input placeholder="https://example.com/avatar.png" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
+            <Button type="submit" disabled={isPending} className="w-full">
+                {isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </form>
         </Form>

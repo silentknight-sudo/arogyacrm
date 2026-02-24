@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -64,7 +64,7 @@ export function CreateCallDialog({ children, contacts, users, isLoading }: Creat
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -77,35 +77,35 @@ export function CreateCallDialog({ children, contacts, users, isLoading }: Creat
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
       return;
     }
-    setIsSubmitting(true);
-    const result = await createCall({
-      ...values,
-      callDate: values.callDate.toISOString(),
-      callerId: currentUser.id,
-      teamspaceId: currentTeamspace.id,
-      relatedToEntityType: values.relatedToEntityId ? 'Contact' : undefined,
-    });
+    startTransition(async () => {
+      const result = await createCall({
+        ...values,
+        callDate: values.callDate.toISOString(),
+        callerId: currentUser.id,
+        teamspaceId: currentTeamspace.id,
+        relatedToEntityType: values.relatedToEntityId ? 'Contact' : undefined,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Call Logged',
-        description: `Successfully logged call "${values.subject}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Logging Call',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Call Logged',
+          description: `Successfully logged call "${values.subject}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Logging Call',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -146,8 +146,8 @@ export function CreateCallDialog({ children, contacts, users, isLoading }: Creat
                 <FormItem><FormLabel>Notes (Optional)</FormLabel><FormControl><Textarea placeholder="Discussed pricing and features..." {...field} /></FormControl><FormMessage /></FormItem>
               )} />
 
-              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                {isSubmitting ? 'Logging Call...' : 'Log Call'}
+              <Button type="submit" disabled={isPending || isLoading} className="w-full">
+                {isPending ? 'Logging Call...' : 'Log Call'}
               </Button>
             </form>
           </Form>
@@ -156,4 +156,3 @@ export function CreateCallDialog({ children, contacts, users, isLoading }: Creat
     </Dialog>
   );
 }
-    

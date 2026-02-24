@@ -1,30 +1,3 @@
-/**
- * # Core Philosophy
- * This ruleset implements a hybrid security model that combines Role-Based Access Control (RBAC) with a team-based, "Closed Collaborators" approach.
- * The primary goal is to enforce strict data isolation between different teams using "Teamspaces". A user's role (e.g., 'admin') grants global permissions,
- * while their membership in a Teamspace grants access to that team's specific data (leads, contacts, deals, etc.).
- *
- * # Data Structure
- * The Firestore database is organized into two main categories:
- * 1. Global Collections: Root-level collections like `/users`, `/products`, and `/stock` contain data that is either globally relevant or administrative in nature.
- * 2. Teamspace-Scoped Collections: The majority of CRM data is nested under `/teamspaces/{teamspaceId}/...`. This structure ensures that all leads, deals, contacts, etc., are inherently segregated by team.
- *
- * # Key Security Decisions
- * - Default Deny: All access is denied by default. Permissions must be explicitly granted.
- * - Teamspace Membership is Paramount: A user MUST be a member of a Teamspace (i.e., their UID must be in the `memberIds` array of the `/teamspaces/{teamspaceId}` document) to perform any action on data within that teamspace.
- * - Admins Manage Structure, Not All Data: Users with the 'admin' role can create users and teamspaces, but they do not automatically have write access to all team-level data like leads or deals. This respects the data ownership within teams.
- * - User Privacy: Listing all users in the `/users` collection is restricted to admins to prevent data harvesting. Users can only access their own profile.
- * - Auditability: Activity logs (`/activityLogs/...`) are append-only. Once created, they cannot be modified or deleted, ensuring the integrity of the audit trail.
- *
- * # Denormalization for Authorization
- * This ruleset relies heavily on denormalization to enable fast and secure authorization checks.
- * - User Roles: A user's role is stored directly on their `/users/{userId}` document. This allows helper functions to quickly check for administrative privileges with a single, efficient `get()` call.
- * - Teamspace ID Propagation: Every document inside a teamspace (e.g., `/teamspaces/{teamspaceId}/leads/{leadId}`) contains a `teamspaceId` field. This is critical for securing subcollections and sub-subcollections (like line items) without needing slow, costly, or impossible reads on parent documents.
- * - Ownership Fields: Documents contain explicit ownership or assignment fields (e.g., `ownerId`, `assignedToId`, `callerId`). This allows for simple, direct checks to grant write permissions to the correct user.
- *
- * # Structural Segregation
- * The separation of global data (like `/products`) from team-scoped data (`/teamspaces/{teamspaceId}/...`) creates a clear and secure boundary. This ensures that rules for public or semi-public data do not accidentally leak access to sensitive, private team information.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -33,215 +6,94 @@ service cloud.firestore {
     // Helper Functions
     // -------------------------------------------------------------------------
 
-    /**
-     * Authenticated user check.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the requesting user's UID matches the provided userId.
-     * This is the foundation of the ownership model.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
-    /**
-     * Ensures a document already exists. Used for all update and delete operations.
-     */
-    function isExistingDoc() {
-      return resource != null;
-    }
     
-    /**
-     * A convenient combination of isOwner and isExistingDoc for update/delete.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && isExistingDoc();
-    }
-
-    /**
-     * Retrieves the requesting user's own user document data.
-     * This is used to check for roles and other user-specific attributes.
-     */
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    /**
-     * Checks if the user has the 'admin' role.
-     */
     function isAdmin() {
       return isSignedIn() && getUserData().role == 'admin';
     }
 
-    /**
-     * Checks if the user is a member of the specified teamspace by reading
-     * the teamspace document's `memberIds` array.
-     */
     function isTeamspaceMember(teamspaceId) {
-      return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/teamspaces/$(teamspaceId)).data.memberIds;
-    }
-    
-    /**
-     * Checks if the user is the owner of the specified teamspace.
-     */
-    function isTeamspaceOwner(teamspaceId) {
-      return isSignedIn() && request.auth.uid == get(/databases/$(database)/documents/teamspaces/$(teamspaceId)).data.ownerId;
+      // A user is a member if their user document contains the teamspaceId
+      return isSignedIn() && teamspaceId in getUserData().teamspaceIds;
     }
 
-    /**
-     * Checks if a user can administer a teamspace (either as owner or global admin).
-     */
-    function canAdminTeamspace(teamspaceId) {
-      return isAdmin() || isTeamspaceOwner(teamspaceId);
+    // Check if the user is the owner of a specific document
+    function isDocOwner(doc) {
+      return isOwner(doc.data.ownerId)
+          || isOwner(doc.data.assignedToId)
+          || isOwner(doc.data.organizerId)
+          || isOwner(doc.data.callerId)
+          || isOwner(doc.data.uploadedById)
+          || isOwner(doc.data.requestedById)
+          || isOwner(doc.data.processedById)
+          || isOwner(doc.data.userId);
     }
     
-    /**
-     * Validates that the user is the owner of the incoming document data.
-     * Used on create to enforce creator ownership.
-     */
-    function isIncomingOwner() {
-      return request.resource.data.ownerId == request.auth.uid;
+    // Check if the user making the request will be the owner of the new document
+    function isIncomingDocOwner() {
+        return request.resource.data.ownerId == request.auth.uid
+            || request.resource.data.assignedToId == request.auth.uid
+            || request.resource.data.organizerId == request.auth.uid
+            || request.resource.data.callerId == request.auth.uid
+            || request.resource.data.uploadedById == request.auth.uid
+            || request.resource.data.requestedById == request.auth.uid
+            || request.resource.data.processedById == request.auth.uid
+            || request.resource.data.userId == request.auth.uid;
     }
     
-    /**
-     * Validates that an immutable ID field matches between path and document body.
-     */
-    function hasValidId(wildcardId) {
-      return request.resource.data.id == wildcardId;
-    }
-    
-    /**
-     * Validates that an ID field is immutable on update.
-     */
-    function isIdImmutable() {
-      return request.resource.data.id == resource.data.id;
-    }
-
-    /**
-     * Validates that the teamspaceId in the document body matches the path.
-     */
-    function hasValidTeamspaceId(pathTeamspaceId) {
-      return request.resource.data.teamspaceId == pathTeamspaceId;
-    }
-    
-    /**
-     * Validates that the teamspaceId field is immutable on update.
-     */
-    function isTeamspaceIdImmutable() {
-      return request.resource.data.teamspaceId == resource.data.teamspaceId;
-    }
-
-    /**
-     * Checks if the requesting user and the user of the document being accessed
-     * share at least one common teamspace.
-     */
+    // Checks if the user being accessed is in a shared teamspace
     function hasSharedTeamspace(targetUserId) {
       let requestUserTeamspaces = getUserData().teamspaceIds;
       let targetUserTeamspaces = get(/databases/$(database)/documents/users/$(targetUserId)).data.teamspaceIds;
-      // .hasAny() checks if any element in the first list exists in the second list.
-      // This is efficient for checking for any overlap.
-      return isSignedIn() && requestUserTeamspaces.hasAny(targetUserTeamspaces);
+      return requestUserTeamspaces.hasAny(targetUserTeamspaces);
     }
 
     // -------------------------------------------------------------------------
-    // User Profiles
+    // Collection Rules
     // -------------------------------------------------------------------------
 
-    /**
-     * @description Manages user profiles. Users can manage their own profile, and admins can manage any user profile.
-     * @path /users/{userId}
-     * @allow (get) A user `auth.uid: "user_abc"` requests their own document `/users/user_abc`.
-     * @deny (list) A non-admin user attempts to list the `/users` collection.
-     * @principle Restricts access to a user's own data tree and grants admin override for management.
-     */
+    // Users can read their own profile. Admins can read any. 
+    // Users can read profiles of teammates in shared teamspaces.
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin() || hasSharedTeamspace(userId);
       allow list: if isAdmin();
-      allow create: if isAdmin() && hasValidId(userId); // Admins create users
-      allow update: if (isOwner(userId) || isAdmin()) && isExistingDoc() && isIdImmutable();
-      allow delete: if isAdmin() && isExistingDoc();
-    }
-
-    // -------------------------------------------------------------------------
-    // Global Catalog & Inventory
-    // -------------------------------------------------------------------------
-
-    /**
-     * @description Manages the global product catalog. Any signed-in user can read, but only admins can modify.
-     * @path /products/{productId}
-     * @allow (get) Any signed-in user requests `/products/prod_123`.
-     * @deny (create) A non-admin user attempts to create a new product.
-     * @principle Provides public read access for catalog data while securing writes for administrators.
-     */
-    match /products/{productId} {
-      allow get, list: if isSignedIn();
-      allow create: if isAdmin() && hasValidId(productId);
-      allow update: if isAdmin() && isExistingDoc() && isIdImmutable();
-      allow delete: if isAdmin() && isExistingDoc();
+      allow create: if isAdmin(); // Only admins can create users
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
     
-    // -------------------------------------------------------------------------
-    // Teamspace & Scoped Data
-    // -------------------------------------------------------------------------
+    // Products are public to all signed-in users, but only managed by admins
+    match /products/{productId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isAdmin();
+    }
 
-    /**
-     * @description Manages Teamspaces, the root of all team-scoped data. Admins can create them. Owners or Admins can manage them. Members can read them.
-     * @path /teamspaces/{teamspaceId}
-     * @allow (update) The user who is the `ownerId` of the teamspace updates its `memberIds` list.
-     * @deny (create) A non-admin user attempts to create a new teamspace.
-     * @principle Enforces team-based data segregation using a "Closed Collaborators" model.
-     */
+    // Teamspaces can be created by admins. They can be managed by their owner or an admin.
+    // Members can read teamspace details.
     match /teamspaces/{teamspaceId} {
-      allow get, list: if isTeamspaceMember(teamspaceId) || isAdmin();
-      allow create: if isAdmin() && isIncomingOwner() && hasValidId(teamspaceId);
-      allow update: if canAdminTeamspace(teamspaceId) && isExistingDoc() && isIdImmutable();
-      allow delete: if isAdmin() && isExistingDoc();
+      allow get: if isTeamspaceMember(teamspaceId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() || isOwner(resource.data.ownerId);
 
-      /**
-       * @description Generic rule for all teamspace subcollections. Access requires being a team member, with an admin override for read operations. Writes are further restricted to document owners/assignees.
-       * @path /teamspaces/{teamspaceId}/{subcollection}/{docId}
-       * @allow (get) A user in `team_abc`'s `memberIds` list gets a lead document at `/teamspaces/team_abc/leads/lead_123`.
-       * @allow (get) An admin can read a document from any teamspace.
-       * @deny (update) A member of `team_abc` tries to update a lead assigned to another user. An admin cannot write to these documents directly unless they are also the owner/assignee.
-       * @principle Combines team membership with document ownership for granular control within a team, with a read-only admin override.
-       */
+      // Generic rule for all teamspace subcollections.
+      // Read access requires being a team member or admin.
+      // Write access requires being a member. Create must set ownership.
+      // Update/delete requires being the document owner.
       match /{collection}/{docId} {
         allow get, list: if isTeamspaceMember(teamspaceId) || isAdmin();
-        allow create: if isTeamspaceMember(teamspaceId) && hasValidId(docId) && hasValidTeamspaceId(teamspaceId);
-        allow update: if isTeamspaceMember(teamspaceId) && (isExistingOwner(resource.data.ownerId) || isExistingOwner(resource.data.assignedToId) || isExistingOwner(resource.data.callerId) || isExistingOwner(resource.data.uploadedById) || isExistingOwner(resource.data.organizerId) || isExistingOwner(resource.data.requestedById) || isExistingOwner(resource.data.processedById)) && isIdImmutable() && isTeamspaceIdImmutable();
-        allow delete: if isTeamspaceMember(teamspaceId) && (isExistingOwner(resource.data.ownerId) || isExistingOwner(resource.data.assignedToId) || isExistingOwner(resource.data.callerId) || isExistingOwner(resource.data.uploadedById) || isExistingOwner(resource.data.organizerId) || isExistingOwner(resource.data.requestedById) || isExistingOwner(resource.data.processedById));
-      }
-
-      /**
-       * @description Special immutable rule for Activity Logs. They are append-only.
-       * @path /teamspaces/{teamspaceId}/activityLogs/{activityLogId}
-       * @allow (create) A member of `team_abc` creates an activity log for an action they performed.
-       * @deny (update) Any user attempts to modify an existing activity log entry.
-       * @principle Enforces immutability for audit trail integrity.
-       */
-      match /activityLogs/{activityLogId} {
-        allow get, list: if isTeamspaceMember(teamspaceId);
-        allow create: if isTeamspaceMember(teamspaceId) && isOwner(request.resource.data.userId) && hasValidId(activityLogId) && hasValidTeamspaceId(teamspaceId);
-        allow update: if false;
-        allow delete: if false;
-      }
-
-      /**
-       * @description Generic rule for all line item sub-subcollections. Access is granted based on teamspace membership.
-       * @path /teamspaces/{teamspaceId}/{parentCollection}/{parentId}/lineItems/{lineItemId}
-       * @allow (create) A member of `team_abc` adds a line item to a quote in that teamspace.
-       * @deny (get) A user from `team_xyz` attempts to read a line item from a quote in `team_abc`.
-       * @principle Relies on denormalized `teamspaceId` on the line item document itself to avoid expensive parent `get` calls.
-       */
-      match /{parentCollection}/{parentId}/lineItems/{lineItemId} {
-        allow get, list: if isTeamspaceMember(teamspaceId);
-        allow create: if isTeamspaceMember(teamspaceId) && hasValidId(lineItemId);
-        allow update: if isTeamspaceMember(teamspaceId) && isExistingDoc() && isIdImmutable();
-        allow delete: if isTeamspaceMember(teamspaceId) && isExistingDoc();
+        allow create: if isTeamspaceMember(teamspaceId) && isIncomingDocOwner();
+        allow update, delete: if isTeamspaceMember(teamspaceId) && (isDocOwner(resource) || isAdmin());
       }
     }
   }

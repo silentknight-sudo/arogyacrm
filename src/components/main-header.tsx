@@ -27,9 +27,10 @@ import { useApp } from '@/context/app-context';
 import type { Teamspace } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { MainSidebar } from './main-sidebar';
+import { Skeleton } from './ui/skeleton';
 
 export function MainHeader() {
-  const { currentUser, currentTeamspace, setCurrentTeamspace, availableTeamspaces, logout } = useApp();
+  const { currentUser, currentTeamspace, setCurrentTeamspace, availableTeamspaces, logout, isUserLoading, areTeamspacesLoading } = useApp();
 
   return (
     <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
@@ -62,7 +63,7 @@ export function MainHeader() {
       </div>
 
       <div className="flex items-center gap-4">
-        {currentTeamspace && (
+        {areTeamspacesLoading ? <Skeleton className="h-10 w-40" /> : currentTeamspace && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2">
@@ -86,10 +87,12 @@ export function MainHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon" className="rounded-full">
-              <Avatar>
-                <AvatarImage src={currentUser?.avatar} alt={currentUser?.displayName} />
-                <AvatarFallback>{currentUser?.displayName?.charAt(0)}</AvatarFallback>
-              </Avatar>
+              {isUserLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : (
+                <Avatar>
+                  <AvatarImage src={currentUser?.avatar} alt={currentUser?.displayName} />
+                  <AvatarFallback>{currentUser?.displayName?.charAt(0)}</AvatarFallback>
+                </Avatar>
+              )}
               <span className="sr-only">Toggle user menu</span>
             </Button>
           </DropdownMenuTrigger>

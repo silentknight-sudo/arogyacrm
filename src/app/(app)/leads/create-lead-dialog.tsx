@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -55,7 +55,7 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -69,32 +69,32 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace to create a lead.' });
         return;
     }
-    setIsSubmitting(true);
-    const result = await createLead({
-        ...values,
-        assignedToId: currentUser.id,
-        teamspaceId: currentTeamspace.id,
+    startTransition(async () => {
+      const result = await createLead({
+          ...values,
+          assignedToId: currentUser.id,
+          teamspaceId: currentTeamspace.id,
+      });
+      if (result.success) {
+        toast({
+          title: 'Lead Created',
+          description: `Successfully created lead "${values.firstName} ${values.lastName}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Creating Lead',
+          description: result.error,
+        });
+      }
     });
-    if (result.success) {
-      toast({
-        title: 'Lead Created',
-        description: `Successfully created lead "${values.firstName} ${values.lastName}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Lead',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
   };
 
   return (
@@ -130,8 +130,8 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
                 <FormField control={form.control} name="status" render={({ field }) => (
                     <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{leadStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? 'Creating Lead...' : 'Create Lead'}
+                <Button type="submit" disabled={isPending} className="w-full">
+                    {isPending ? 'Creating Lead...' : 'Create Lead'}
                 </Button>
             </form>
             </Form>

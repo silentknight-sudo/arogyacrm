@@ -51,4 +51,3 @@ export async function createProduct(values: CreateProductInput): Promise<CreateP
         return { success: false, error: `Failed to create product: ${errorMessage}` };
     }
 }
-    

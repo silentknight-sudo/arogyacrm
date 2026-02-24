@@ -43,7 +43,7 @@ export function ActivityTimeline({ logs }: { logs: InteractionLog[] }) {
                 </div>
 
                 <div className="space-y-8 relative">
-                    <div className="absolute left-5 top-2 bottom-2 w-0.5 bg-border -translate-x-1/2" />
+                     {sortedLogs.length > 0 && <div className="absolute left-5 top-2 bottom-2 w-0.5 bg-border -translate-x-1/2" />}
                     {sortedLogs.map((log) => {
                         const agent = log.agent || 'System';
                         return (

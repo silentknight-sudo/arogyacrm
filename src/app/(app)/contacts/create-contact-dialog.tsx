@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +33,6 @@ import { useToast } from '@/hooks/use-toast';
 import { createContact } from './actions';
 import { useApp } from '@/context/app-context';
 import type { Account } from '@/types';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'First name is required.'),
@@ -52,9 +50,9 @@ type CreateContactDialogProps = {
 
 export function CreateContactDialog({ children, accounts, isLoadingAccounts }: CreateContactDialogProps) {
   const { toast } = useToast();
-  const { currentTeamspace } = useApp();
+  const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,32 +65,33 @@ export function CreateContactDialog({ children, accounts, isLoadingAccounts }: C
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!currentTeamspace) {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (!currentUser || !currentTeamspace) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be in a teamspace to create a contact.' });
         return;
     }
-    setIsSubmitting(true);
-    const result = await createContact({
-        ...values,
-        teamspaceId: currentTeamspace.id,
-    });
+    startTransition(async () => {
+      const result = await createContact({
+          ...values,
+          teamspaceId: currentTeamspace.id,
+          ownerId: currentUser.id,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Contact Created',
-        description: `Successfully created contact "${values.firstName} ${values.lastName}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Contact',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Contact Created',
+          description: `Successfully created contact "${values.firstName} ${values.lastName}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Creating Contact',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -145,8 +144,8 @@ export function CreateContactDialog({ children, accounts, isLoadingAccounts }: C
                         <FormMessage />
                     </FormItem>
                 )} />
-                <Button type="submit" disabled={isSubmitting || isLoadingAccounts || accounts.length === 0} className="w-full">
-                    {isSubmitting ? 'Creating Contact...' : 'Create Contact'}
+                <Button type="submit" disabled={isPending || isLoadingAccounts || accounts.length === 0} className="w-full">
+                    {isPending ? 'Creating Contact...' : 'Create Contact'}
                 </Button>
             </form>
             </Form>

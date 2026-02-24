@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { File, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -34,10 +34,6 @@ export default function AccountsPage() {
                 </p>
             </div>
             <div className="flex items-center space-x-2">
-                <Button variant="outline" disabled>
-                    <File className="mr-2 h-4 w-4" />
-                    Import CSV
-                </Button>
                 <CreateAccountDialog>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -58,7 +58,7 @@ export function CreateComplaintDialog({ children, contacts, users, isLoading }: 
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -71,32 +71,32 @@ export function CreateComplaintDialog({ children, contacts, users, isLoading }: 
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
       return;
     }
-    setIsSubmitting(true);
-    const result = await createComplaint({
-      ...values,
-      teamspaceId: currentTeamspace.id,
-    });
+    startTransition(async () => {
+      const result = await createComplaint({
+        ...values,
+        teamspaceId: currentTeamspace.id,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Complaint Logged',
-        description: `Successfully logged complaint "${values.subject}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Logging Complaint',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Complaint Logged',
+          description: `Successfully logged complaint "${values.subject}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Logging Complaint',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -132,8 +132,8 @@ export function CreateComplaintDialog({ children, contacts, users, isLoading }: 
                 <FormField control={form.control} name="assignedToId" render={({ field }) => (
                     <FormItem><FormLabel>Assign To</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a user"} /></SelectTrigger></FormControl><SelectContent>{users.map(u => (<SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
-              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                {isSubmitting ? 'Logging...' : 'Log Complaint'}
+              <Button type="submit" disabled={isPending || isLoading} className="w-full">
+                {isPending ? 'Logging...' : 'Log Complaint'}
               </Button>
             </form>
           </Form>
@@ -142,4 +142,3 @@ export function CreateComplaintDialog({ children, contacts, users, isLoading }: 
     </Dialog>
   );
 }
-    

@@ -1,4 +1,3 @@
-
 'use server';
 
 import { adminDb, serverTimestamp } from '@/firebase/admin';

@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -63,7 +62,7 @@ export function CreateTaskDialog({ children, users, isLoading }: CreateTaskDialo
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,33 +75,33 @@ export function CreateTaskDialog({ children, users, isLoading }: CreateTaskDialo
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
         return;
     }
-    setIsSubmitting(true);
-    const result = await createTask({
-        ...values,
-        dueDate: values.dueDate.toISOString(),
-        teamspaceId: currentTeamspace.id,
-    });
+    startTransition(async () => {
+      const result = await createTask({
+          ...values,
+          dueDate: values.dueDate.toISOString(),
+          teamspaceId: currentTeamspace.id,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Task Created',
-        description: `Successfully created task "${values.title}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Task',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Task Created',
+          description: `Successfully created task "${values.title}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Creating Task',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -138,8 +137,8 @@ export function CreateTaskDialog({ children, users, isLoading }: CreateTaskDialo
                  <FormField control={form.control} name="dueDate" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                    {isSubmitting ? 'Creating Task...' : 'Create Task'}
+                <Button type="submit" disabled={isPending || isLoading} className="w-full">
+                    {isPending ? 'Creating Task...' : 'Create Task'}
                 </Button>
             </form>
             </Form>

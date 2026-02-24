@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +43,7 @@ type CreateProductDialogProps = {
 export function CreateProductDialog({ children }: CreateProductDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,25 +58,25 @@ export function CreateProductDialog({ children }: CreateProductDialogProps) {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true);
-    const result = await createProduct(values);
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    startTransition(async () => {
+      const result = await createProduct(values);
 
-    if (result.success) {
-      toast({
-        title: 'Product Created',
-        description: `Successfully created product "${values.name}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Product',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Product Created',
+          description: `Successfully created product "${values.name}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Creating Product',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -118,8 +118,8 @@ export function CreateProductDialog({ children }: CreateProductDialogProps) {
                     <FormItem><FormLabel>Image URL</FormLabel><FormControl><Input placeholder="https://picsum.photos/400" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
 
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? 'Creating Product...' : 'Create Product'}
+                <Button type="submit" disabled={isPending} className="w-full">
+                    {isPending ? 'Creating Product...' : 'Create Product'}
                 </Button>
             </form>
             </Form>
@@ -128,4 +128,3 @@ export function CreateProductDialog({ children }: CreateProductDialogProps) {
     </Dialog>
   );
 }
-    

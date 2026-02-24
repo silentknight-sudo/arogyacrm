@@ -42,7 +42,7 @@ export function LeadDetails({ lead }: { lead: Lead }) {
                 </div>}
                  <div className="flex items-center gap-3">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span>Assigned to ID: {lead.assignedToId}</span>
+                    <span className="truncate">Assigned to ID: {lead.assignedToId}</span>
                 </div>
                 <div className="flex items-center gap-3">
                     <Flag className="h-4 w-4 text-muted-foreground" />

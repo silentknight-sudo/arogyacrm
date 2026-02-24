@@ -50,9 +50,6 @@ const CallActions = ({ call }: { call: Call }) => {
           <DropdownMenuItem onClick={handleCopyId}>
             Copy log ID
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuItem>Edit log</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );
@@ -121,5 +118,3 @@ export const columns: ColumnDef<Call>[] = [
     cell: ({ row }) => <CallActions call={row.original} />,
   },
 ];
-
-    

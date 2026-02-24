@@ -18,7 +18,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateProductDialog } from './create-product-dialog';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 function ProductCard({ product }: { product: Product }) {
   return (
@@ -45,9 +45,6 @@ function ProductCard({ product }: { product: Product }) {
             </Badge>
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0">
-        <Button className="w-full" disabled>Add to Cart</Button>
-      </CardFooter>
     </Card>
   );
 }
@@ -60,7 +57,7 @@ export default function ProductsPage() {
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
   const { data: products, isLoading } = useCollection<Product>(productsQuery);
 
-  const categories = useMemoFirebase(() => {
+  const categories = useMemo(() => {
     if (!products) return [];
     return [...new Set(products.map(p => p.category))];
   }, [products]);
@@ -71,7 +68,7 @@ export default function ProductsPage() {
     );
   };
 
-  const filteredProducts = useMemoFirebase(() => {
+  const filteredProducts = useMemo(() => {
     if (!products) return [];
     if (selectedCategories.length === 0) return products;
     return products.filter(p => selectedCategories.includes(p.category));
@@ -133,7 +130,7 @@ export default function ProductsPage() {
             <div className="flex flex-col items-center gap-1 text-center">
                 <h3 className="text-2xl font-bold tracking-tight">No products found</h3>
                 <p className="text-sm text-muted-foreground">
-                    Create a new product to get started.
+                    Create a new product or adjust your filters.
                 </p>
             </div>
         </div>
@@ -141,4 +138,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-    

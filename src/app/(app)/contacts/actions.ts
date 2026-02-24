@@ -1,4 +1,3 @@
-
 'use server';
 
 import { adminDb, serverTimestamp } from '@/firebase/admin';
@@ -12,6 +11,7 @@ const CreateContactSchema = z.object({
     phone: z.string().optional(),
     accountId: z.string().min(1, 'Account is required.'),
     teamspaceId: z.string().min(1, 'Teamspace ID is required.'),
+    ownerId: z.string().min(1, 'Owner ID is required.'),
 });
 
 export type CreateContactInput = z.infer<typeof CreateContactSchema>;

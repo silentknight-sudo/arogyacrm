@@ -50,10 +50,6 @@ const RefundActions = ({ refund }: { refund: Refund }) => {
           <DropdownMenuItem onClick={handleCopyId}>
             Copy refund ID
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuItem>Approve</DropdownMenuItem>
-          <DropdownMenuItem>Reject</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );
@@ -122,5 +118,3 @@ export const columns: ColumnDef<Refund>[] = [
     cell: ({ row }) => <RefundActions refund={row.original} />,
   },
 ];
-
-    

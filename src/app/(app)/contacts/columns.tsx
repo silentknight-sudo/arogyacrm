@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -51,9 +50,6 @@ const ContactActions = ({ contact }: { contact: Contact }) => {
           <DropdownMenuItem onClick={handleCopyId}>
             Copy contact ID
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuItem>Edit contact</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -31,9 +30,6 @@ const CampaignActions = ({ campaign }: { campaign: Campaign }) => {
           <DropdownMenuItem onClick={() => navigator.clipboard.writeText(campaign.id)}>
             Copy campaign ID
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuItem>Edit campaign</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );

@@ -4,9 +4,7 @@ import { useApp, type Theme } from '@/context/app-context';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Monitor, Moon, Sun, Terminal } from 'lucide-react';
+import { Monitor, Moon, Sun } from 'lucide-react';
 
 export default function SettingsPage() {
     const { theme, setTheme } = useApp();
@@ -15,7 +13,7 @@ export default function SettingsPage() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-                <p className="text-muted-foreground">Manage your account and application settings.</p>
+                <p className="text-muted-foreground">Manage your application settings.</p>
             </div>
             <Card>
                 <CardHeader>
@@ -62,28 +60,6 @@ export default function SettingsPage() {
                             </Label>
                         </div>
                     </RadioGroup>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Data Management</CardTitle>
-                    <CardDescription>Manage application data. These actions are irreversible.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Alert variant="destructive">
-                        <Terminal className="h-4 w-4" />
-                        <AlertTitle>Danger Zone</AlertTitle>
-                        <AlertDescription>
-                            <div className="flex items-center justify-between mt-2">
-                                <div>
-                                    <p className="font-semibold">Reset Application Data</p>
-                                    <p className="text-sm">This will permanently delete all leads, contacts, deals, and other data.</p>
-                                </div>
-                                <Button variant="destructive" disabled>Reset Data</Button>
-                            </div>
-                        </AlertDescription>
-                    </Alert>
                 </CardContent>
             </Card>
         </div>

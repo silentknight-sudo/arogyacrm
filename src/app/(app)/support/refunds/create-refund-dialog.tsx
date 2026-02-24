@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -54,7 +54,7 @@ export function CreateRefundDialog({ children, salesOrders, users, isLoading }: 
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,33 +65,33 @@ export function CreateRefundDialog({ children, salesOrders, users, isLoading }: 
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
       return;
     }
-    setIsSubmitting(true);
-    const result = await createRefund({
-      ...values,
-      requestedById: currentUser.id,
-      teamspaceId: currentTeamspace.id,
-    });
+    startTransition(async () => {
+      const result = await createRefund({
+        ...values,
+        requestedById: currentUser.id,
+        teamspaceId: currentTeamspace.id,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Refund Request Created',
-        description: `Successfully created refund request.`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Refund',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Refund Request Created',
+          description: `Successfully created refund request.`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Creating Refund',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -121,8 +121,8 @@ export function CreateRefundDialog({ children, salesOrders, users, isLoading }: 
                     <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{refundStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
               </div>
-              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                {isSubmitting ? 'Submitting...' : 'Submit Request'}
+              <Button type="submit" disabled={isPending || isLoading} className="w-full">
+                {isPending ? 'Submitting...' : 'Submit Request'}
               </Button>
             </form>
           </Form>
@@ -131,4 +131,3 @@ export function CreateRefundDialog({ children, salesOrders, users, isLoading }: 
     </Dialog>
   );
 }
-    

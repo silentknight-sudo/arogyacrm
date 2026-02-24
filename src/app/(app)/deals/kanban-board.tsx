@@ -1,10 +1,8 @@
-
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Deal, DealStage } from '@/types';
-import { DollarSign } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useApp } from '@/context/app-context';
 import { collection, query } from 'firebase/firestore';

@@ -25,15 +25,15 @@ import {
 import { useApp } from '@/context/app-context';
 import type { Lead, Deal } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { subMonths, format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function Dashboard() {
     const { currentUser, currentTeamspace } = useApp();
     const firestore = useFirestore();
 
-    // Query for all new leads to get an accurate count
     const newLeadsQuery = useMemoFirebase(() => 
         currentTeamspace 
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'), where('status', '==', 'New'))
@@ -67,7 +67,6 @@ export default function Dashboard() {
             setTotalRevenue(calculatedTotalRevenue);
             setDealsWonCount(wonDeals.length);
 
-            // Calculate monthly revenue for the last 12 months, ensuring correct chronological order.
             const today = new Date();
             const twelveMonthsAgo = startOfMonth(subMonths(today, 11));
             const interval = { start: twelveMonthsAgo, end: endOfMonth(today) };
@@ -79,9 +78,7 @@ export default function Dashboard() {
             }));
 
             wonDeals.forEach(deal => {
-                // Ensure closeDate is valid and can be converted to a Date object.
-                // Firestore timestamps will have a toDate() method.
-                const closeDate = deal.closeDate && (typeof deal.closeDate === 'string' ? new Date(deal.closeDate) : deal.closeDate.toDate());
+                const closeDate = deal.closeDate instanceof Timestamp ? deal.closeDate.toDate() : new Date(deal.closeDate);
                 if (closeDate && closeDate >= interval.start && closeDate <= interval.end) {
                     const monthStr = format(closeDate, 'MMM');
                     const monthEntry = revenueByMonth.find(m => m.month === monthStr);
@@ -100,7 +97,6 @@ export default function Dashboard() {
         }
         
         if (newLeads) {
-            // Sort leads by creation date to get the most recent ones.
             const sortedLeads = [...newLeads].sort((a, b) => {
                 const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
                 const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
@@ -112,6 +108,7 @@ export default function Dashboard() {
     }, [newLeads, wonDeals, allDeals]);
     
     const isLoadingMetrics = isLoadingLeads || isLoadingWonDeals || isLoadingAllDeals;
+    const isLoading = isUserLoading || isLoadingMetrics;
 
     return (
         <div className="flex flex-1 flex-col gap-4">
@@ -126,7 +123,7 @@ export default function Dashboard() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{!isLoadingMetrics && totalRevenue !== null ? `₹${totalRevenue.toLocaleString('en-IN')}` : 'Loading...'}</div>
+                {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{`₹${(totalRevenue || 0).toLocaleString('en-IN')}`}</div>}
                 </CardContent>
             </Card>
             <Card>
@@ -135,7 +132,7 @@ export default function Dashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{!isLoadingMetrics && newLeads ? `+${newLeads.length}` : 'Loading...'}</div>
+                {isLoading ? <Skeleton className="h-8 w-12" /> : <div className="text-2xl font-bold">{`+${newLeads?.length || 0}`}</div>}
                 </CardContent>
             </Card>
             <Card>
@@ -144,7 +141,7 @@ export default function Dashboard() {
                 <Target className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{!isLoadingMetrics && conversionRate !== null ? `${conversionRate.toFixed(1)}%` : 'Loading...'}</div>
+                {isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{`${(conversionRate || 0).toFixed(1)}%`}</div>}
                 </CardContent>
             </Card>
             <Card>
@@ -153,7 +150,7 @@ export default function Dashboard() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                <div className="text-2xl font-bold">{!isLoadingMetrics && dealsWonCount !== null ? `+${dealsWonCount}` : 'Loading...'}</div>
+                 {isLoading ? <Skeleton className="h-8 w-12" /> : <div className="text-2xl font-bold">{`+${dealsWonCount || 0}`}</div>}
                 </CardContent>
             </Card>
             </div>
@@ -163,38 +160,40 @@ export default function Dashboard() {
                 <CardTitle>Monthly Revenue</CardTitle>
                 </CardHeader>
                 <CardContent className="pl-2">
-                <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={monthlyRevenue}>
-                    <XAxis
-                        dataKey="month"
-                        stroke="#888888"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                    />
-                    <YAxis
-                        stroke="#888888"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `₹${value / 1000}K`}
-                    />
-                    <Tooltip
-                        cursor={{ fill: 'hsl(var(--muted))' }}
-                        contentStyle={{ 
-                            background: 'hsl(var(--background))', 
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: 'var(--radius)'
-                        }}
-                    />
-                    <Legend />
-                    <Bar
-                        dataKey="revenue"
-                        fill="hsl(var(--primary))"
-                        radius={[4, 4, 0, 0]}
-                    />
-                    </BarChart>
-                </ResponsiveContainer>
+                {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
+                  <ResponsiveContainer width="100%" height={350}>
+                      <BarChart data={monthlyRevenue}>
+                      <XAxis
+                          dataKey="month"
+                          stroke="#888888"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                      />
+                      <YAxis
+                          stroke="#888888"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(value) => `₹${value / 1000}K`}
+                      />
+                      <Tooltip
+                          cursor={{ fill: 'hsl(var(--muted))' }}
+                          contentStyle={{ 
+                              background: 'hsl(var(--background))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: 'var(--radius)'
+                          }}
+                      />
+                      <Legend />
+                      <Bar
+                          dataKey="revenue"
+                          fill="hsl(var(--primary))"
+                          radius={[4, 4, 0, 0]}
+                      />
+                      </BarChart>
+                  </ResponsiveContainer>
+                )}
                 </CardContent>
             </Card>
             <Card className="col-span-4 lg:col-span-3">
@@ -207,7 +206,9 @@ export default function Dashboard() {
                 <CardContent>
                     <div className="space-y-4">
                         {isLoadingLeads ? (
-                           <p className="text-sm text-muted-foreground">Loading recent leads...</p>
+                           <div className="space-y-4">
+                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                           </div>
                         ) : recentLeads.length > 0 ? recentLeads.map(lead => (
                             <div key={lead.id} className="flex items-center">
                                 <div className="ml-4 space-y-1">

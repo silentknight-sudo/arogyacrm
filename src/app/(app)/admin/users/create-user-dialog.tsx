@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -52,10 +52,38 @@ type CreateUserDialogProps = {
   isLoadingTeamspaces: boolean;
 };
 
+function TeamspaceCheckbox({ field, item }: { field: any; item: Teamspace }) {
+  return (
+    <FormItem
+      key={item.id}
+      className="flex flex-row items-start space-x-3 space-y-0"
+    >
+      <FormControl>
+        <Checkbox
+          checked={(field.value || []).includes(item.id)}
+          onCheckedChange={(checked) => {
+            return checked
+              ? field.onChange([...(field.value || []), item.id])
+              : field.onChange(
+                  (field.value || []).filter(
+                    (value: string) => value !== item.id
+                  )
+                );
+          }}
+        />
+      </FormControl>
+      <FormLabel className="font-normal">
+        {item.name}
+      </FormLabel>
+    </FormItem>
+  );
+}
+
+
 export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: CreateUserDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -68,24 +96,24 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true);
-    const result = await createUser(values);
-    if (result.success) {
-      toast({
-        title: 'User Created',
-        description: `Successfully created user ${values.displayName}.`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating User',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    startTransition(async () => {
+      const result = await createUser(values);
+      if (result.success) {
+        toast({
+          title: 'User Created',
+          description: `Successfully created user ${values.displayName}.`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Creating User',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -188,31 +216,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         </div>
                       ) : teamspaces.length > 0 ? (
                         teamspaces.map((item) => (
-                          <FormItem
-                            key={item.id}
-                            className="flex flex-row items-start space-x-3 space-y-0"
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={(field.value || []).includes(item.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([
-                                        ...(field.value || []),
-                                        item.id,
-                                      ])
-                                    : field.onChange(
-                                        (field.value || []).filter(
-                                          (value) => value !== item.id
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              {item.name}
-                            </FormLabel>
-                          </FormItem>
+                           <TeamspaceCheckbox key={item.id} field={field} item={item} />
                         ))
                       ) : (
                         <div className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
@@ -223,8 +227,8 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                     </FormItem>
                   )}
                 />
-                <Button type="submit" disabled={isSubmitting || isLoadingTeamspaces || teamspaces.length === 0} className="w-full">
-                {isSubmitting ? 'Creating User...' : 'Create User'}
+                <Button type="submit" disabled={isPending || isLoadingTeamspaces || teamspaces.length === 0} className="w-full">
+                {isPending ? 'Creating User...' : 'Create User'}
                 </Button>
             </form>
             </Form>

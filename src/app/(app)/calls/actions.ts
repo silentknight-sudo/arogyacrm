@@ -55,4 +55,3 @@ export async function createCall(values: CreateCallInput): Promise<CreateCallRes
         return { success: false, error: `Failed to create call log: ${errorMessage}` };
     }
 }
-    

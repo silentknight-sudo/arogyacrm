@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -62,7 +61,7 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,34 +72,34 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
         return;
     }
-    setIsSubmitting(true);
-    const result = await createDeal({
-        ...values,
-        closeDate: values.closeDate.toISOString(),
-        ownerId: currentUser.id,
-        teamspaceId: currentTeamspace.id,
-    });
+    startTransition(async () => {
+      const result = await createDeal({
+          ...values,
+          closeDate: values.closeDate.toISOString(),
+          ownerId: currentUser.id,
+          teamspaceId: currentTeamspace.id,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Deal Created',
-        description: `Successfully created deal "${values.name}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Deal',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Deal Created',
+          description: `Successfully created deal "${values.name}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Creating Deal',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -134,8 +133,8 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
                 <FormField control={form.control} name="closeDate" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Expected Close Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                    {isSubmitting ? 'Creating Deal...' : 'Create Deal'}
+                <Button type="submit" disabled={isPending || isLoading} className="w-full">
+                    {isPending ? 'Creating Deal...' : 'Create Deal'}
                 </Button>
             </form>
             </Form>

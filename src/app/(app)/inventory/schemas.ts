@@ -7,4 +7,3 @@ export const LineItemSchema = z.object({
   unitPrice: z.coerce.number().min(0),
   subtotal: z.coerce.number().min(0),
 });
-    

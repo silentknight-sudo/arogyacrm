@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -60,7 +59,7 @@ export function CreateTicketDialog({ children, contacts, users, isLoading }: Cre
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -72,33 +71,33 @@ export function CreateTicketDialog({ children, contacts, users, isLoading }: Cre
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
         return;
     }
-    setIsSubmitting(true);
-    const result = await createTicket({
-        ...values,
-        assignedToId: currentUser.id, // Assign to current user by default
-        teamspaceId: currentTeamspace.id,
-    });
+    startTransition(async () => {
+      const result = await createTicket({
+          ...values,
+          assignedToId: currentUser.id, // Assign to current user by default
+          teamspaceId: currentTeamspace.id,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Ticket Created',
-        description: `Successfully created ticket "${values.subject}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Ticket',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Ticket Created',
+          description: `Successfully created ticket "${values.subject}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Creating Ticket',
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
@@ -134,8 +133,8 @@ export function CreateTicketDialog({ children, contacts, users, isLoading }: Cre
                         <FormItem><FormLabel>Priority</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a priority" /></SelectTrigger></FormControl><SelectContent>{ticketPriorities.map(p => (<SelectItem key={p} value={p}>{p}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                 </div>
-                <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                    {isSubmitting ? 'Creating Ticket...' : 'Create Ticket'}
+                <Button type="submit" disabled={isPending || isLoading} className="w-full">
+                    {isPending ? 'Creating Ticket...' : 'Create Ticket'}
                 </Button>
             </form>
             </Form>

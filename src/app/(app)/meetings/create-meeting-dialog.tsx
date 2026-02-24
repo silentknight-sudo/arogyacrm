@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -50,11 +50,35 @@ type CreateMeetingDialogProps = {
   isLoading: boolean;
 };
 
+function AttendeeCheckbox({ field, item }: { field: any; item: UserProfile | Contact }) {
+  const label = 'displayName' in item ? item.displayName : `${item.firstName} ${item.lastName}`;
+  return (
+    <FormItem
+      key={item.id}
+      className="flex flex-row items-start space-x-3 space-y-0"
+    >
+      <FormControl>
+        <Checkbox
+          checked={(field.value || []).includes(item.id)}
+          onCheckedChange={(checked) => {
+            return checked
+              ? field.onChange([...(field.value || []), item.id])
+              : field.onChange(
+                  (field.value || []).filter((value: string) => value !== item.id)
+                );
+          }}
+        />
+      </FormControl>
+      <FormLabel className="font-normal">{label}</FormLabel>
+    </FormItem>
+  );
+}
+
 export function CreateMeetingDialog({ children, users, contacts, isLoading }: CreateMeetingDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,35 +90,35 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
       return;
     }
-    setIsSubmitting(true);
-    const result = await createMeeting({
-      ...values,
-      startTime: values.startTime.toISOString(),
-      endTime: values.endTime.toISOString(),
-      organizerId: currentUser.id,
-      teamspaceId: currentTeamspace.id,
-    });
+    startTransition(async () => {
+      const result = await createMeeting({
+        ...values,
+        startTime: values.startTime.toISOString(),
+        endTime: values.endTime.toISOString(),
+        organizerId: currentUser.id,
+        teamspaceId: currentTeamspace.id,
+      });
 
-    if (result.success) {
-      toast({
-        title: 'Meeting Scheduled',
-        description: `Successfully scheduled meeting "${values.title}".`,
-      });
-      setOpen(false);
-      form.reset();
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Scheduling Meeting',
-        description: result.error,
-      });
-    }
-    setIsSubmitting(false);
+      if (result.success) {
+        toast({
+          title: 'Meeting Scheduled',
+          description: `Successfully scheduled meeting "${values.title}".`,
+        });
+        setOpen(false);
+        form.reset();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error Scheduling Meeting',
+          description: result.error,
+        });
+      }
+    });
   };
 
   const allAttendees = [...users, ...contacts];
@@ -136,43 +160,15 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                   <FormItem>
                     <FormLabel>Attendees</FormLabel>
                     <div className="max-h-40 overflow-y-auto space-y-2 rounded-md border p-2">
-                      {allAttendees.map((item) => (
-                        <FormItem
-                          key={item.id}
-                          className="flex flex-row items-start space-x-3 space-y-0"
-                        >
-                          <FormControl>
-                            <Checkbox
-                              checked={(field.value || []).includes(item.id)}
-                              onCheckedChange={(checked) => {
-                                return checked
-                                  ? field.onChange([
-                                      ...(field.value || []),
-                                      item.id,
-                                    ])
-                                  : field.onChange(
-                                      (field.value || []).filter(
-                                        (value) => value !== item.id
-                                      )
-                                    );
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            {'displayName' in item
-                              ? item.displayName
-                              : `${item.firstName} ${item.lastName}`}
-                          </FormLabel>
-                        </FormItem>
-                      ))}
+                      {allAttendees.map((item) => <AttendeeCheckbox key={item.id} field={field} item={item} />)}
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                {isSubmitting ? 'Scheduling...' : 'Schedule Meeting'}
+              <Button type="submit" disabled={isPending || isLoading} className="w-full">
+                {isPending ? 'Scheduling...' : 'Schedule Meeting'}
               </Button>
             </form>
           </Form>

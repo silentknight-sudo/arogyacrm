@@ -1,61 +1,67 @@
 'use server';
 
-import { adminDb, serverTimestamp, FieldValue } from '@/firebase/admin';
+import { adminDb, FieldValue } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
-type CreateTeamspaceInput = {
-  name: string;
-  description?: string;
-  ownerId: string;
-};
+const CreateTeamspaceSchema = z.object({
+  name: z.string().min(2, 'Teamspace name must be at least 2 characters.'),
+  description: z.string().optional(),
+  ownerId: z.string().min(1, 'Owner ID is required.'),
+});
 
-type CreateTeamspaceResult = { success: boolean; error?: string; teamspaceId?: string; name?: string; };
+type CreateTeamspaceInput = z.infer<typeof CreateTeamspaceSchema>;
+type CreateTeamspaceResult = { success: boolean; error?: string; teamspaceId?: string; name?: string };
 
 export async function createTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
-    const { name, description, ownerId } = values;
+  try {
+    const validatedInput = CreateTeamspaceSchema.parse(values);
+    const { name, description, ownerId } = validatedInput;
 
-    if (!name || name.length < 2) {
-        return { success: false, error: 'Teamspace name must be at least 2 characters.' };
+    const userDocRef = adminDb.collection('users').doc(ownerId);
+    const userDoc = await userDocRef.get();
+    if (!userDoc.exists) {
+      throw new Error(`User with ID ${ownerId} does not exist.`);
     }
-    if (!ownerId) {
-        return { success: false, error: 'Owner ID is required. You may not be properly logged in.' };
+
+    const newTeamspaceRef = adminDb.collection('teamspaces').doc();
+    
+    // Use a write batch to perform an atomic operation
+    const batch = adminDb.batch();
+    
+    // 1. Create the new teamspace
+    batch.set(newTeamspaceRef, {
+      id: newTeamspaceRef.id,
+      name,
+      description: description || '',
+      ownerId,
+      memberIds: [ownerId], // The creator is the first member
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    // 2. Add the new teamspace ID to the user's list of teamspaces
+    batch.update(userDocRef, {
+      teamspaceIds: FieldValue.arrayUnion(newTeamspaceRef.id)
+    });
+
+    // Commit the atomic batch
+    await batch.commit();
+
+    // Revalidate paths to update the UI
+    revalidatePath('/admin/teamspaces');
+    revalidatePath('/(app)', 'layout'); // Revalidate layout to update teamspace switcher
+
+    return { success: true, teamspaceId: newTeamspaceRef.id, name: name };
+
+  } catch (error: any) {
+    console.error('Error creating teamspace:', error);
+    let errorMessage = 'An unknown server error occurred.';
+    if (error instanceof z.ZodError) {
+      errorMessage = error.errors.map(e => e.message).join(', ');
+    } else if (error.message) {
+      errorMessage = error.message;
     }
-
-    try {
-        const userDocRef = adminDb.collection('users').doc(ownerId);
-        const userDoc = await userDocRef.get();
-        if (!userDoc.exists) {
-            throw new Error(`User profile with ID ${ownerId} does not exist.`);
-        }
-
-        const newTeamspaceRef = adminDb.collection('teamspaces').doc();
-        const batch = adminDb.batch();
-        
-        // Queue teamspace creation
-        batch.set(newTeamspaceRef, {
-            id: newTeamspaceRef.id,
-            name: name,
-            description: description || '',
-            ownerId: ownerId,
-            memberIds: [ownerId],
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-        });
-
-        // Queue user profile update
-        batch.update(userDocRef, {
-            teamspaceIds: FieldValue.arrayUnion(newTeamspaceRef.id)
-        });
-
-        await batch.commit();
-
-        revalidatePath('/admin/teamspaces');
-        revalidatePath('/(app)', 'layout');
-
-        return { success: true, teamspaceId: newTeamspaceRef.id, name: name };
-
-    } catch (e: any) {
-        console.error('Error creating teamspace:', e);
-        return { success: false, error: `Failed to create teamspace: ${e.message}` };
-    }
+    return { success: false, error: `Failed to create teamspace: ${errorMessage}` };
+  }
 }

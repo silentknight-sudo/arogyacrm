@@ -50,9 +50,6 @@ const ComplaintActions = ({ complaint }: { complaint: Complaint }) => {
           <DropdownMenuItem onClick={handleCopyId}>
             Copy complaint ID
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuItem>Resolve</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );
@@ -127,5 +124,3 @@ export const columns: ColumnDef<Complaint>[] = [
     cell: ({ row }) => <ComplaintActions complaint={row.original} />,
   },
 ];
-
-    
