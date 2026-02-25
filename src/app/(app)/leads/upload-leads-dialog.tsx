@@ -18,6 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -131,7 +132,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     <CSVReader onUploadAccepted={handleUploadAccepted}>
                         {({ getRootProps, acceptedFile, ProgressBar }: any) => (
                             <div className="space-y-2">
-                                <FormLabel>Upload CSV</FormLabel>
+                                <Label>Upload CSV</Label>
                                 <FileInput {...getRootProps()}>
                                     {acceptedFile ? acceptedFile.name : 'Click to upload a file'}
                                 </FileInput>
@@ -171,7 +172,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                 </Form>
             </div>
             <div>
-                <FormLabel>Review Imported Leads</FormLabel>
+                <Label>Review Imported Leads</Label>
                 <ScrollArea className="h-72 mt-2 rounded-md border">
                     <div className="p-4 space-y-4">
                         {importedLeads.length > 0 ? (
