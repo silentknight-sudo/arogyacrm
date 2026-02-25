@@ -35,6 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createUser } from './actions';
 import type { Teamspace, UserRole } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
 
 const roles: UserRole[] = ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'];
 
@@ -51,34 +52,6 @@ type CreateUserDialogProps = {
   teamspaces: Teamspace[];
   isLoadingTeamspaces: boolean;
 };
-
-function TeamspaceCheckbox({ field, item }: { field: any; item: Teamspace }) {
-  return (
-    <FormItem
-      key={item.id}
-      className="flex flex-row items-start space-x-3 space-y-0"
-    >
-      <FormControl>
-        <Checkbox
-          checked={(field.value || []).includes(item.id)}
-          onCheckedChange={(checked) => {
-            return checked
-              ? field.onChange([...(field.value || []), item.id])
-              : field.onChange(
-                  (field.value || []).filter(
-                    (value: string) => value !== item.id
-                  )
-                );
-          }}
-        />
-      </FormControl>
-      <FormLabel className="font-normal">
-        {item.name}
-      </FormLabel>
-    </FormItem>
-  );
-}
-
 
 export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: CreateUserDialogProps) {
   const { toast } = useToast();
@@ -196,12 +169,12 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                   control={form.control}
                   name="teamspaceIds"
                   render={({ field }) => (
-                    <FormItem>
-                      <div className="mb-4">
-                        <FormLabel className="text-base">Teamspaces</FormLabel>
-                        <FormDescription>
+                    <div className="space-y-2">
+                      <div className="mb-2">
+                        <Label className="text-base">Teamspaces</Label>
+                        <p className="text-sm text-muted-foreground">
                           Select the teamspaces this user will belong to.
-                        </FormDescription>
+                        </p>
                       </div>
                       {isLoadingTeamspaces ? (
                         <div className="space-y-3">
@@ -216,7 +189,25 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         </div>
                       ) : teamspaces.length > 0 ? (
                         teamspaces.map((item) => (
-                           <TeamspaceCheckbox key={item.id} field={field} item={item} />
+                          <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-y-0">
+                             <FormControl>
+                                <Checkbox
+                                  checked={(field.value || []).includes(item.id)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...(field.value || []), item.id])
+                                      : field.onChange(
+                                          (field.value || []).filter(
+                                            (value: string) => value !== item.id
+                                          )
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {item.name}
+                              </FormLabel>
+                          </FormItem>
                         ))
                       ) : (
                         <div className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
@@ -224,7 +215,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         </div>
                       )}
                       <FormMessage />
-                    </FormItem>
+                    </div>
                   )}
                 />
                 <Button type="submit" disabled={isPending || isLoadingTeamspaces || teamspaces.length === 0} className="w-full">
