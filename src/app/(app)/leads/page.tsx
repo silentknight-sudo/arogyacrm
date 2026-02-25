@@ -3,9 +3,9 @@
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where, documentId } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
-import type { Lead } from '@/types';
+import type { Lead, UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,17 @@ export default function LeadsPage() {
       : null
   , [firestore, currentTeamspace]);
 
-  const { data: leads, isLoading } = useCollection<Lead>(leadsQuery);
+  const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!currentTeamspace || !currentTeamspace.memberIds?.length) return null;
+    return query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds));
+  }, [firestore, currentTeamspace]);
+
+  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+
+  const isLoading = isLoadingLeads || isLoadingUsers;
+
 
   return (
     <div className="space-y-6">
@@ -47,7 +57,7 @@ export default function LeadsPage() {
                 <Skeleton className="h-12 w-full" />
             </div>
         )}
-        {!isLoading && <DataTable columns={columns} data={leads || []} />}
+        {!isLoading && <DataTable columns={columns} data={leads || []} users={users || []} />}
     </div>
   );
 }

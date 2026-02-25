@@ -10,10 +10,11 @@ import {
   getSortedRowModel,
   ColumnFiltersState,
   getFilteredRowModel,
+  Table,
 } from '@tanstack/react-table';
 
 import {
-  Table,
+  Table as UiTable,
   TableBody,
   TableCell,
   TableHead,
@@ -23,15 +24,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import React from 'react';
+import type { UserProfile } from '@/types';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  users: UserProfile[];
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  users,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -52,6 +56,9 @@ export function DataTable<TData, TValue>({
       columnFilters,
       rowSelection,
     },
+    meta: {
+      users,
+    },
   });
 
   return (
@@ -67,7 +74,7 @@ export function DataTable<TData, TValue>({
         />
       </div>
       <div className="rounded-md border bg-card">
-        <Table>
+        <UiTable>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -114,7 +121,7 @@ export function DataTable<TData, TValue>({
               </TableRow>
             )}
           </TableBody>
-        </Table>
+        </UiTable>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">

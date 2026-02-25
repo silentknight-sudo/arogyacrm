@@ -22,10 +22,12 @@ service cloud.firestore {
       return isSignedIn() && getUserData().role == 'admin';
     }
 
+    function isTeamLead() {
+      return isSignedIn() && getUserData().role == 'sales_team_lead';
+    }
+
     function isTeamspaceMember(teamspaceId) {
       // A user is a member if their user document's teamspaceIds array contains the teamspaceId.
-      // The `in` operator checks for keys in a Map, not values in a List.
-      // The correct way to check for existence in a List is to use `hasAny` with a single-element list.
       return isSignedIn() && getUserData().teamspaceIds.hasAny([teamspaceId]);
     }
 
@@ -59,6 +61,10 @@ service cloud.firestore {
       let targetUserTeamspaces = get(/databases/$(database)/documents/users/$(targetUserId)).data.teamspaceIds;
       return requestUserTeamspaces.hasAny(targetUserTeamspaces);
     }
+    
+    function salesExecAllowedLeadUpdateKeys() {
+        return ['status', 'notes', 'priority', 'reasoning', 'score', 'engagementScore', 'lastContacted', 'updatedAt'];
+    }
 
     // -------------------------------------------------------------------------
     // Collection Rules
@@ -88,10 +94,22 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow update, delete: if isAdmin() || isOwner(resource.data.ownerId);
 
-      // Generic rule for all teamspace subcollections.
-      // Read access requires being a team member or admin.
-      // Write access requires being a member. Create must set ownership.
-      // Update/delete requires being the document owner.
+      // Lead-specific rules for distribution workflow
+      match /leads/{leadId} {
+        allow get, list: if isTeamspaceMember(teamspaceId) || isAdmin();
+        allow create: if (isTeamspaceMember(teamspaceId) || isAdmin()) && request.auth.uid == request.resource.data.assignedToId;
+        allow update: if 
+            isTeamspaceMember(teamspaceId) && (
+                // Admins and Team Leads can update anything
+                isAdmin() || isTeamLead() ||
+                // The assigned sales executive can only update specific fields
+                (request.auth.uid == resource.data.assignedToId && 
+                 request.resource.data.diff(resource.data).affectedKeys().hasOnly(salesExecAllowedLeadUpdateKeys()))
+            );
+        allow delete: if (isTeamspaceMember(teamspaceId) || isAdmin()) && (isDocOwner(resource) || isAdmin() || isTeamLead());
+      }
+
+      // Generic rule for all other teamspace subcollections.
       match /{collection}/{docId} {
         allow get, list: if isTeamspaceMember(teamspaceId) || isAdmin();
         allow create: if (isTeamspaceMember(teamspaceId) || isAdmin()) && isIncomingDocOwner();

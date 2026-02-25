@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Star, Bot } from 'lucide-react';
+import { ColumnDef, type Table as TanstackTable } from '@tanstack/react-table';
+import { MoreHorizontal, ArrowUpDown, Star, Bot, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Lead } from '@/types';
+import type { Lead, UserProfile } from '@/types';
 import { scoreLeadWithAI } from './actions';
 import { AiLeadScoringAndPrioritizationOutput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
 import {
@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useApp } from '@/context/app-context';
+import { AssignLeadDialog } from './assign-lead-dialog';
 
 function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { open: boolean; onOpenChange: (open: boolean) => void; result: AiLeadScoringAndPrioritizationOutput | null, leadName: string }) {
   if (!result) return null;
@@ -79,11 +81,16 @@ function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { ope
   );
 }
 
-const LeadActions = ({ lead }: { lead: Lead }) => {
+const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }) => {
   const { toast } = useToast();
+  const { currentUser } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AiLeadScoringAndPrioritizationOutput | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const users = (table.options.meta as { users?: UserProfile[] })?.users || [];
+  const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+
 
   const handleScoreLead = async () => {
     setIsLoading(true);
@@ -136,6 +143,14 @@ const LeadActions = ({ lead }: { lead: Lead }) => {
             <Bot className="mr-2 h-4 w-4" />
             {isLoading ? 'Scoring...' : 'Score with AI'}
           </DropdownMenuItem>
+          {canAssign && (
+            <AssignLeadDialog lead={lead} users={users}>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <Users className="mr-2 h-4 w-4" />
+                Assign Lead
+              </DropdownMenuItem>
+            </AssignLeadDialog>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleCopyId}>
             Copy lead ID
@@ -190,13 +205,15 @@ export const columns: ColumnDef<Lead>[] = [
     accessorKey: 'email',
     header: 'Email',
   },
-  {
-    accessorKey: 'phone',
-    header: 'Phone',
-  },
-  {
-    accessorKey: 'source',
-    header: 'Source',
+    {
+    accessorKey: 'assignedToId',
+    header: 'Assigned To',
+    cell: ({ row, table }) => {
+        const assignedToId = row.getValue('assignedToId') as string;
+        const users = (table.options.meta as { users?: UserProfile[] })?.users || [];
+        const user = users.find(u => u.id === assignedToId);
+        return user ? user.displayName : <span className="text-muted-foreground">Unassigned</span>;
+    }
   },
   {
     accessorKey: 'status',
@@ -209,6 +226,10 @@ export const columns: ColumnDef<Lead>[] = [
         status === 'Contacted' ? 'secondary' : 'destructive';
       return <Badge variant={variant} className="capitalize">{status}</Badge>;
     },
+  },
+  {
+    accessorKey: 'source',
+    header: 'Source',
   },
    {
     accessorKey: 'score',
@@ -226,8 +247,6 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     id: 'actions',
-    cell: ({ row }) => <LeadActions lead={row.original} />,
+    cell: ({ row, table }) => <LeadActions lead={row.original} table={table} />,
   },
 ];
-
-    
