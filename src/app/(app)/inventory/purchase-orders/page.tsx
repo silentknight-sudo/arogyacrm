@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { PlusCircle } from 'lucide-react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where, documentId } from 'firebase/firestore';
 import type { PurchaseOrder, UserProfile, Product } from '@/types';
 import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,7 +24,9 @@ export default function PurchaseOrdersPage() {
   const { data: purchaseOrders, isLoading: isLoadingPOs } = useCollection<PurchaseOrder>(purchaseOrdersQuery);
 
   const usersQuery = useMemoFirebase(() =>
-    currentTeamspace ? query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id)) : null,
+    currentTeamspace && currentTeamspace.memberIds?.length > 0
+        ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds))
+        : null,
     [firestore, currentTeamspace]
   )
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
@@ -68,5 +69,3 @@ export default function PurchaseOrdersPage() {
     </div>
   );
 }
-
-    
