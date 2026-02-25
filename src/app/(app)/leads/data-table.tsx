@@ -23,8 +23,11 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import React from 'react';
-import type { UserProfile } from '@/types';
+import React, { useState } from 'react';
+import type { Lead, UserProfile } from '@/types';
+import { Users as AssignIcon } from 'lucide-react';
+import { BulkAssignLeadsDialog } from './bulk-assign-leads-dialog';
+
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -40,6 +43,8 @@ export function DataTable<TData, TValue>({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
+  
+  const [isBulkAssignDialogOpen, setBulkAssignDialogOpen] = useState(false);
 
   const table = useReactTable({
     data,
@@ -61,8 +66,21 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  const selectedLeads = table.getFilteredSelectedRowModel().rows.map(row => row.original as Lead);
+
   return (
     <div>
+       <BulkAssignLeadsDialog
+        open={isBulkAssignDialogOpen}
+        onOpenChange={(open) => {
+          setBulkAssignDialogOpen(open);
+          if (!open) {
+            table.resetRowSelection();
+          }
+        }}
+        leads={selectedLeads}
+        users={users}
+      />
       <div className="flex items-center py-4">
         <Input
           placeholder="Filter by full name..."
@@ -72,6 +90,12 @@ export function DataTable<TData, TValue>({
           }
           className="max-w-sm"
         />
+         {selectedLeads.length > 0 && (
+            <Button onClick={() => setBulkAssignDialogOpen(true)} className="ml-auto">
+                <AssignIcon className="mr-2"/>
+                Assign Selected ({selectedLeads.length})
+            </Button>
+        )}
       </div>
       <div className="rounded-md border bg-card">
         <UiTable>

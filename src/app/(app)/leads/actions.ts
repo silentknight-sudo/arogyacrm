@@ -78,6 +78,59 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
   }
 }
 
+const BulkAssignLeadsSchema = z.object({
+  leadIds: z.array(z.string()).min(1, 'At least one lead must be selected.'),
+  teamspaceId: z.string().min(1),
+  newAssignedToIds: z.array(z.string()).min(1, 'At least one user must be assigned.'),
+  currentUserId: z.string().min(1),
+});
+
+export async function bulkAssignLeads(values: z.infer<typeof BulkAssignLeadsSchema>)
+: Promise<{ success: boolean; error?: string }> {
+  try {
+    const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = BulkAssignLeadsSchema.parse(values);
+
+    const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
+    if (!currentUserDoc.exists) {
+      throw new Error('Could not verify your identity.');
+    }
+    const currentUserData = currentUserDoc.data();
+    const userRole = currentUserData?.role;
+
+    if (userRole !== 'admin' && userRole !== 'sales_team_lead') {
+      throw new Error('You do not have permission to assign leads.');
+    }
+
+    if (userRole !== 'admin' && !currentUserData?.teamspaceIds?.includes(teamspaceId)) {
+        throw new Error('You do not belong to this teamspace.');
+    }
+    
+    const batch = adminDb.batch();
+    const leadsCollectionRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
+
+    leadIds.forEach(leadId => {
+      const leadRef = leadsCollectionRef.doc(leadId);
+      batch.update(leadRef, {
+        assignedToIds: newAssignedToIds,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
+
+    revalidatePath('/leads');
+    // Also revalidate individual lead pages if they are ever visited
+    leadIds.forEach(leadId => revalidatePath(`/leads/${leadId}`));
+
+    return { success: true };
+
+  } catch (error: any) {
+    const errorMessage = handleAdminSDKError(error);
+    return { success: false, error: errorMessage };
+  }
+}
+
+
 const ConvertLeadSchema = z.object({
   leadId: z.string().min(1),
   teamspaceId: z.string().min(1),
