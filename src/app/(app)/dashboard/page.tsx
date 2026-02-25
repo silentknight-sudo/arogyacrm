@@ -25,7 +25,7 @@ import {
 import { useApp } from '@/context/app-context';
 import type { Lead, Deal } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { subMonths, format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -78,7 +78,7 @@ export default function Dashboard() {
             }));
 
             wonDeals.forEach(deal => {
-                const closeDate = deal.closeDate instanceof Timestamp ? deal.closeDate.toDate() : new Date(deal.closeDate);
+                const closeDate = new Date(deal.closeDate);
                 if (closeDate && closeDate >= interval.start && closeDate <= interval.end) {
                     const monthStr = format(closeDate, 'MMM');
                     const monthEntry = revenueByMonth.find(m => m.month === monthStr);
@@ -98,8 +98,8 @@ export default function Dashboard() {
         
         if (newLeads) {
             const sortedLeads = [...newLeads].sort((a, b) => {
-                const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-                const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
                 return dateB - dateA;
             });
             setRecentLeads(sortedLeads.slice(0, 5));

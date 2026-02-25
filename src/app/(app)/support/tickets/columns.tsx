@@ -126,8 +126,8 @@ export const columns: ColumnDef<Ticket>[] = [
     accessorKey: 'createdAt',
     header: 'Created At',
     cell: ({ row }) => {
-        const date = row.original.createdAt?.toDate();
-        return date ? formatDistanceToNow(date, { addSuffix: true }) : 'N/A';
+        const createdAt = row.original.createdAt as string;
+        return createdAt ? formatDistanceToNow(new Date(createdAt), { addSuffix: true }) : 'N/A';
     },
   },
   {

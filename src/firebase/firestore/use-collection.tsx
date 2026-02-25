@@ -8,6 +8,7 @@ import {
   FirestoreError,
   QuerySnapshot,
   CollectionReference,
+  Timestamp,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -36,6 +37,38 @@ export interface InternalQuery extends Query<DocumentData> {
     }
   }
 }
+
+/**
+ * Recursively serializes data, converting Firestore Timestamps and Date objects to ISO strings.
+ * @param data The data to serialize.
+ * @returns The serialized data.
+ */
+function serializeData(data: any): any {
+  if (data === null || data === undefined || typeof data !== 'object') {
+    return data;
+  }
+
+  if (data instanceof Timestamp) {
+    return data.toDate().toISOString();
+  }
+  
+  if (data instanceof Date) {
+    return data.toISOString();
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => serializeData(item));
+  }
+
+  const newObj: { [key: string]: any } = {};
+  for (const key in data) {
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
+      newObj[key] = serializeData(data[key]);
+    }
+  }
+  return newObj;
+}
+
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
@@ -77,7 +110,8 @@ export function useCollection<T = any>(
       (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
         for (const doc of snapshot.docs) {
-          results.push({ ...(doc.data() as T), id: doc.id });
+          const serializedData = serializeData(doc.data() as T);
+          results.push({ ...(serializedData as T), id: doc.id });
         }
         setData(results);
         setError(null);

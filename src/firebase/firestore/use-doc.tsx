@@ -7,6 +7,7 @@ import {
   DocumentData,
   FirestoreError,
   DocumentSnapshot,
+  Timestamp,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -23,6 +24,38 @@ export interface UseDocResult<T> {
   isLoading: boolean;       // True if loading.
   error: FirestoreError | Error | null; // Error object, or null.
 }
+
+/**
+ * Recursively serializes data, converting Firestore Timestamps and Date objects to ISO strings.
+ * @param data The data to serialize.
+ * @returns The serialized data.
+ */
+function serializeData(data: any): any {
+  if (data === null || data === undefined || typeof data !== 'object') {
+    return data;
+  }
+
+  if (data instanceof Timestamp) {
+    return data.toDate().toISOString();
+  }
+  
+  if (data instanceof Date) {
+    return data.toISOString();
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => serializeData(item));
+  }
+
+  const newObj: { [key: string]: any } = {};
+  for (const key in data) {
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
+      newObj[key] = serializeData(data[key]);
+    }
+  }
+  return newObj;
+}
+
 
 /**
  * React hook to subscribe to a single Firestore document in real-time.
@@ -62,7 +95,8 @@ export function useDoc<T = any>(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
         if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
+          const serializedData = serializeData(snapshot.data() as T);
+          setData({ ...(serializedData as T), id: snapshot.id });
         } else {
           // Document does not exist
           setData(null);
