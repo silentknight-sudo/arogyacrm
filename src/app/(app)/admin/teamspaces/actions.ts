@@ -1,6 +1,6 @@
 'use server';
 
-import { adminDb, FieldValue } from '@/firebase/admin';
+import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -55,13 +55,7 @@ export async function createTeamspace(values: CreateTeamspaceInput): Promise<Cre
     return { success: true, teamspaceId: newTeamspaceRef.id, name: name };
 
   } catch (error: any) {
-    console.error('Error creating teamspace:', error);
-    let errorMessage = 'An unknown server error occurred.';
-    if (error instanceof z.ZodError) {
-      errorMessage = error.errors.map(e => e.message).join(', ');
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
+    const errorMessage = handleAdminSDKError(error);
     return { success: false, error: `Failed to create teamspace: ${errorMessage}` };
   }
 }

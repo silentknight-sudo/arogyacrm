@@ -1,6 +1,6 @@
 'use server';
 
-import { adminAuth, adminDb } from '@/firebase/admin';
+import { adminAuth, adminDb, handleAdminSDKError } from '@/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
@@ -53,19 +53,7 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
     return { success: true };
 
   } catch (error: any) {
-    console.error('Error creating user:', error);
-    
-    let errorMessage = 'An unexpected error occurred.';
-    if (error.code === 'auth/email-already-exists') {
-      errorMessage = 'This email address is already in use by another account.';
-    } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'The password is too weak. Please choose a stronger password.';
-    } else if (error instanceof z.ZodError) {
-        errorMessage = error.errors.map(e => e.message).join(', ');
-    } else if (error.message) {
-        errorMessage = error.message;
-    }
-
+    const errorMessage = handleAdminSDKError(error);
     return { success: false, error: errorMessage };
   }
 }
@@ -104,13 +92,7 @@ export async function deleteUser(values: { userId: string, adminId: string }): P
     return { success: true };
 
   } catch (error: any) {
-    console.error('Error deleting user:', error);
-    
-    let errorMessage = 'An unexpected server error occurred. This can happen in local development if server credentials are not configured.';
-    if (error.message) {
-        errorMessage = error.message;
-    }
-
+    const errorMessage = handleAdminSDKError(error);
     return { success: false, error: errorMessage };
   }
 }

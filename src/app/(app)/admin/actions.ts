@@ -1,6 +1,6 @@
 'use server';
 
-import { adminDb } from '@/firebase/admin';
+import { adminDb, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 
 const COLLECTIONS_TO_DELETE = [
@@ -80,7 +80,7 @@ export async function resetAllData(adminUserId: string): Promise<{ success: bool
 
     return { success: true };
   } catch (error: any) {
-    console.error('Error resetting data:', error);
-    return { success: false, error: error.message || 'An unknown error occurred.' };
+    const errorMessage = handleAdminSDKError(error);
+    return { success: false, error: errorMessage };
   }
 }
