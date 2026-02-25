@@ -30,9 +30,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { createLead } from './actions';
 import { useApp } from '@/context/app-context';
 import type { LeadStatus } from '@/types';
+import { useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost'];
 const leadSources = ['Website', 'Referral', 'Social Media', 'Google Ads', 'Facebook Ads', 'LinkedIn Ads', 'Cold Call', 'Other'];
@@ -54,6 +55,7 @@ type CreateLeadDialogProps = {
 export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
+  const firestore = useFirestore();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -75,23 +77,27 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
         return;
     }
     startTransition(async () => {
-      const result = await createLead({
-          ...values,
-          assignedToId: currentUser.id,
-          teamspaceId: currentTeamspace.id,
-      });
-      if (result.success) {
+      try {
+        const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
+        await addDoc(leadsRef, {
+            ...values,
+            assignedToId: currentUser.id,
+            teamspaceId: currentTeamspace.id,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
         toast({
           title: 'Lead Created',
           description: `Successfully created lead "${values.firstName} ${values.lastName}".`,
         });
         setOpen(false);
         form.reset();
-      } else {
-        toast({
+      } catch (error: any) {
+         console.error("Error creating lead: ", error);
+         toast({
           variant: 'destructive',
           title: 'Error Creating Lead',
-          description: result.error,
+          description: error.message || 'An unexpected error occurred.',
         });
       }
     });

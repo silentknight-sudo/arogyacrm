@@ -23,9 +23,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { createAccount } from './actions';
 import { useApp } from '@/context/app-context';
 import { Textarea } from '@/components/ui/textarea';
+import { useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Account name must be at least 2 characters.'),
@@ -42,6 +43,7 @@ type CreateAccountDialogProps = {
 export function CreateAccountDialog({ children }: CreateAccountDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
+  const firestore = useFirestore();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -63,25 +65,29 @@ export function CreateAccountDialog({ children }: CreateAccountDialogProps) {
     }
     
     startTransition(async () => {
-        const result = await createAccount({
-            ...values,
-            ownerId: currentUser.id,
-            teamspaceId: currentTeamspace.id,
-        });
+        try {
+            const accountsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'accounts');
+            await addDoc(accountsRef, {
+                ...values,
+                ownerId: currentUser.id,
+                teamspaceId: currentTeamspace.id,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
 
-        if (result.success) {
-        toast({
-            title: 'Account Created',
-            description: `Successfully created account "${values.name}".`,
-        });
-        setOpen(false);
-        form.reset();
-        } else {
-        toast({
-            variant: 'destructive',
-            title: 'Error Creating Account',
-            description: result.error,
-        });
+            toast({
+                title: 'Account Created',
+                description: `Successfully created account "${values.name}".`,
+            });
+            setOpen(false);
+            form.reset();
+        } catch (error: any) {
+            console.error("Error creating account: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error Creating Account',
+                description: error.message || 'An unexpected error occurred.',
+            });
         }
     });
   };

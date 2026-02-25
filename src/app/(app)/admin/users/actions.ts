@@ -1,6 +1,7 @@
 'use server';
 
-import { adminAuth, adminDb, serverTimestamp } from '@/firebase/admin';
+import { adminAuth, adminDb } from '@/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
@@ -40,8 +41,8 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
       email: validatedInput.email,
       role: validatedInput.role,
       teamspaceIds: validatedInput.teamspaceIds,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       avatar: `https://picsum.photos/seed/${newUserId}/100/100`,
     });
     
@@ -61,6 +62,8 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
         errorMessage = 'The password is too weak. Please choose a stronger password.';
     } else if (error instanceof z.ZodError) {
         errorMessage = error.errors.map(e => e.message).join(', ');
+    } else if (error.message) {
+        errorMessage = error.message;
     }
 
     return { success: false, error: errorMessage };
@@ -103,7 +106,7 @@ export async function deleteUser(values: { userId: string, adminId: string }): P
   } catch (error: any) {
     console.error('Error deleting user:', error);
     
-    let errorMessage = 'An unexpected error occurred.';
+    let errorMessage = 'An unexpected server error occurred. This can happen in local development if server credentials are not configured.';
     if (error.message) {
         errorMessage = error.message;
     }

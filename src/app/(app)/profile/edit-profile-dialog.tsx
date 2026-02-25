@@ -23,8 +23,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserProfile } from './actions';
 import { useApp } from '@/context/app-context';
+import { useAuth, useFirestore } from '@/firebase';
+import { updateProfile } from 'firebase/auth';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+
 
 const formSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -38,6 +41,8 @@ type EditProfileDialogProps = {
 export function EditProfileDialog({ children }: EditProfileDialogProps) {
   const { toast } = useToast();
   const { currentUser } = useApp();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -60,27 +65,37 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
 
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!currentUser) {
+    if (!currentUser || !auth.currentUser) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to edit your profile.' });
         return;
     }
     startTransition(async () => {
-      const result = await updateUserProfile({
-          ...values,
-          userId: currentUser.id,
-      });
+      try {
+        const { displayName, avatar } = values;
 
-      if (result.success) {
+        // Update Firebase Auth user profile
+        await updateProfile(auth.currentUser!, { displayName, photoURL: avatar });
+
+        // Update Firestore document
+        const userDocRef = doc(firestore, 'users', currentUser.id);
+        await updateDoc(userDocRef, {
+          displayName,
+          avatar,
+          updatedAt: serverTimestamp(),
+        });
+        
         toast({
           title: 'Profile Updated',
           description: 'Your profile has been successfully updated.',
         });
         setOpen(false);
-      } else {
+
+      } catch (error: any) {
+        console.error('Error updating profile:', error);
         toast({
           variant: 'destructive',
           title: 'Error Updating Profile',
-          description: result.error,
+          description: error.message || 'An unexpected error occurred.',
         });
       }
     });

@@ -19,6 +19,7 @@ import { collection, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateProductDialog } from './create-product-dialog';
 import { useState, useMemo } from 'react';
+import { useApp } from '@/context/app-context';
 
 function ProductCard({ product }: { product: Product }) {
   return (
@@ -52,6 +53,7 @@ function ProductCard({ product }: { product: Product }) {
 
 export default function ProductsPage() {
   const firestore = useFirestore();
+  const { currentUser } = useApp();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
@@ -103,12 +105,14 @@ export default function ProductsPage() {
                     ))}
                 </DropdownMenuContent>
             </DropdownMenu>
-          <CreateProductDialog>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
-          </CreateProductDialog>
+          {currentUser?.role === 'admin' && (
+            <CreateProductDialog>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </CreateProductDialog>
+          )}
         </div>
       </div>
 
