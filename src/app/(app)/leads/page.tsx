@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, getDoc } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +12,7 @@ import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Upload } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
+import { getTeamspaceUsers } from './actions';
 
 export default function LeadsPage() {
   const { currentUser, currentTeamspace } = useApp();
@@ -29,29 +30,22 @@ export default function LeadsPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
   useEffect(() => {
-    if (currentTeamspace?.memberIds && currentTeamspace.memberIds.length > 0) {
+    if (currentTeamspace) {
       setIsLoadingUsers(true);
-      const fetchUsers = async () => {
-        try {
-          const userPromises = currentTeamspace.memberIds.map(id => getDoc(doc(firestore, 'users', id)));
-          const userDocs = await Promise.all(userPromises);
-          const fetchedUsers = userDocs
-            .filter(snap => snap.exists())
-            .map(snap => ({ id: snap.id, ...snap.data() } as UserProfile));
-          setUsers(fetchedUsers);
-        } catch (error) {
-          console.error("Failed to fetch users:", error);
+      getTeamspaceUsers(currentTeamspace.id).then(result => {
+        if (result.success && result.users) {
+          setUsers(result.users);
+        } else {
+          console.error("Failed to fetch users:", result.error);
           setUsers([]);
-        } finally {
-          setIsLoadingUsers(false);
         }
-      };
-      fetchUsers();
+        setIsLoadingUsers(false);
+      });
     } else {
-      setUsers([]);
-      setIsLoadingUsers(false);
+        setUsers([]);
+        setIsLoadingUsers(false);
     }
-  }, [currentTeamspace, firestore]);
+  }, [currentTeamspace]);
 
   const isLoading = isLoadingLeads || isLoadingUsers;
 

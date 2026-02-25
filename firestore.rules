@@ -55,13 +55,6 @@ service cloud.firestore {
             || request.resource.data.userId == request.auth.uid;
     }
     
-    // Checks if the user being accessed is in a shared teamspace
-    function hasSharedTeamspace(targetUserId) {
-      let requestUserTeamspaces = getUserData().teamspaceIds;
-      let targetUserTeamspaces = get(/databases/$(database)/documents/users/$(targetUserId)).data.teamspaceIds;
-      return requestUserTeamspaces.hasAny(targetUserTeamspaces);
-    }
-    
     function salesExecAllowedLeadUpdateKeys() {
         return ['status', 'notes', 'priority', 'reasoning', 'score', 'engagementScore', 'lastContacted', 'updatedAt'];
     }
@@ -71,9 +64,8 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
 
     // Users can read their own profile. Admins can read any. 
-    // Users can read profiles of teammates in shared teamspaces.
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin() || hasSharedTeamspace(userId);
+      allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       allow create: if isAdmin(); // Only admins can create users
       allow update: if isOwner(userId) || isAdmin();

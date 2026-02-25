@@ -4,7 +4,7 @@ import { adminDb, FieldValue, handleAdminSDKError, serverTimestamp } from '@/fir
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
-import type { Lead } from '@/types';
+import type { Lead, UserProfile } from '@/types';
 
 
 export async function scoreLeadWithAI(lead: Lead) {
@@ -144,6 +144,19 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
   } catch (error: any) {
     return { success: false, error: handleAdminSDKError(error) };
   }
+}
+
+export async function getTeamspaceUsers(teamspaceId: string): Promise<{ success: boolean; users?: UserProfile[], error?: string; }> {
+    try {
+        const usersSnapshot = await adminDb.collection('users').where('teamspaceIds', 'array-contains', teamspaceId).get();
+        if (usersSnapshot.empty) {
+            return { success: true, users: [] };
+        }
+        const users = usersSnapshot.docs.map(doc => doc.data() as UserProfile);
+        return { success: true, users: users };
+    } catch (error: any) {
+        return { success: false, error: handleAdminSDKError(error) };
+    }
 }
 
 
