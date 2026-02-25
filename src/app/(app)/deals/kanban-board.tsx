@@ -80,23 +80,25 @@ const KanbanColumn = ({ stage, deals, isLoading }: { stage: DealStage; deals: De
 };
 
 export default function KanbanBoard() {
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, isUserLoading, areTeamspacesLoading } = useApp();
   const firestore = useFirestore();
 
   const dealsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && !areTeamspacesLoading && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, isUserLoading, areTeamspacesLoading]);
   
-  const { data: deals, isLoading } = useCollection<Deal>(dealsQuery);
+  const { data: deals, isLoading: isLoadingDeals } = useCollection<Deal>(dealsQuery);
+
+  const displayLoading = isLoadingDeals || isUserLoading || areTeamspacesLoading;
 
   return (
     <div className="flex-1 flex overflow-x-auto h-[calc(100vh-150px)]">
       <div className="flex space-x-4 p-4">
         {stages.map(stage => {
-          const dealsInStage = deals ? deals.filter(deal => deal.stage === stage) : [];
-          return <KanbanColumn key={stage} stage={stage} deals={dealsInStage} isLoading={isLoading} />;
+          const dealsInStage = displayLoading || !deals ? [] : deals.filter(deal => deal.stage === stage);
+          return <KanbanColumn key={stage} stage={stage} deals={dealsInStage} isLoading={displayLoading} />;
         })}
       </div>
     </div>

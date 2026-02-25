@@ -10,22 +10,24 @@ import { useApp } from '@/context/app-context';
 
 
 export default function DealsPage() {
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, isUserLoading, areTeamspacesLoading } = useApp();
   const firestore = useFirestore();
 
   const accountsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && !areTeamspacesLoading && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'accounts'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, isUserLoading, areTeamspacesLoading]);
   const { data: accounts, isLoading: isLoadingAccounts } = useCollection<Account>(accountsQuery);
 
   const contactsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && !areTeamspacesLoading && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'contacts'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, isUserLoading, areTeamspacesLoading]);
   const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
+
+  const displayLoading = isLoadingAccounts || isLoadingContacts || isUserLoading || areTeamspacesLoading;
 
   return (
     <div className="flex flex-col h-full">
@@ -40,7 +42,7 @@ export default function DealsPage() {
                 <CreateDealDialog 
                     accounts={accounts || []} 
                     contacts={contacts || []}
-                    isLoading={isLoadingAccounts || isLoadingContacts}
+                    isLoading={displayLoading}
                 >
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
