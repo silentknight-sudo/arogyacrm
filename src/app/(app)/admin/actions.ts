@@ -26,31 +26,18 @@ const COLLECTIONS_TO_DELETE = [
 async function deleteCollection(collectionRef: FirebaseFirestore.CollectionReference, batchSize: number) {
   const query = collectionRef.limit(batchSize);
 
-  return new Promise<void>((resolve, reject) => {
-    deleteQueryBatch(query, resolve).catch(reject);
-  });
-}
+  let snapshot = await query.get();
 
-async function deleteQueryBatch(query: FirebaseFirestore.Query, resolve: () => void) {
-  const snapshot = await query.get();
+  while (snapshot.size > 0) {
+    const batch = adminDb.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
 
-  if (snapshot.size === 0) {
-    // When there are no documents left, we are done
-    resolve();
-    return;
+    // After deleting, get the next batch
+    snapshot = await query.get();
   }
-
-  // Delete documents in a batch
-  const batch = adminDb.batch();
-  snapshot.docs.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
-  await batch.commit();
-
-  // Recurse on the next process tick, to avoid hitting stack size limits
-  process.nextTick(() => {
-    deleteQueryBatch(query, resolve);
-  });
 }
 
 export async function resetAllData(adminUserId: string): Promise<{ success: boolean; error?: string }> {
