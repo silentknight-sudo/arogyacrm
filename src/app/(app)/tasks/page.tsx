@@ -12,6 +12,7 @@ import { collection, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateTaskDialog } from './create-task-dialog';
 import { getTeamspaceUsers } from '../leads/actions';
+import { useToast } from '@/hooks/use-toast';
 
 
 const statuses: TaskStatus[] = ['Todo', 'In Progress', 'Done'];
@@ -71,6 +72,7 @@ const TaskColumn = ({ status, tasks, isLoading }: { status: TaskStatus; tasks: T
 export default function TasksPage() {
   const { currentTeamspace } = useApp();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const tasksQuery = useMemoFirebase(() =>
     currentTeamspace
@@ -91,6 +93,11 @@ export default function TasksPage() {
           setUsers(result.users);
         } else {
           console.error("Failed to fetch users:", result.error);
+          toast({
+            variant: 'destructive',
+            title: 'Failed to Load Team Members',
+            description: result.error || 'An unexpected error occurred while fetching the user list.',
+          });
           setUsers([]);
         }
         setIsLoadingUsers(false);
@@ -99,7 +106,7 @@ export default function TasksPage() {
         setUsers([]);
         setIsLoadingUsers(false);
     }
-  }, [currentTeamspace]);
+  }, [currentTeamspace, toast]);
 
   const isLoading = isLoadingTasks || isLoadingUsers;
 

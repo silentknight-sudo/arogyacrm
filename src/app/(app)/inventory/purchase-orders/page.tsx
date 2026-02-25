@@ -11,10 +11,12 @@ import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreatePurchaseOrderDialog } from './create-purchase-order-dialog';
 import { getTeamspaceUsers } from '../../leads/actions';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PurchaseOrdersPage() {
   const { currentTeamspace } = useApp();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const purchaseOrdersQuery = useMemoFirebase(() =>
     currentTeamspace
@@ -35,6 +37,11 @@ export default function PurchaseOrdersPage() {
           setUsers(result.users);
         } else {
           console.error("Failed to fetch users:", result.error);
+          toast({
+            variant: 'destructive',
+            title: 'Failed to Load Team Members',
+            description: result.error || 'An unexpected error occurred while fetching the user list.',
+          });
           setUsers([]);
         }
         setIsLoadingUsers(false);
@@ -43,7 +50,7 @@ export default function PurchaseOrdersPage() {
         setUsers([]);
         setIsLoadingUsers(false);
     }
-  }, [currentTeamspace]);
+  }, [currentTeamspace, toast]);
 
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);

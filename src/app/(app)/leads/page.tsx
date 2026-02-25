@@ -13,10 +13,12 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, Upload } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 import { getTeamspaceUsers } from './actions';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LeadsPage() {
   const { currentUser, currentTeamspace } = useApp();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const leadsQuery = useMemoFirebase(() => 
     currentTeamspace 
@@ -37,6 +39,11 @@ export default function LeadsPage() {
           setUsers(result.users);
         } else {
           console.error("Failed to fetch users:", result.error);
+          toast({
+            variant: 'destructive',
+            title: 'Failed to Load Team Members',
+            description: result.error || 'An unexpected error occurred while fetching the user list.',
+          });
           setUsers([]);
         }
         setIsLoadingUsers(false);
@@ -45,7 +52,7 @@ export default function LeadsPage() {
         setUsers([]);
         setIsLoadingUsers(false);
     }
-  }, [currentTeamspace]);
+  }, [currentTeamspace, toast]);
 
   const isLoading = isLoadingLeads || isLoadingUsers;
 

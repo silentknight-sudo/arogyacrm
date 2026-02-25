@@ -11,10 +11,12 @@ import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateComplaintDialog } from './create-complaint-dialog';
 import { getTeamspaceUsers } from '../../leads/actions';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ComplaintsPage() {
   const { currentTeamspace } = useApp();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const complaintsQuery = useMemoFirebase(() =>
     currentTeamspace
@@ -42,6 +44,11 @@ export default function ComplaintsPage() {
           setUsers(result.users);
         } else {
           console.error("Failed to fetch users:", result.error);
+          toast({
+            variant: 'destructive',
+            title: 'Failed to Load Team Members',
+            description: result.error || 'An unexpected error occurred while fetching the user list.',
+          });
           setUsers([]);
         }
         setIsLoadingUsers(false);
@@ -50,7 +57,7 @@ export default function ComplaintsPage() {
         setUsers([]);
         setIsLoadingUsers(false);
     }
-  }, [currentTeamspace]);
+  }, [currentTeamspace, toast]);
 
   const isLoading = isLoadingComplaints || isLoadingContacts || isLoadingUsers;
 
