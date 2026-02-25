@@ -2,7 +2,7 @@
 
 This is a Next.js CRM application built for Ayurvedic wellness supplement businesses.
 
-## Getting Started
+## Getting Starte
 
 The application is configured to run with Firebase. Ensure your Firebase project is set up and the configuration in `src/firebase/config.ts` is correct.
 
