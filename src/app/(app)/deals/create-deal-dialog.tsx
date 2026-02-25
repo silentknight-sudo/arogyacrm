@@ -26,9 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -36,8 +33,6 @@ import { useToast } from '@/hooks/use-toast';
 import { createDeal } from './actions';
 import { useApp } from '@/context/app-context';
 import type { DealStage, Account, Contact } from '@/types';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 
 const dealStages: DealStage[] = ['New', 'Contacted', 'Qualified', 'Demo', 'Negotiation', 'Won', 'Lost'];
 
@@ -45,7 +40,7 @@ const formSchema = z.object({
   name: z.string().min(2, 'Deal name must be at least 2 characters.'),
   amount: z.coerce.number().min(0, 'Amount must be a positive number.'),
   stage: z.enum(dealStages),
-  closeDate: z.date({ required_error: 'Close date is required.' }),
+  closeDate: z.string().min(1, 'Close date is required.'),
   accountId: z.string().min(1, 'Account is required.'),
   contactId: z.string().optional(),
 });
@@ -61,7 +56,6 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
-  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -70,6 +64,7 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
       name: '',
       amount: 0,
       stage: 'New',
+      closeDate: '',
     },
   });
 
@@ -79,9 +74,22 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
         return;
     }
     startTransition(async () => {
+      const date = new Date(values.closeDate);
+      // Add a day to counteract timezone issues where new Date() creates a date at UTC midnight
+      date.setDate(date.getDate() + 1);
+
+      if (isNaN(date.getTime())) {
+          toast({
+              variant: 'destructive',
+              title: 'Invalid Date',
+              description: 'Please enter a valid date format (e.g., YYYY-MM-DD).',
+          });
+          return;
+      }
+
       const result = await createDeal({
           ...values,
-          closeDate: values.closeDate.toISOString(),
+          closeDate: date.toISOString(),
           ownerId: currentUser.id,
           teamspaceId: currentTeamspace.id,
       });
@@ -135,39 +143,14 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
                   control={form.control}
                   name="closeDate"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Expected Close Date</FormLabel>
-                      <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={'outline'}
-                              className={cn(
-                                'pl-3 text-left font-normal',
-                                !field.value && 'text-muted-foreground'
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, 'PPP')
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={(date) => {
-                              field.onChange(date);
-                              setDatePickerOpen(false);
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
