@@ -122,7 +122,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
         <DialogHeader>
           <DialogTitle>Upload and Assign Leads</DialogTitle>
           <DialogDescription>
-            Upload a CSV file from Meta Ads, review the leads, and assign them to a team lead.
+            Upload a CSV file from Meta Ads, review the leads, and assign them to a team member.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -146,17 +146,17 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     name="assignedToId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Assign To Team Lead</FormLabel>
+                        <FormLabel>Assign To User</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                             <SelectTrigger disabled={isLoading}>
-                                <SelectValue placeholder={isLoading ? 'Loading...' : 'Select a Team Lead'} />
+                                <SelectValue placeholder={isLoading ? 'Loading...' : 'Select a user'} />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            {users.filter(u => u.role === 'sales_team_lead').map(user => (
+                            {users.map(user => (
                                 <SelectItem key={user.id} value={user.id}>
-                                {user.displayName}
+                                {user.displayName} ({user.role.replace(/_/g, ' ')})
                                 </SelectItem>
                             ))}
                             </SelectContent>
