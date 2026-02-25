@@ -31,12 +31,12 @@ export type LeadStatus =
 
 export type Lead = {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  company: string;
+  fullName: string;
+  email?: string;
+  phone: string;
+  age?: number;
   status: LeadStatus;
-  source: string;
+  source?: string;
   assignedToId: string;
   teamspaceId: string;
   lastContacted?: string; // Should be a timestamp string
@@ -45,7 +45,6 @@ export type Lead = {
   reasoning?: string;
   // AI related fields - should match schema
   engagementScore?: number;
-  leadSource?: string;
   demographicData?: {
     industry: string;
     companySize: string;
@@ -320,5 +319,3 @@ export type Complaint = {
     createdAt: any;
     updatedAt: any;
 };
-
-    

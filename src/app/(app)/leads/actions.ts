@@ -7,7 +7,7 @@ export async function scoreLeadWithAI(lead: Lead) {
   try {
     const input: AiLeadScoringAndPrioritizationInput = {
       engagementScore: lead.engagementScore || 0,
-      leadSource: lead.leadSource || 'Unknown',
+      leadSource: lead.source || 'Unknown',
       demographicData: {
         industry: lead.demographicData?.industry,
         companySize: lead.demographicData?.companySize,

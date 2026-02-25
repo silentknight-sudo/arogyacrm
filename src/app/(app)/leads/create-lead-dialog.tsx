@@ -36,16 +36,13 @@ import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost'];
-const leadSources = ['Website', 'Referral', 'Social Media', 'Google Ads', 'Facebook Ads', 'LinkedIn Ads', 'Cold Call', 'Other'];
-
 
 const formSchema = z.object({
-  firstName: z.string().min(1, 'First name is required.'),
-  lastName: z.string().min(1, 'Last name is required.'),
-  email: z.string().email('Invalid email address.'),
-  company: z.string().optional(),
-  source: z.string().min(1, 'Lead source is required.'),
-  status: z.enum(['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost']),
+  fullName: z.string().min(1, 'Full name is required.'),
+  age: z.coerce.number().positive().int().optional(),
+  phone: z.string().min(1, 'Phone number is required.'),
+  email: z.string().email('Invalid email address.').optional().or(z.literal('')),
+  status: z.enum(leadStatuses),
 });
 
 type CreateLeadDialogProps = {
@@ -62,11 +59,9 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: '',
-      lastName: '',
+      fullName: '',
+      phone: '',
       email: '',
-      company: '',
-      source: 'Website',
       status: 'New',
     },
   });
@@ -88,7 +83,7 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
         });
         toast({
           title: 'Lead Created',
-          description: `Successfully created lead "${values.firstName} ${values.lastName}".`,
+          description: `Successfully created lead "${values.fullName}".`,
         });
         setOpen(false);
         form.reset();
@@ -116,22 +111,17 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
         <div className="overflow-y-auto max-h-[60vh] pr-4">
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="firstName" render={({ field }) => (
-                        <FormItem><FormLabel>First Name</FormLabel><FormControl><Input placeholder="John" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="lastName" render={({ field }) => (
-                        <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input placeholder="Doe" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </div>
+                <FormField control={form.control} name="fullName" render={({ field }) => (
+                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="phone" render={({ field }) => (
+                    <FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input placeholder="+1 234 567 890" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
                 <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="john.doe@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Email (Optional)</FormLabel><FormControl><Input type="email" placeholder="john.doe@example.com" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="company" render={({ field }) => (
-                    <FormItem><FormLabel>Company (Optional)</FormLabel><FormControl><Input placeholder="Acme Inc." {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="source" render={({ field }) => (
-                    <FormItem><FormLabel>Lead Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source" /></SelectTrigger></FormControl><SelectContent>{leadSources.map(source => (<SelectItem key={source} value={source}>{source}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                 <FormField control={form.control} name="age" render={({ field }) => (
+                    <FormItem><FormLabel>Age (Optional)</FormLabel><FormControl><Input type="number" placeholder="35" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="status" render={({ field }) => (
                     <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{leadStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>

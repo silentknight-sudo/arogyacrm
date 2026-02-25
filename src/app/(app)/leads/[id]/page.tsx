@@ -53,7 +53,7 @@ export default function LeadDetailPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{`${lead.firstName} ${lead.lastName}`}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{lead.fullName}</h1>
             <p className="text-muted-foreground">{lead.email}</p>
           </div>
         </div>

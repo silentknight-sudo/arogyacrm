@@ -115,32 +115,24 @@
           "type": "string",
           "description": "Reference to the Teamspace this lead belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Lead)"
         },
-        "firstName": {
+        "fullName": {
           "type": "string",
-          "description": "The first name of the lead."
+          "description": "The full name of the lead."
         },
-        "lastName": {
+        "age": {
+          "type": "number",
+          "description": "The age of the lead."
+        },
+        "phone": {
           "type": "string",
-          "description": "The last name of the lead."
+          "description": "The phone number of the lead."
         },
         "email": {
           "type": "string",
           "description": "The email address of the lead.",
           "format": "email"
         },
-        "phone": {
-          "type": "string",
-          "description": "The phone number of the lead."
-        },
-        "company": {
-          "type": "string",
-          "description": "The company or organization the lead is associated with, if applicable."
-        },
-        "leadSource": {
-          "type": "string",
-          "description": "The origin of the lead (e.g., 'Webform', 'Facebook Ads', 'Google Ads', 'Referral')."
-        },
-        "leadStatus": {
+        "status": {
           "type": "string",
           "description": "The current status of the lead in the sales process (e.g., 'New', 'Contacted', 'Qualified', 'Unqualified')."
         },
@@ -170,11 +162,9 @@
       "required": [
         "id",
         "teamspaceId",
-        "firstName",
-        "lastName",
-        "email",
-        "leadSource",
-        "leadStatus",
+        "fullName",
+        "phone",
+        "status",
         "assignedToId",
         "createdAt",
         "updatedAt"

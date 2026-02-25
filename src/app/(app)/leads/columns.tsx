@@ -119,7 +119,7 @@ const LeadActions = ({ lead }: { lead: Lead }) => {
 
   return (
     <>
-      <LeadScoringResultDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} result={result} leadName={`${lead.firstName} ${lead.lastName}`} />
+      <LeadScoringResultDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} result={result} leadName={lead.fullName} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -168,22 +168,21 @@ export const columns: ColumnDef<Lead>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: 'name',
-    accessorFn: row => `${row.firstName} ${row.lastName}`,
+    accessorKey: 'fullName',
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Name
+          Full Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
     },
     cell: ({ row }) => (
       <Link href={`/leads/${row.original.id}`} className="font-medium text-primary hover:underline">
-        {`${row.original.firstName} ${row.original.lastName}`}
+        {row.getValue('fullName')}
       </Link>
     ),
   },
@@ -192,8 +191,8 @@ export const columns: ColumnDef<Lead>[] = [
     header: 'Email',
   },
   {
-    accessorKey: 'company',
-    header: 'Company',
+    accessorKey: 'phone',
+    header: 'Phone',
   },
   {
     accessorKey: 'status',
@@ -206,10 +205,6 @@ export const columns: ColumnDef<Lead>[] = [
         status === 'Contacted' ? 'secondary' : 'destructive';
       return <Badge variant={variant} className="capitalize">{status}</Badge>;
     },
-  },
-  {
-    accessorKey: 'source',
-    header: 'Source',
   },
    {
     accessorKey: 'score',

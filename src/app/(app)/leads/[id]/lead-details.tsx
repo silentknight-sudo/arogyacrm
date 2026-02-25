@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Lead } from "@/types";
-import { AtSign, Building, Globe, Star, Flag, User, CaseUpper, Briefcase, Handshake } from 'lucide-react';
+import { AtSign, Building, Globe, Star, Flag, User, CaseUpper, Briefcase, Handshake, Phone, Cake } from 'lucide-react';
 
 const statusVariantMap: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   Qualified: 'default',
@@ -18,21 +18,25 @@ export function LeadDetails({ lead }: { lead: Lead }) {
                 <CardTitle>Lead Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
+                {lead.email && (
+                    <div className="flex items-center gap-3">
+                        <AtSign className="h-4 w-4 text-muted-foreground" />
+                        <a href={`mailto:${lead.email}`} className="text-primary hover:underline break-all">
+                            {lead.email}
+                        </a>
+                    </div>
+                )}
                 <div className="flex items-center gap-3">
-                    <AtSign className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${lead.email}`} className="text-primary hover:underline break-all">
-                        {lead.email}
-                    </a>
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{lead.phone}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Building className="h-4 w-4 text-muted-foreground" />
-                    <span>{lead.company}</span>
-                </div>
-                 {lead.demographicData?.jobTitle && <div className="flex items-center gap-3">
-                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    <span>{lead.demographicData.jobTitle}</span>
-                </div>}
-                {lead.demographicData?.industry && <div className="flex items-center gap-3">
+                {lead.age && (
+                    <div className="flex items-center gap-3">
+                        <Cake className="h-4 w-4 text-muted-foreground" />
+                        <span>{lead.age} years old</span>
+                    </div>
+                )}
+                 {lead.demographicData?.industry && <div className="flex items-center gap-3">
                     <Handshake className="h-4 w-4 text-muted-foreground" />
                     <span>{lead.demographicData.industry}</span>
                 </div>}
@@ -44,10 +48,12 @@ export function LeadDetails({ lead }: { lead: Lead }) {
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="truncate">Assigned to ID: {lead.assignedToId}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Flag className="h-4 w-4 text-muted-foreground" />
-                    <span>Source: {lead.source}</span>
-                </div>
+                {lead.source && (
+                    <div className="flex items-center gap-3">
+                        <Flag className="h-4 w-4 text-muted-foreground" />
+                        <span>Source: {lead.source}</span>
+                    </div>
+                )}
                 <div className="flex items-center gap-3">
                     <Star className="h-4 w-4 text-muted-foreground" />
                     <span>AI Score: {lead.score ?? 'N/A'}</span>

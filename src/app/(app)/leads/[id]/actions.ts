@@ -21,10 +21,10 @@ export async function generateLeadSummary(lead: Lead) {
     const input: LeadInteractionSummaryInput = {
       leadDetails: {
         id: lead.id,
-        name: `${lead.firstName} ${lead.lastName}`,
-        email: lead.email,
+        name: lead.fullName,
+        email: lead.email || '',
         status: lead.status,
-        source: lead.source,
+        source: lead.source || 'N/A',
         lastContactDate: lead.lastContacted ? formatISO(new Date(lead.lastContacted)) : undefined,
         notes: lead.notes,
       },
