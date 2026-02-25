@@ -44,7 +44,7 @@ const formSchema = z.object({
   phone: z.string().min(1, 'Phone number is required.'),
   email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   productAsked: z.string().optional(),
-  source: z.string().min(1, 'Lead source is required.'),
+  source: z.string().optional(),
   status: z.enum(leadStatuses),
 });
 
@@ -162,5 +162,3 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
     </Dialog>
   );
 }
-
-    
