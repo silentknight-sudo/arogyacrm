@@ -1,5 +1,5 @@
 'use client';
-
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Task, TaskStatus, UserProfile } from '@/types';
@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useApp } from '@/context/app-context';
-import { collection, query, where, documentId } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateTaskDialog } from './create-task-dialog';
+import { getTeamspaceUsers } from '../leads/actions';
 
 
 const statuses: TaskStatus[] = ['Todo', 'In Progress', 'Done'];
@@ -79,12 +80,26 @@ export default function TasksPage() {
   
   const { data: tasks, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const usersQuery = useMemoFirebase(() => {
-    if (!currentTeamspace || !currentTeamspace.memberIds?.length) return null;
-    return query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds));
-  }, [firestore, currentTeamspace]);
-  
-  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+
+  useEffect(() => {
+    if (currentTeamspace) {
+      setIsLoadingUsers(true);
+      getTeamspaceUsers(currentTeamspace.id).then(result => {
+        if (result.success && result.users) {
+          setUsers(result.users);
+        } else {
+          console.error("Failed to fetch users:", result.error);
+          setUsers([]);
+        }
+        setIsLoadingUsers(false);
+      });
+    } else {
+        setUsers([]);
+        setIsLoadingUsers(false);
+    }
+  }, [currentTeamspace]);
 
   const isLoading = isLoadingTasks || isLoadingUsers;
 

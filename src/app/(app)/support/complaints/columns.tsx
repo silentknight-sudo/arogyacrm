@@ -117,7 +117,10 @@ export const columns: ColumnDef<Complaint>[] = [
   {
     accessorKey: 'createdAt',
     header: 'Date',
-     cell: ({ row }) => format(row.original.createdAt.toDate(), 'PP'),
+     cell: ({ row }) => {
+        const date = row.original.createdAt?.toDate();
+        return date ? format(date, 'PP') : 'N/A';
+     }
   },
   {
     id: 'actions',

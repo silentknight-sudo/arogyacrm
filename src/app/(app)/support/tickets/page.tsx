@@ -1,15 +1,16 @@
 'use client';
-
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, documentId } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import type { Ticket, Contact, UserProfile } from '@/types';
 import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateTicketDialog } from './create-ticket-dialog';
+import { getTeamspaceUsers } from '../../leads/actions';
 
 export default function TicketsPage() {
   const { currentTeamspace } = useApp();
@@ -30,11 +31,26 @@ export default function TicketsPage() {
   , [firestore, currentTeamspace]);
   const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!currentTeamspace || !currentTeamspace.memberIds?.length) return null;
-    return query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds));
-  }, [firestore, currentTeamspace]);
-  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+
+  useEffect(() => {
+    if (currentTeamspace) {
+      setIsLoadingUsers(true);
+      getTeamspaceUsers(currentTeamspace.id).then(result => {
+        if (result.success && result.users) {
+          setUsers(result.users);
+        } else {
+          console.error("Failed to fetch users:", result.error);
+          setUsers([]);
+        }
+        setIsLoadingUsers(false);
+      });
+    } else {
+        setUsers([]);
+        setIsLoadingUsers(false);
+    }
+  }, [currentTeamspace]);
 
   const isLoading = isLoadingTickets || isLoadingContacts || isLoadingUsers;
 

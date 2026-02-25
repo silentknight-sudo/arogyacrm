@@ -212,7 +212,7 @@ export default function Dashboard() {
                         ) : recentLeads.length > 0 ? recentLeads.map(lead => (
                             <div key={lead.id} className="flex items-center">
                                 <div className="ml-4 space-y-1">
-                                    <p className="text-sm font-medium leading-none">{`${lead.firstName} ${lead.lastName}`}</p>
+                                    <p className="text-sm font-medium leading-none">{lead.fullName}</p>
                                     <p className="text-sm text-muted-foreground">{lead.email}</p>
                                 </div>
                                 <div className="ml-auto font-medium">{lead.source}</div>
