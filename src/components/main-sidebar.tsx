@@ -3,25 +3,26 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Users,
-  Contact,
-  Building2,
-  Handshake,
-  Megaphone,
-  ListTodo,
-  Calendar,
-  Phone,
-  Package,
-  ShoppingCart,
-  FilePlus2,
-  Receipt,
-  Ticket,
-  Undo2,
-  ShieldAlert,
-  BarChart3,
-  LayoutDashboard,
-  ChevronDown,
-  FileQuestion,
+    Users,
+    Contact,
+    Building2,
+    Handshake,
+    Megaphone,
+    ListTodo,
+    Calendar,
+    Phone,
+    Package,
+    ShoppingCart,
+    FilePlus2,
+    Receipt,
+    Ticket,
+    Undo2,
+    ShieldAlert,
+    BarChart3,
+    LayoutDashboard,
+    ChevronDown,
+    FileQuestion,
+    Settings,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -122,6 +123,16 @@ export function MainSidebar({ className }: { className?: string }) {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                     <div className="mt-2 flex flex-col gap-1">
+                        <Link
+                            href="/admin"
+                            className={cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                            pathname === '/admin' && 'bg-muted text-primary'
+                            )}
+                        >
+                            <Settings className="h-4 w-4" />
+                            Admin Dashboard
+                        </Link>
                         <Link
                             href="/admin/users"
                             className={cn(
