@@ -34,14 +34,14 @@ export async function scoreLeadWithAI(lead: Lead) {
 const AssignLeadSchema = z.object({
   leadId: z.string().min(1),
   teamspaceId: z.string().min(1),
-  newAssignedToId: z.string().min(1),
+  newAssignedToIds: z.array(z.string()).min(1, 'At least one user must be assigned.'),
   currentUserId: z.string().min(1), // User performing the action
 });
 
 export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
 : Promise<{ success: boolean; error?: string }> {
   try {
-    const { leadId, teamspaceId, newAssignedToId, currentUserId } = AssignLeadSchema.parse(values);
+    const { leadId, teamspaceId, newAssignedToIds, currentUserId } = AssignLeadSchema.parse(values);
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
     if (!currentUserDoc.exists) {
@@ -63,7 +63,7 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
 
     await leadRef.update({
-      assignedToId: newAssignedToId,
+      assignedToIds: newAssignedToIds,
       updatedAt: FieldValue.serverTimestamp(),
     });
 
@@ -104,7 +104,7 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
     const newAccountData = {
       id: accountRef.id,
       name: `${leadData.fullName}'s Company`,
-      ownerId: leadData.assignedToId,
+      ownerId: currentUserId,
       teamspaceId: teamspaceId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -121,7 +121,7 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
       phone: leadData.phone || '',
       accountId: accountRef.id,
       teamspaceId: teamspaceId,
-      ownerId: leadData.assignedToId,
+      ownerId: currentUserId,
       avatar: `https://picsum.photos/seed/${contactRef.id}/100/100`,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -169,7 +169,8 @@ export async function getTeamspaceUsers(teamspaceId: string): Promise<{ success:
         });
         return { success: true, users: users };
     } catch (error: any) {
-        return { success: false, error: handleAdminSDKError(error) };
+        const errorMessage = handleAdminSDKError(error);
+        return { success: false, error: errorMessage };
     }
 }
 

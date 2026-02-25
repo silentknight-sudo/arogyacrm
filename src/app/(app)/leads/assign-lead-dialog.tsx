@@ -4,6 +4,7 @@ import { useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -16,13 +17,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -30,9 +25,10 @@ import { useToast } from '@/hooks/use-toast';
 import { assignLead } from './actions';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile } from '@/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const formSchema = z.object({
-  assignedToId: z.string().min(1, 'You must select a user to assign the lead to.'),
+  assignedToIds: z.array(z.string()).min(1, 'You must select at least one user.'),
 });
 
 type AssignLeadDialogProps = {
@@ -50,7 +46,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      assignedToId: lead.assignedToId,
+      assignedToIds: lead.assignedToIds || [],
     },
   });
 
@@ -63,7 +59,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
       const result = await assignLead({
         leadId: lead.id,
         teamspaceId: lead.teamspaceId,
-        newAssignedToId: values.assignedToId,
+        newAssignedToIds: values.assignedToIds,
         currentUserId: currentUser.id,
       });
 
@@ -88,35 +84,57 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Assign Lead: {lead.fullName}</DialogTitle>
+          <DialogDescription>Select one or more users to assign this lead to.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="assignedToId"
-              render={({ field }) => (
+              name="assignedToIds"
+              render={() => (
                 <FormItem>
-                  <FormLabel>Assign To</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a user" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {users.map(user => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.displayName} ({user.role.replace(/_/g, ' ')})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Team Members</FormLabel>
+                  <ScrollArea className="h-40 rounded-md border p-4">
+                    {users.map((user) => (
+                      <FormField
+                        key={user.id}
+                        control={form.control}
+                        name="assignedToIds"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={user.id}
+                              className="flex flex-row items-start space-x-3 space-y-0 mb-3"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(user.id)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, user.id])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== user.id
+                                          )
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {user.displayName}
+                              </FormLabel>
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    ))}
+                  </ScrollArea>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <Button type="submit" disabled={isPending} className="w-full">
-              {isPending ? 'Assigning...' : 'Assign Lead'}
+              {isPending ? 'Assigning...' : 'Update Assignment'}
             </Button>
           </form>
         </Form>

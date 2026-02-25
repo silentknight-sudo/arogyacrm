@@ -31,6 +31,8 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useApp } from '@/context/app-context';
 import { AssignLeadDialog } from './assign-lead-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { open: boolean; onOpenChange: (open: boolean) => void; result: AiLeadScoringAndPrioritizationOutput | null, leadName: string }) {
   if (!result) return null;
@@ -195,7 +197,7 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
             {isLoading ? 'Scoring...' : 'Score with AI'}
           </DropdownMenuItem>
           {canAssign && (
-            <DropdownMenuItem onSelect={() => setAssignDialogOpen(true)}>
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setAssignDialogOpen(true); }}>
               <Users className="mr-2 h-4 w-4" />
               Assign Lead
             </DropdownMenuItem>
@@ -260,13 +262,44 @@ export const columns: ColumnDef<Lead>[] = [
     header: 'Email',
   },
     {
-    accessorKey: 'assignedToId',
+    accessorKey: 'assignedToIds',
     header: 'Assigned To',
     cell: ({ row, table }) => {
-        const assignedToId = row.getValue('assignedToId') as string;
+        const assignedToIds = (row.getValue('assignedToIds') as string[]) || [];
         const users = (table.options.meta as { users?: UserProfile[] })?.users || [];
-        const user = users.find(u => u.id === assignedToId);
-        return user ? user.displayName : <span className="text-muted-foreground">Unassigned</span>;
+        const assignedUsers = assignedToIds.map(id => users.find(u => u.id === id)).filter(Boolean) as UserProfile[];
+        
+        if (assignedUsers.length === 0) {
+            return <span className="text-muted-foreground">Unassigned</span>;
+        }
+
+        const visibleUsers = assignedUsers.slice(0, 3);
+        const remainingCount = assignedUsers.length - visibleUsers.length;
+
+        return (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="flex items-center -space-x-2">
+                            {visibleUsers.map(user => (
+                                <Avatar key={user.id} className="h-7 w-7 border-2 border-background">
+                                    <AvatarImage src={user.avatar} alt={user.displayName} />
+                                    <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            ))}
+                            {remainingCount > 0 && (
+                                <Avatar className="h-7 w-7 border-2 border-background">
+                                    <AvatarFallback>+{remainingCount}</AvatarFallback>
+                                </Avatar>
+                            )}
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        {assignedUsers.map(u => u.displayName).join(', ')}
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        );
     }
   },
   {

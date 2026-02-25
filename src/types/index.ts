@@ -38,7 +38,7 @@ export type Lead = {
   age?: number;
   status: LeadStatus;
   source?: string;
-  assignedToId: string;
+  assignedToIds: string[];
   teamspaceId: string;
   lastContacted?: string; // Should be a timestamp string
   score?: number;

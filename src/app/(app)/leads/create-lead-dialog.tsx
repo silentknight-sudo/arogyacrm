@@ -84,7 +84,7 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
         const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
         await addDoc(leadsRef, {
             ...values,
-            assignedToId: currentUser.id,
+            assignedToIds: [currentUser.id],
             teamspaceId: currentTeamspace.id,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),

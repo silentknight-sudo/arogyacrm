@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Lead } from "@/types";
-import { AtSign, Building, Globe, Star, Flag, User, CaseUpper, Briefcase, Handshake, Phone, Cake, Package } from 'lucide-react';
+import { AtSign, Building, Globe, Star, Flag, User, CaseUpper, Briefcase, Handshake, Phone, Cake, Package, Users } from 'lucide-react';
 
 const statusVariantMap: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   Qualified: 'default',
@@ -51,8 +51,8 @@ export function LeadDetails({ lead }: { lead: Lead }) {
                     </div>
                 )}
                  <div className="flex items-center gap-3">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate">Assigned to ID: {lead.assignedToId}</span>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="truncate">Assigned to {lead.assignedToIds.length} user(s)</span>
                 </div>
                 {lead.source && (
                     <div className="flex items-center gap-3">

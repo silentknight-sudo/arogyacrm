@@ -148,9 +148,12 @@
           "type": "number",
           "description": "A numerical score indicating the lead's potential or likelihood to convert, calculated by the AI lead scoring system."
         },
-        "assignedToId": {
-          "type": "string",
-          "description": "Reference to the User (sales executive) currently assigned to nurture this lead. (Relationship: User 1:N Lead)"
+        "assignedToIds": {
+          "type": "array",
+          "description": "References to Users (sales executives) currently assigned to nurture this lead. (Relationship: User N:N Lead)",
+          "items": {
+            "type": "string"
+          }
         },
         "attributionFields": {
           "type": "string",
@@ -173,7 +176,7 @@
         "fullName",
         "phone",
         "status",
-        "assignedToId",
+        "assignedToIds",
         "createdAt",
         "updatedAt"
       ]
@@ -1427,7 +1430,7 @@
           "schema": {
             "$ref": "#/backend/entities/Lead"
           },
-          "description": "Stores potential customer leads, isolated per teamspace. Each lead document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToId' for authorization independence. Access is restricted to members of the respective teamspace and the assigned sales executive."
+          "description": "Stores potential customer leads, isolated per teamspace. Each lead document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToIds' for authorization independence. Access is restricted to members of the respective teamspace and the assigned sales executives."
         }
       },
       {
