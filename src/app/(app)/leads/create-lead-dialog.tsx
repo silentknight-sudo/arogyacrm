@@ -36,6 +36,7 @@ import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost'];
+const leadSources = ['Website', 'Referral', 'Cold Call', 'Advertisement', 'Social Media', 'Other'];
 
 const formSchema = z.object({
   fullName: z.string().min(1, 'Full name is required.'),
@@ -43,6 +44,7 @@ const formSchema = z.object({
   phone: z.string().min(1, 'Phone number is required.'),
   email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   productAsked: z.string().optional(),
+  source: z.string().min(1, 'Lead source is required.'),
   status: z.enum(leadStatuses),
 });
 
@@ -64,6 +66,7 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
       phone: '',
       email: '',
       productAsked: '',
+      source: '',
       status: 'New',
     },
   });
@@ -128,6 +131,24 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
                 <FormField control={form.control} name="productAsked" render={({ field }) => (
                   <FormItem><FormLabel>Product Asked (Optional)</FormLabel><FormControl><Input placeholder="Ashwagandha, Stress Relief" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
+                <FormField control={form.control} name="source" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Lead Source</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a source" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {leadSources.map(source => (
+                                    <SelectItem key={source} value={source}>{source}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )} />
                 <FormField control={form.control} name="status" render={({ field }) => (
                     <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{leadStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
@@ -141,3 +162,5 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
     </Dialog>
   );
 }
+
+    

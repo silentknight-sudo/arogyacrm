@@ -195,6 +195,10 @@ export const columns: ColumnDef<Lead>[] = [
     header: 'Phone',
   },
   {
+    accessorKey: 'source',
+    header: 'Source',
+  },
+  {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => {
@@ -225,3 +229,5 @@ export const columns: ColumnDef<Lead>[] = [
     cell: ({ row }) => <LeadActions lead={row.original} />,
   },
 ];
+
+    
