@@ -50,30 +50,6 @@ type CreateMeetingDialogProps = {
   isLoading: boolean;
 };
 
-function AttendeeCheckbox({ field, item }: { field: any; item: UserProfile | Contact }) {
-  const label = 'displayName' in item ? item.displayName : `${item.firstName} ${item.lastName}`;
-  return (
-    <FormItem
-      key={item.id}
-      className="flex flex-row items-start space-x-3 space-y-0"
-    >
-      <FormControl>
-        <Checkbox
-          checked={(field.value || []).includes(item.id)}
-          onCheckedChange={(checked) => {
-            return checked
-              ? field.onChange([...(field.value || []), item.id])
-              : field.onChange(
-                  (field.value || []).filter((value: string) => value !== item.id)
-                );
-          }}
-        />
-      </FormControl>
-      <FormLabel className="font-normal">{label}</FormLabel>
-    </FormItem>
-  );
-}
-
 export function CreateMeetingDialog({ children, users, contacts, isLoading }: CreateMeetingDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
@@ -156,17 +132,44 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
               <FormField
                 control={form.control}
                 name="attendeeIds"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Attendees</FormLabel>
                     <div className="max-h-40 overflow-y-auto space-y-2 rounded-md border p-2">
-                      {allAttendees.map((item) => <AttendeeCheckbox key={item.id} field={field} item={item} />)}
+                      {allAttendees.map((item) => (
+                        <FormField
+                            key={item.id}
+                            control={form.control}
+                            name="attendeeIds"
+                            render={({ field }) => {
+                                const label = 'displayName' in item ? item.displayName : `${item.firstName} ${item.lastName}`;
+                                return (
+                                <FormItem
+                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                >
+                                    <FormControl>
+                                    <Checkbox
+                                        checked={field.value?.includes(item.id)}
+                                        onCheckedChange={(checked) => {
+                                        return checked
+                                            ? field.onChange([...(field.value || []), item.id])
+                                            : field.onChange(
+                                                (field.value || []).filter((value) => value !== item.id)
+                                            )
+                                        }}
+                                    />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">{label}</FormLabel>
+                                </FormItem>
+                                )
+                            }}
+                        />
+                      ))}
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <Button type="submit" disabled={isPending || isLoading} className="w-full">
                 {isPending ? 'Scheduling...' : 'Schedule Meeting'}
               </Button>

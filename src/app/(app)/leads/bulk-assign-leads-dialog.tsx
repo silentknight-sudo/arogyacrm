@@ -96,33 +96,39 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
             <FormField
               control={form.control}
               name="assignedToIds"
-              render={({ field }) => (
+              render={() => (
                 <FormItem>
                   <FormLabel>Team Members</FormLabel>
                   <ScrollArea className="h-40 rounded-md border p-4">
                     {users.map((user) => (
-                      <FormItem
+                      <FormField
                         key={user.id}
-                        className="flex flex-row items-start space-x-3 space-y-0 mb-3"
-                      >
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value?.includes(user.id)}
-                            onCheckedChange={(checked) => {
-                              return checked
-                                ? field.onChange([...(field.value || []), user.id])
-                                : field.onChange(
-                                    (field.value || []).filter(
-                                      (value) => value !== user.id
-                                    )
-                                  );
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          {user.displayName}
-                        </FormLabel>
-                      </FormItem>
+                        control={form.control}
+                        name="assignedToIds"
+                        render={({ field }) => (
+                          <FormItem
+                            className="flex flex-row items-start space-x-3 space-y-0 mb-3"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(user.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...(field.value || []), user.id])
+                                    : field.onChange(
+                                        (field.value || []).filter(
+                                          (value) => value !== user.id
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              {user.displayName}
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
                     ))}
                   </ScrollArea>
                   <FormMessage />
