@@ -61,6 +61,7 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -130,9 +131,47 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
                  <FormField control={form.control} name="stage" render={({ field }) => (
                     <FormItem><FormLabel>Stage</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a stage" /></SelectTrigger></FormControl><SelectContent>{dealStages.map(stage => (<SelectItem key={stage} value={stage}>{stage}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="closeDate" render={({ field }) => (
-                    <FormItem className="flex flex-col"><FormLabel>Expected Close Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="closeDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Expected Close Date</FormLabel>
+                      <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => {
+                              field.onChange(date);
+                              setDatePickerOpen(false);
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <Button type="submit" disabled={isPending || isLoading} className="w-full">
                     {isPending ? 'Creating Deal...' : 'Create Deal'}
                 </Button>
