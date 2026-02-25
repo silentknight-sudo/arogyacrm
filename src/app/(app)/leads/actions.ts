@@ -152,7 +152,21 @@ export async function getTeamspaceUsers(teamspaceId: string): Promise<{ success:
         if (usersSnapshot.empty) {
             return { success: true, users: [] };
         }
-        const users = usersSnapshot.docs.map(doc => doc.data() as UserProfile);
+        const users = usersSnapshot.docs.map(doc => {
+            const docData = doc.data();
+            // Firestore Timestamps are not plain objects and cannot be passed from server to client components.
+            // We need to serialize them to strings.
+            const serializedData = Object.fromEntries(
+                Object.entries(docData).map(([key, value]) => {
+                    // Check if the value is a Firestore Timestamp
+                    if (value && typeof value.toDate === 'function') {
+                        return [key, value.toDate().toISOString()];
+                    }
+                    return [key, value];
+                })
+            );
+            return serializedData as UserProfile;
+        });
         return { success: true, users: users };
     } catch (error: any) {
         return { success: false, error: handleAdminSDKError(error) };
