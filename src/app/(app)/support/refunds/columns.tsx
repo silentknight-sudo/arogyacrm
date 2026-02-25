@@ -112,8 +112,16 @@ export const columns: ColumnDef<Refund>[] = [
     accessorKey: 'createdAt',
     header: 'Date',
      cell: ({ row }) => {
-       const date = row.original.createdAt?.toDate();
-       return date ? format(date, 'PP') : 'N/A';
+       const createdAt = row.original.createdAt;
+        if (!createdAt) {
+            return 'N/A';
+        }
+        // Handle both Timestamp objects and serialized date strings
+        const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+        if (isNaN(date.getTime())) {
+            return 'Invalid Date';
+        }
+        return format(date, 'PP');
      }
   },
   {
