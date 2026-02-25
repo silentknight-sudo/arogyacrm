@@ -213,6 +213,10 @@
           "type": "string",
           "description": "Reference to the Account (company) this contact is associated with. (Relationship: Account 1:N Contact)"
         },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the User who owns this contact record. (Relationship: User 1:N Contact)"
+        },
         "leadId": {
           "type": "string",
           "description": "Optional reference to the original Lead if this contact was converted from a lead, for historical tracking. (Relationship: Lead 1:1 Contact)"
@@ -235,6 +239,7 @@
         "lastName",
         "email",
         "accountId",
+        "ownerId",
         "createdAt",
         "updatedAt"
       ]

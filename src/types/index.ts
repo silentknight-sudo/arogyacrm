@@ -27,7 +27,8 @@ export type LeadStatus =
   | 'Contacted'
   | 'Qualified'
   | 'Lost'
-  | 'Unqualified';
+  | 'Unqualified'
+  | 'Converted';
 
 export type Lead = {
   id: string;
@@ -123,6 +124,7 @@ export type Contact = {
   email: string;
   phone?: string;
   accountId: string;
+  ownerId: string;
   leadId?: string;
   createdAt: any;
   updatedAt: any;

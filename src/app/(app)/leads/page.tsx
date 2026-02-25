@@ -1,9 +1,10 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, documentId } from 'firebase/firestore';
+import { collection, query, doc, getDoc } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,12 +25,33 @@ export default function LeadsPage() {
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!currentTeamspace || !currentTeamspace.memberIds?.length) return null;
-    return query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds));
-  }, [firestore, currentTeamspace]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
-  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+  useEffect(() => {
+    if (currentTeamspace?.memberIds && currentTeamspace.memberIds.length > 0) {
+      setIsLoadingUsers(true);
+      const fetchUsers = async () => {
+        try {
+          const userPromises = currentTeamspace.memberIds.map(id => getDoc(doc(firestore, 'users', id)));
+          const userDocs = await Promise.all(userPromises);
+          const fetchedUsers = userDocs
+            .filter(snap => snap.exists())
+            .map(snap => ({ id: snap.id, ...snap.data() } as UserProfile));
+          setUsers(fetchedUsers);
+        } catch (error) {
+          console.error("Failed to fetch users:", error);
+          setUsers([]);
+        } finally {
+          setIsLoadingUsers(false);
+        }
+      };
+      fetchUsers();
+    } else {
+      setUsers([]);
+      setIsLoadingUsers(false);
+    }
+  }, [currentTeamspace, firestore]);
 
   const isLoading = isLoadingLeads || isLoadingUsers;
 

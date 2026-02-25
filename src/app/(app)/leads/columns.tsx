@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { ColumnDef, type Table as TanstackTable } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Star, Bot, Users } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Star, Bot, Users, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,11 +15,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Lead, UserProfile } from '@/types';
-import { scoreLeadWithAI } from './actions';
+import { scoreLeadWithAI, convertLead } from './actions';
 import { AiLeadScoringAndPrioritizationOutput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -86,7 +87,10 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   const { currentUser } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AiLeadScoringAndPrioritizationOutput | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isScoringDialogOpen, setScoringDialogOpen] = useState(false);
+  const [isConverting, startConvertTransition] = useTransition();
+  const [isConvertAlertOpen, setConvertAlertOpen] = useState(false);
+
 
   const users = (table.options.meta as { users?: UserProfile[] })?.users || [];
   const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
@@ -97,7 +101,7 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
     const response = await scoreLeadWithAI(lead);
     if (response.success && response.data) {
       setResult(response.data);
-      setIsDialogOpen(true);
+      setScoringDialogOpen(true);
     } else {
       toast({
         variant: "destructive",
@@ -124,9 +128,49 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
     });
   };
 
+  const handleConvertLead = () => {
+    if (!currentUser) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You are not authenticated.' });
+      return;
+    }
+    startConvertTransition(async () => {
+      const result = await convertLead({ leadId: lead.id, teamspaceId: lead.teamspaceId, currentUserId: currentUser.id });
+      if (result.success) {
+        toast({
+          title: 'Lead Converted',
+          description: `Successfully converted ${lead.fullName} to a contact and account.`,
+        });
+        setConvertAlertOpen(false);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Conversion Failed',
+          description: result.error,
+        });
+      }
+    });
+  };
+
   return (
     <>
-      <LeadScoringResultDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} result={result} leadName={lead.fullName} />
+      <LeadScoringResultDialog open={isScoringDialogOpen} onOpenChange={setScoringDialogOpen} result={result} leadName={lead.fullName} />
+      <AlertDialog open={isConvertAlertOpen} onOpenChange={setConvertAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Convert this Lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a new Account and Contact from '{lead.fullName}'. The lead's status will be set to 'Converted'. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isConverting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConvertLead} disabled={isConverting}>
+              {isConverting ? 'Converting...' : 'Yes, Convert Lead'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -151,6 +195,11 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
               </DropdownMenuItem>
             </AssignLeadDialog>
           )}
+          <DropdownMenuSeparator />
+           <DropdownMenuItem onSelect={() => setConvertAlertOpen(true)} disabled={lead.status === 'Converted'}>
+                <ChevronsRight className="mr-2 h-4 w-4" />
+                Convert Lead
+            </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleCopyId}>
             Copy lead ID
@@ -221,7 +270,7 @@ export const columns: ColumnDef<Lead>[] = [
     cell: ({ row }) => {
       const status = row.getValue('status') as string;
       const variant: 'default' | 'secondary' | 'destructive' | 'outline' =
-        status === 'Qualified' ? 'default' :
+        status === 'Qualified' || status === 'Converted' ? 'default' :
         status === 'New' ? 'outline' :
         status === 'Contacted' ? 'secondary' : 'destructive';
       return <Badge variant={variant} className="capitalize">{status}</Badge>;
