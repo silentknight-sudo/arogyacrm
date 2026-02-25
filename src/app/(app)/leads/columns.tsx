@@ -90,6 +90,7 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   const [isScoringDialogOpen, setScoringDialogOpen] = useState(false);
   const [isConverting, startConvertTransition] = useTransition();
   const [isConvertAlertOpen, setConvertAlertOpen] = useState(false);
+  const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
 
 
   const users = (table.options.meta as { users?: UserProfile[] })?.users || [];
@@ -154,6 +155,12 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   return (
     <>
       <LeadScoringResultDialog open={isScoringDialogOpen} onOpenChange={setScoringDialogOpen} result={result} leadName={lead.fullName} />
+      <AssignLeadDialog
+        open={isAssignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        lead={lead}
+        users={users}
+      />
       <AlertDialog open={isConvertAlertOpen} onOpenChange={setConvertAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -188,12 +195,10 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
             {isLoading ? 'Scoring...' : 'Score with AI'}
           </DropdownMenuItem>
           {canAssign && (
-            <AssignLeadDialog lead={lead} users={users}>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                <Users className="mr-2 h-4 w-4" />
-                Assign Lead
-              </DropdownMenuItem>
-            </AssignLeadDialog>
+            <DropdownMenuItem onSelect={() => setAssignDialogOpen(true)}>
+              <Users className="mr-2 h-4 w-4" />
+              Assign Lead
+            </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
            <DropdownMenuItem onSelect={() => setConvertAlertOpen(true)} disabled={lead.status === 'Converted'}>

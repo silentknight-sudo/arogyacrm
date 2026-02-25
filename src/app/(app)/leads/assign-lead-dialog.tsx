@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,15 +36,15 @@ const formSchema = z.object({
 });
 
 type AssignLeadDialogProps = {
-  children: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   lead: Lead;
   users: UserProfile[];
 };
 
-export function AssignLeadDialog({ children, lead, users }: AssignLeadDialogProps) {
+export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLeadDialogProps) {
   const { toast } = useToast();
   const { currentUser } = useApp();
-  const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -73,7 +72,7 @@ export function AssignLeadDialog({ children, lead, users }: AssignLeadDialogProp
           title: 'Lead Assigned',
           description: `Lead "${lead.fullName}" has been assigned.`,
         });
-        setOpen(false);
+        onOpenChange(false);
       } else {
         toast({
           variant: 'destructive',
@@ -85,8 +84,7 @@ export function AssignLeadDialog({ children, lead, users }: AssignLeadDialogProp
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Assign Lead: {lead.fullName}</DialogTitle>
