@@ -23,8 +23,10 @@ service cloud.firestore {
     }
 
     function isTeamspaceMember(teamspaceId) {
-      // A user is a member if their user document contains the teamspaceId
-      return isSignedIn() && teamspaceId in getUserData().teamspaceIds;
+      // A user is a member if their user document's teamspaceIds array contains the teamspaceId.
+      // The `in` operator checks for keys in a Map, not values in a List.
+      // The correct way to check for existence in a List is to use `hasAny` with a single-element list.
+      return isSignedIn() && getUserData().teamspaceIds.hasAny([teamspaceId]);
     }
 
     // Check if the user is the owner of a specific document
@@ -92,8 +94,8 @@ service cloud.firestore {
       // Update/delete requires being the document owner.
       match /{collection}/{docId} {
         allow get, list: if isTeamspaceMember(teamspaceId) || isAdmin();
-        allow create: if isTeamspaceMember(teamspaceId) && isIncomingDocOwner();
-        allow update, delete: if isTeamspaceMember(teamspaceId) && (isDocOwner(resource) || isAdmin());
+        allow create: if (isTeamspaceMember(teamspaceId) || isAdmin()) && isIncomingDocOwner();
+        allow update, delete: if (isTeamspaceMember(teamspaceId) || isAdmin()) && (isDocOwner(resource) || isAdmin());
       }
     }
   }
