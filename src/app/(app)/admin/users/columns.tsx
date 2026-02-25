@@ -1,8 +1,9 @@
 'use client';
 
+import { useState, useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MoreHorizontal, ArrowUpDown, Trash2 } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,10 +17,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { UserProfile } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { deleteUser } from './actions';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useApp } from '@/context/app-context';
 
 
 const UserActions = ({ user }: { user: UserProfile }) => {
   const { toast } = useToast();
+  const { currentUser } = useApp();
+  const [isDeleting, startDeleteTransition] = useTransition();
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(user.id).then(() => {
@@ -36,8 +52,51 @@ const UserActions = ({ user }: { user: UserProfile }) => {
         console.error('Failed to copy ID: ', err);
     });
   };
+  
+  const handleDelete = () => {
+    if (!currentUser) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
+      return;
+    }
+
+    startDeleteTransition(async () => {
+      const result = await deleteUser({ userId: user.id, adminId: currentUser.id });
+      if (result.success) {
+        toast({
+          title: 'User Deleted',
+          description: `User ${user.displayName} has been permanently deleted.`,
+        });
+        setIsAlertOpen(false);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Deletion Failed',
+          description: result.error,
+        });
+      }
+    });
+  }
 
   return (
+    <>
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user account for{' '}
+              <span className="font-semibold">{user.displayName} ({user.email})</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: 'destructive' })}>
+              {isDeleting ? 'Deleting...' : 'Yes, delete user'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -50,8 +109,18 @@ const UserActions = ({ user }: { user: UserProfile }) => {
           <DropdownMenuItem onClick={handleCopyId}>
             Copy user ID
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem 
+            onClick={() => setIsAlertOpen(true)}
+            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+            disabled={currentUser?.id === user.id}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete User
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+    </>
   );
 };
 

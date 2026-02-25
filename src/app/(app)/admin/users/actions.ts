@@ -66,3 +66,48 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
     return { success: false, error: errorMessage };
   }
 }
+
+
+const DeleteUserSchema = z.object({
+  userId: z.string().min(1),
+  adminId: z.string().min(1),
+});
+
+export async function deleteUser(values: { userId: string, adminId: string }): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { userId, adminId } = DeleteUserSchema.parse(values);
+
+    // Verify admin privileges
+    const adminUserDoc = await adminDb.collection('users').doc(adminId).get();
+    if (!adminUserDoc.exists || adminUserDoc.data()?.role !== 'admin') {
+      throw new Error('You do not have permission to perform this action.');
+    }
+    
+    if (userId === adminId) {
+        throw new Error('Admins cannot delete their own account.');
+    }
+
+    // Step 1: Delete user from Firebase Authentication
+    await adminAuth.deleteUser(userId);
+
+    // Step 2: Delete the user profile document in Firestore
+    const userDocRef = adminDb.collection('users').doc(userId);
+    await userDocRef.delete();
+
+    // Note: This does not remove the user from teamspace member lists or re-assign their owned documents.
+    // A more robust implementation would handle this, but for this request, this is sufficient.
+
+    revalidatePath('/admin/users');
+    return { success: true };
+
+  } catch (error: any) {
+    console.error('Error deleting user:', error);
+    
+    let errorMessage = 'An unexpected error occurred.';
+    if (error.message) {
+        errorMessage = error.message;
+    }
+
+    return { success: false, error: errorMessage };
+  }
+}
