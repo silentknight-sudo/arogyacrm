@@ -18,7 +18,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -37,6 +36,7 @@ import {
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
   assignedToId: z.string().min(1, 'You must assign the leads to a user.'),
@@ -59,6 +59,9 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      assignedToId: '',
+    },
   });
 
   const handleUploadAccepted = (results: any) => {
@@ -147,7 +150,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Assign To User</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
                             <SelectTrigger disabled={isLoading}>
                                 <SelectValue placeholder={isLoading ? 'Loading...' : 'Select a user'} />
