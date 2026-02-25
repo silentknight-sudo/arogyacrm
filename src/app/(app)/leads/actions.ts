@@ -14,6 +14,7 @@ export async function scoreLeadWithAI(lead: Lead) {
         jobTitle: lead.demographicData?.jobTitle,
         country: lead.demographicData?.country,
       },
+      productAsked: lead.productAsked,
       leadStatus: lead.status,
       notes: lead.notes,
     };

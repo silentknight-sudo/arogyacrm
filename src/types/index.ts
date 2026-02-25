@@ -43,6 +43,7 @@ export type Lead = {
   score?: number;
   priority?: 'High' | 'Medium' | 'Low';
   reasoning?: string;
+  productAsked?: string;
   // AI related fields - should match schema
   engagementScore?: number;
   demographicData?: {

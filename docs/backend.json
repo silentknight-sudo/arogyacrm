@@ -132,6 +132,10 @@
           "description": "The email address of the lead.",
           "format": "email"
         },
+        "productAsked": {
+          "type": "string",
+          "description": "The specific product or category of products the lead has inquired about."
+        },
         "status": {
           "type": "string",
           "description": "The current status of the lead in the sales process (e.g., 'New', 'Contacted', 'Qualified', 'Unqualified')."

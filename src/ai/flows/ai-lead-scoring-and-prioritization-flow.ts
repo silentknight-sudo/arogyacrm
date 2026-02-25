@@ -19,6 +19,7 @@ const AiLeadScoringAndPrioritizationInputSchema = z.object({
     jobTitle: z.string().optional().describe('The job title of the lead.'),
     country: z.string().optional().describe('The country the lead is located in.'),
   }).describe('Demographic data about the lead.'),
+  productAsked: z.string().optional().describe('The specific product or product category the lead has inquired about.'),
   leadStatus: z.string().optional().describe('The current status of the lead (e.g., "New", "Contacted", "Qualified").'),
   notes: z.string().optional().describe('Any additional notes or historical data about the lead.'),
 });
@@ -44,6 +45,7 @@ const prompt = ai.definePrompt({
 Consider the following factors:
 - **Engagement Score**: Higher scores indicate more interest.
 - **Lead Source**: Some sources (e.g., direct website, referrals) might be more valuable than others (e.g., general ads).
+- **Product Asked**: Specific interest in a high-value product should increase the score.
 - **Demographic Data**: Align with the target customer profile for Ayurvedic supplements. For example, individuals in wellness-related industries, specific job titles, or certain company sizes might be more relevant.
 - **Lead Status**: Leads that are further along in the sales process (e.g., 'Qualified') are generally higher priority.
 - **Notes**: Any additional context that helps understand the lead's potential.
@@ -53,6 +55,7 @@ Provide a 'reasoning' explaining your score and priority.
 Here is the lead data:
 Engagement Score: {{{engagementScore}}}
 Lead Source: {{{leadSource}}}
+Product Asked: {{{productAsked}}}
 Demographic Data:
   Industry: {{{demographicData.industry}}}
   Company Size: {{{demographicData.companySize}}}

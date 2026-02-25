@@ -42,6 +42,7 @@ const formSchema = z.object({
   age: z.coerce.number().positive().int().optional(),
   phone: z.string().min(1, 'Phone number is required.'),
   email: z.string().email('Invalid email address.').optional().or(z.literal('')),
+  productAsked: z.string().optional(),
   status: z.enum(leadStatuses),
 });
 
@@ -62,6 +63,7 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
       fullName: '',
       phone: '',
       email: '',
+      productAsked: '',
       status: 'New',
     },
   });
@@ -122,6 +124,9 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
                 )} />
                  <FormField control={form.control} name="age" render={({ field }) => (
                     <FormItem><FormLabel>Age (Optional)</FormLabel><FormControl><Input type="number" placeholder="35" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="productAsked" render={({ field }) => (
+                  <FormItem><FormLabel>Product Asked (Optional)</FormLabel><FormControl><Input placeholder="Ashwagandha, Stress Relief" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="status" render={({ field }) => (
                     <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{leadStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
