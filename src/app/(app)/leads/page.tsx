@@ -9,10 +9,11 @@ import type { Lead, UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Upload } from 'lucide-react';
+import { UploadLeadsDialog } from './upload-leads-dialog';
 
 export default function LeadsPage() {
-  const { currentTeamspace } = useApp();
+  const { currentUser, currentTeamspace } = useApp();
   const firestore = useFirestore();
 
   const leadsQuery = useMemoFirebase(() => 
@@ -42,12 +43,22 @@ export default function LeadsPage() {
                     Manage your prospective customers and track their journey.
                 </p>
             </div>
-             <CreateLeadDialog>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Lead
-                </Button>
-            </CreateLeadDialog>
+             <div className="flex items-center space-x-2">
+              {currentUser?.role === 'admin' && (
+                <UploadLeadsDialog users={users || []} isLoading={isLoading}>
+                  <Button variant="outline">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload CSV
+                  </Button>
+                </UploadLeadsDialog>
+              )}
+              <CreateLeadDialog>
+                  <Button>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Lead
+                  </Button>
+              </CreateLeadDialog>
+            </div>
         </div>
         
         {isLoading && (

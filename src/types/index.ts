@@ -53,6 +53,7 @@ export type Lead = {
     country: string;
   };
   notes?: string;
+  attributionFields?: string;
   createdAt: any; // serverTimestamp
   updatedAt: any; // serverTimestamp
 };
@@ -319,4 +320,13 @@ export type Complaint = {
     relatedToEntityId?: string;
     createdAt: any;
     updatedAt: any;
+};
+
+// Represents a row from the CSV upload before it's converted to a full Lead object.
+export type RawLead = {
+  'Name': string;
+  'Email address': string;
+  'Phone': string;
+  'Source': string;
+  [key: string]: any; // Allow other fields from the CSV
 };

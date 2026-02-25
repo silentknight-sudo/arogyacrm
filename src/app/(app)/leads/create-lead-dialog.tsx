@@ -34,6 +34,7 @@ import { useApp } from '@/context/app-context';
 import type { LeadStatus } from '@/types';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Textarea } from '@/components/ui/textarea';
 
 const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost'];
 const leadSources = ['Website', 'Referral', 'Cold Call', 'Advertisement', 'Social Media', 'Other'];
@@ -46,6 +47,7 @@ const formSchema = z.object({
   productAsked: z.string().optional(),
   source: z.string().optional(),
   status: z.enum(leadStatuses),
+  attributionFields: z.string().optional(),
 });
 
 type CreateLeadDialogProps = {
@@ -68,6 +70,7 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
       productAsked: '',
       source: '',
       status: 'New',
+      attributionFields: '',
     },
   });
 
@@ -152,6 +155,19 @@ export function CreateLeadDialog({ children }: CreateLeadDialogProps) {
                 <FormField control={form.control} name="status" render={({ field }) => (
                     <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{leadStatuses.map(status => (<SelectItem key={status} value={status}>{status}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
+                <FormField
+                  control={form.control}
+                  name="attributionFields"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Attribution (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder='{"campaignId": "xyz", "adSet": "abc"}' {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <Button type="submit" disabled={isPending} className="w-full">
                     {isPending ? 'Creating Lead...' : 'Create Lead'}
                 </Button>
