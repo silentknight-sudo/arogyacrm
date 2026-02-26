@@ -36,7 +36,7 @@ import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Textarea } from '@/components/ui/textarea';
 
-const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost'];
+const leadStatuses = ['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost'] as const;
 const leadSources = ['Website', 'Referral', 'Cold Call', 'Advertisement', 'Social Media', 'Other'];
 
 const formSchema = z.object({

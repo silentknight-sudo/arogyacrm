@@ -40,8 +40,8 @@ import type { TaskStatus, UserProfile } from '@/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-const taskStatuses: TaskStatus[] = ['Todo', 'In Progress', 'Done'];
-const taskPriorities: Array<'Low' | 'Medium' | 'High'> = ['Low', 'Medium', 'High'];
+const taskStatuses = ['Todo', 'In Progress', 'Done'] as const;
+const taskPriorities = ['Low', 'Medium', 'High'] as const;
 
 const formSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters.'),
@@ -124,7 +124,7 @@ export function CreateTaskDialog({ children, users, isLoading }: CreateTaskDialo
                     <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Discuss renewal and upsell opportunities..." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="assignedToId" render={({ field }) => (
-                    <FormItem><FormLabel>Assign To</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading users..." : "Select a user"} /></SelectTrigger></FormControl><SelectContent>{users.map(u => (<SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Assign To</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading users..." : "Select a user"} /></SelectTrigger></FormControl><SelectContent>{users.length > 0 ? users.map(u => (<SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No team members found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="status" render={({ field }) => (

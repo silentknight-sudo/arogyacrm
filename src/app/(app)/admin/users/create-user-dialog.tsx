@@ -36,7 +36,7 @@ import { createUser } from './actions';
 import type { Teamspace, UserRole } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const roles: UserRole[] = ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'];
+const roles = ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'] as const;
 
 const formSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),

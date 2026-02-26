@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -41,7 +40,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { LineItemSchema } from '../schemas';
 
-const purchaseOrderStatuses: PurchaseOrderStatus[] = ['Pending', 'Ordered', 'Received', 'Cancelled'];
+const purchaseOrderStatuses = ['Pending', 'Ordered', 'Received', 'Cancelled'] as const;
 
 const formSchema = z.object({
   supplierName: z.string().min(2, 'Supplier name is required.'),
@@ -169,7 +168,7 @@ export function CreatePurchaseOrderDialog({ children, users, products, isLoading
                         <div className="grid grid-cols-3 gap-2 flex-grow">
                             <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
                                 <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
-                                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                                <SelectContent>{products.length > 0 ? products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">No products found.</div>}</SelectContent>
                             </Select>
                             <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
                             <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
@@ -196,4 +195,3 @@ export function CreatePurchaseOrderDialog({ children, users, products, isLoading
     </Dialog>
   );
 }
-    

@@ -40,8 +40,8 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-const callStatuses: CallStatus[] = ['Completed', 'No Answer', 'Voicemail', 'Busy'];
-const callTypes: CallType[] = ['Outbound', 'Inbound'];
+const callStatuses = ['Completed', 'No Answer', 'Voicemail', 'Busy'] as const;
+const callTypes = ['Outbound', 'Inbound'] as const;
 
 const formSchema = z.object({
   subject: z.string().min(2, 'Subject is required.'),
@@ -126,7 +126,7 @@ export function CreateCallDialog({ children, contacts, users, isLoading }: Creat
               )} />
               <FormField control={form.control} name="relatedToEntityId" render={({ field }) => (
                 <FormItem><FormLabel>Related Contact (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="callDate" render={({ field }) => (
                 <FormItem className="flex flex-col"><FormLabel>Call Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>

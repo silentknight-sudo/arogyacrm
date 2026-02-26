@@ -34,7 +34,7 @@ import { createRefund } from './actions';
 import { useApp } from '@/context/app-context';
 import type { SalesOrder, UserProfile, RefundStatus } from '@/types';
 
-const refundStatuses: RefundStatus[] = ['Pending', 'Approved', 'Rejected', 'Processed', 'Cancelled'];
+const refundStatuses = ['Pending', 'Approved', 'Rejected', 'Processed', 'Cancelled'] as const;
 
 const formSchema = z.object({
     salesOrderId: z.string().min(1, 'Sales Order is required.'),
@@ -108,7 +108,7 @@ export function CreateRefundDialog({ children, salesOrders, users, isLoading }: 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                <FormField control={form.control} name="salesOrderId" render={({ field }) => (
-                <FormItem><FormLabel>Sales Order</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select an order"} /></SelectTrigger></FormControl><SelectContent>{salesOrders.map(so => (<SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                <FormItem><FormLabel>Sales Order</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select an order"} /></SelectTrigger></FormControl><SelectContent>{salesOrders.length > 0 ? salesOrders.map(so => (<SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No sales orders found.</div>}</SelectContent></Select><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="reason" render={({ field }) => (
                 <FormItem><FormLabel>Reason</FormLabel><FormControl><Input placeholder="Customer returning product" {...field} /></FormControl><FormMessage /></FormItem>

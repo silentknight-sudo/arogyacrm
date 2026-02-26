@@ -201,33 +201,32 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
 
 export async function getTeamspaceUsers(teamspaceId: string): Promise<{ success: boolean; users?: UserProfile[], error?: string; }> {
     try {
+        if (!teamspaceId) {
+            return { success: true, users: [] };
+        }
+
         const usersSnapshot = await adminDb.collection('users').where('teamspaceIds', 'array-contains', teamspaceId).get();
         if (usersSnapshot.empty) {
             return { success: true, users: [] };
         }
+        
         const users = usersSnapshot.docs.map(doc => {
             const docData = doc.data();
-            // Firestore Timestamps are not plain objects and cannot be passed from server to client components.
-            // We need to serialize them to strings.
-            const serializedData = Object.fromEntries(
-                Object.entries(docData).map(([key, value]) => {
-                    // Check if the value is a Firestore Timestamp
-                    if (value && typeof value.toDate === 'function') {
-                        return [key, value.toDate().toISOString()];
-                    }
-                    return [key, value];
-                })
-            );
-            return serializedData as UserProfile;
+            // Deeply and recursively scan for Firestore Timestamps and convert to ISO strings
+            const serialize = (data: any): any => {
+                if (data === null || data === undefined || typeof data !== 'object') return data;
+                if (typeof data.toDate === 'function') return data.toDate().toISOString();
+                if (Array.isArray(data)) return data.map(serialize);
+                return Object.fromEntries(Object.entries(data).map(([k, v]) => [k, serialize(v)]));
+            };
+
+            const serializedData = serialize(docData);
+            return { ...serializedData, id: doc.id } as UserProfile;
         });
+        
         return { success: true, users: users };
     } catch (error: any) {
         const errorMessage = handleAdminSDKError(error);
         return { success: false, error: errorMessage };
     }
 }
-
-
-// NOTE: createLead server action removed.
-// This is now handled on the client-side to ensure proper authentication
-// and to be governed by Firestore security rules.

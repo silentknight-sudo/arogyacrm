@@ -34,7 +34,7 @@ import { createDeal } from './actions';
 import { useApp } from '@/context/app-context';
 import type { DealStage, Account, Contact } from '@/types';
 
-const dealStages: DealStage[] = ['New', 'Contacted', 'Qualified', 'Demo', 'Negotiation', 'Won', 'Lost'];
+const dealStages = ['New', 'Contacted', 'Qualified', 'Demo', 'Negotiation', 'Won', 'Lost'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, 'Deal name must be at least 2 characters.'),
@@ -131,10 +131,10 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
                     <FormItem><FormLabel>Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="25000" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                  <FormField control={form.control} name="accountId" render={({ field }) => (
-                    <FormItem><FormLabel>Account</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select an account"} /></SelectTrigger></FormControl><SelectContent>{accounts.map(account => (<SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Account</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select an account"} /></SelectTrigger></FormControl><SelectContent>{accounts.length > 0 ? accounts.map(account => (<SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No accounts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
                  <FormField control={form.control} name="contactId" render={({ field }) => (
-                    <FormItem><FormLabel>Contact (Optional)</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.map(contact => (<SelectItem key={contact.id} value={contact.id}>{`${contact.firstName} ${contact.lastName}`}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Contact (Optional)</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(contact => (<SelectItem key={contact.id} value={contact.id}>{`${contact.firstName} ${contact.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
                  <FormField control={form.control} name="stage" render={({ field }) => (
                     <FormItem><FormLabel>Stage</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a stage" /></SelectTrigger></FormControl><SelectContent>{dealStages.map(stage => (<SelectItem key={stage} value={stage}>{stage}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>

@@ -35,8 +35,8 @@ import { createTicket } from './actions';
 import { useApp } from '@/context/app-context';
 import type { TicketStatus, TicketPriority, Contact, UserProfile } from '@/types';
 
-const ticketStatuses: TicketStatus[] = ['Open', 'In Progress', 'Awaiting Customer', 'Resolved', 'Closed'];
-const ticketPriorities: TicketPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
+const ticketStatuses = ['Open', 'In Progress', 'Awaiting Customer', 'Resolved', 'Closed'] as const;
+const ticketPriorities = ['Low', 'Medium', 'High', 'Urgent'] as const;
 const ticketCategories = ['Technical Support', 'Billing Inquiry', 'Product Information', 'Complaint', 'Other'];
 
 const formSchema = z.object({
@@ -117,7 +117,7 @@ export function CreateTicketDialog({ children, contacts, users, isLoading }: Cre
                     <FormItem><FormLabel>Subject</FormLabel><FormControl><Input placeholder="Issue with order #12345" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="contactId" render={({ field }) => (
-                    <FormItem><FormLabel>Contact</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Contact</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Detailed description of the issue..." {...field} /></FormControl><FormMessage /></FormItem>

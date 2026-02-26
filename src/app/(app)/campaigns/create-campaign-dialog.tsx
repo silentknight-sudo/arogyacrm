@@ -40,7 +40,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 
-const campaignStatuses: CampaignStatus[] = ['Planned', 'Active', 'Completed', 'Paused', 'Cancelled'];
+const campaignStatuses = ['Planned', 'Active', 'Completed', 'Paused', 'Cancelled'] as const;
 const campaignTypes = ['Email Marketing', 'Social Media Ad', 'Event Promotion', 'Content Marketing', 'Referral Program'];
 
 const formSchema = z.object({

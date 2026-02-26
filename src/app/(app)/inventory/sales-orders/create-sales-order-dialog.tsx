@@ -40,7 +40,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { LineItemSchema } from '../schemas';
 
-const salesOrderStatuses: SalesOrderStatus[] = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'];
+const salesOrderStatuses = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'] as const;
 
 const formSchema = z.object({
   accountId: z.string().min(1, 'Account is required.'),
@@ -147,10 +147,10 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                  <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="accountId" render={({ field }) => (
-                        <FormItem><FormLabel>Account</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select an account"} /></SelectTrigger></FormControl><SelectContent>{accounts.map(a => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Account</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select an account"} /></SelectTrigger></FormControl><SelectContent>{accounts.length > 0 ? accounts.map(a => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No accounts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="contactId" render={({ field }) => (
-                        <FormItem><FormLabel>Contact (Optional)</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Contact (Optional)</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                 </div>
                  <div className="grid grid-cols-2 gap-4">
@@ -169,7 +169,7 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
                         <div className="grid grid-cols-3 gap-2 flex-grow">
                             <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
                                 <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
-                                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                                <SelectContent>{products.length > 0 ? products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">No products found.</div>}</SelectContent>
                             </Select>
                             <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
                             <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
@@ -196,4 +196,3 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
     </Dialog>
   );
 }
-    

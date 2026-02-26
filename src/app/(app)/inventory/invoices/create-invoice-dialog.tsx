@@ -40,7 +40,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { LineItemSchema } from '../schemas';
 
-const invoiceStatuses: InvoiceStatus[] = ['Draft', 'Sent', 'Paid', 'Partially Paid', 'Overdue', 'Voided'];
+const invoiceStatuses = ['Draft', 'Sent', 'Paid', 'Partially Paid', 'Overdue', 'Voided'] as const;
 
 const formSchema = z.object({
   salesOrderId: z.string().min(1, 'Sales Order is required.'),
@@ -136,7 +136,7 @@ export function CreateInvoiceDialog({ children, accounts, salesOrders, isLoading
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField control={form.control} name="salesOrderId" render={({ field }) => (
-                    <FormItem><FormLabel>From Sales Order</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a sales order"} /></SelectTrigger></FormControl><SelectContent>{salesOrders.map(so => (<SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>From Sales Order</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a sales order"} /></SelectTrigger></FormControl><SelectContent>{salesOrders.length > 0 ? salesOrders.map(so => (<SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No sales orders found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
                  <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="invoiceDate" render={({ field }) => (
@@ -186,4 +186,3 @@ export function CreateInvoiceDialog({ children, accounts, salesOrders, isLoading
     </Dialog>
   );
 }
-    

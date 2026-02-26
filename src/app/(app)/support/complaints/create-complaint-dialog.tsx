@@ -35,8 +35,8 @@ import { useApp } from '@/context/app-context';
 import type { Contact, UserProfile, ComplaintStatus, ComplaintSeverity } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 
-const complaintStatuses: ComplaintStatus[] = ['Received', 'Investigating', 'Action Taken', 'Resolved', 'Closed'];
-const complaintSeverities: ComplaintSeverity[] = ['Minor', 'Moderate', 'Major', 'Critical'];
+const complaintStatuses = ['Received', 'Investigating', 'Action Taken', 'Resolved', 'Closed'] as const;
+const complaintSeverities = ['Minor', 'Moderate', 'Major', 'Critical'] as const;
 
 const formSchema = z.object({
     subject: z.string().min(5, 'Subject is required.'),
@@ -116,7 +116,7 @@ export function CreateComplaintDialog({ children, contacts, users, isLoading }: 
                 <FormItem><FormLabel>Subject</FormLabel><FormControl><Input placeholder="Late delivery" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="contactId" render={({ field }) => (
-                <FormItem><FormLabel>Contact</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                <FormItem><FormLabel>Contact</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="description" render={({ field }) => (
                 <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Detailed description of the complaint..." {...field} /></FormControl><FormMessage /></FormItem>
@@ -130,7 +130,7 @@ export function CreateComplaintDialog({ children, contacts, users, isLoading }: 
                 )} />
               </div>
                 <FormField control={form.control} name="assignedToId" render={({ field }) => (
-                    <FormItem><FormLabel>Assign To</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a user"} /></SelectTrigger></FormControl><SelectContent>{users.map(u => (<SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Assign To</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a user"} /></SelectTrigger></FormControl><SelectContent>{users.length > 0 ? users.map(u => (<SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No team members found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
               <Button type="submit" disabled={isPending || isLoading} className="w-full">
                 {isPending ? 'Logging...' : 'Log Complaint'}
