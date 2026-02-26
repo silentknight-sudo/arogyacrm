@@ -144,7 +144,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a role" />
@@ -176,14 +176,8 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         <div className="space-y-2">
                         {isLoadingTeamspaces ? (
                             <div className="space-y-3">
-                                <div className="flex items-center space-x-2">
-                                <Skeleton className="h-4 w-4" />
-                                <Skeleton className="h-4 w-[250px]" />
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                <Skeleton className="h-4 w-4" />
-                                <Skeleton className="h-4 w-[200px]" />
-                                </div>
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-3/4" />
                             </div>
                         ) : teamspaces.length > 0 ? (
                            teamspaces.map((item) => (

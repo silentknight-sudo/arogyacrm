@@ -119,7 +119,7 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
                                 );
                           }}
                         />
-                        <label htmlFor={`bulk-user-${user.id}`} className="text-sm font-normal cursor-pointer">
+                        <label htmlFor={`bulk-user-${user.id}`} className="text-sm font-normal cursor-pointer ml-2">
                           {user.displayName}
                         </label>
                       </div>

@@ -114,7 +114,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                                 );
                           }}
                         />
-                        <label htmlFor={`user-${user.id}`} className="text-sm font-normal cursor-pointer">
+                        <label htmlFor={`user-${user.id}`} className="text-sm font-normal cursor-pointer ml-2">
                           {user.displayName}
                         </label>
                       </div>

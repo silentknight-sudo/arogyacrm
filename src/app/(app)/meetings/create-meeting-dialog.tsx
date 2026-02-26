@@ -155,7 +155,7 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                                         )
                                     }}
                                 />
-                                <label htmlFor={`att-${item.id}`} className="text-sm font-normal cursor-pointer">{label}</label>
+                                <label htmlFor={`att-${item.id}`} className="text-sm font-normal cursor-pointer ml-2">{label}</label>
                             </div>
                           );
                       }) : (
