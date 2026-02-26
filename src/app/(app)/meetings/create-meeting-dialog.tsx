@@ -33,6 +33,7 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
   title: z.string().min(2, 'Title is required.'),
@@ -132,7 +133,7 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
               <FormField
                 control={form.control}
                 name="attendeeIds"
-                render={() => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Attendees</FormLabel>
                     <div className="max-h-40 overflow-y-auto space-y-2 rounded-md border p-2">
@@ -140,33 +141,21 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                       {allAttendees.length > 0 ? allAttendees.map((item) => {
                           const label = 'displayName' in item ? item.displayName : `${item.firstName} ${item.lastName}`;
                           return (
-                            <FormField
-                                key={item.id}
-                                control={form.control}
-                                name="attendeeIds"
-                                render={({ field }) => (
-                                    <FormItem
-                                        key={item.id}
-                                        className="flex flex-row items-center space-x-3 space-y-0"
-                                    >
-                                        <FormControl>
-                                            <Checkbox
-                                                checked={field.value?.includes(item.id)}
-                                                onCheckedChange={(checked) => {
-                                                    return checked
-                                                        ? field.onChange([...(field.value || []), item.id])
-                                                        : field.onChange(
-                                                            (field.value || []).filter((value) => value !== item.id)
-                                                        )
-                                                }}
-                                            />
-                                        </FormControl>
-                                        <FormLabel className="text-sm font-normal cursor-pointer">
-                                            {label}
-                                        </FormLabel>
-                                    </FormItem>
-                                )}
-                            />
+                            <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0">
+                                <Checkbox
+                                    checked={field.value?.includes(item.id)}
+                                    onCheckedChange={(checked) => {
+                                        return checked
+                                            ? field.onChange([...(field.value || []), item.id])
+                                            : field.onChange(
+                                                (field.value || []).filter((value: string) => value !== item.id)
+                                            )
+                                    }}
+                                />
+                                <Label className="text-sm font-normal cursor-pointer">
+                                    {label}
+                                </Label>
+                            </div>
                           );
                       }) : (
                           <div className="text-center text-sm text-muted-foreground py-2">No team members found.</div>

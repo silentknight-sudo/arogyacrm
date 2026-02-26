@@ -35,14 +35,13 @@ import { useToast } from '@/hooks/use-toast';
 import { createUser } from './actions';
 import type { Teamspace } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const ROLES = ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'] as const;
+import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
   email: z.string().email('Invalid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
-  role: z.enum(ROLES),
+  role: z.enum(['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support']),
   teamspaceIds: z.array(z.string()).min(1, 'User must belong to at least one teamspace.'),
 });
 
@@ -167,7 +166,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 <FormField
                   control={form.control}
                   name="teamspaceIds"
-                  render={() => (
+                  render={({ field }) => (
                     <FormItem>
                         <div className="mb-2">
                             <FormLabel className="text-base">Teamspaces</FormLabel>
@@ -183,35 +182,21 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                             </div>
                         ) : teamspaces.length > 0 ? (
                            teamspaces.map((item) => (
-                                <FormField
-                                    key={item.id}
-                                    control={form.control}
-                                    name="teamspaceIds"
-                                    render={({ field }) => (
-                                        <FormItem
-                                            key={item.id}
-                                            className="flex flex-row items-center space-x-3 space-y-0"
-                                        >
-                                            <FormControl>
-                                                <Checkbox
-                                                    checked={field.value?.includes(item.id)}
-                                                    onCheckedChange={(checked) => {
-                                                        return checked
-                                                            ? field.onChange([...field.value, item.id])
-                                                            : field.onChange(
-                                                                field.value?.filter(
-                                                                    (value) => value !== item.id
-                                                                )
-                                                            )
-                                                    }}
-                                                />
-                                            </FormControl>
-                                            <FormLabel className="text-sm font-normal cursor-pointer">
-                                                {item.name}
-                                            </FormLabel>
-                                        </FormItem>
-                                    )}
-                                />
+                                <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0">
+                                    <Checkbox
+                                        checked={field.value?.includes(item.id)}
+                                        onCheckedChange={(checked) => {
+                                            return checked
+                                                ? field.onChange([...(field.value || []), item.id])
+                                                : field.onChange(
+                                                    field.value?.filter((value: string) => value !== item.id)
+                                                )
+                                        }}
+                                    />
+                                    <Label className="text-sm font-normal cursor-pointer">
+                                        {item.name}
+                                    </Label>
+                                </div>
                             ))
                         ) : (
                             <div className="text-sm text-muted-foreground p-4 text-center border rounded-lg">

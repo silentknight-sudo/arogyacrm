@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -96,41 +97,27 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
             <FormField
               control={form.control}
               name="assignedToIds"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Team Members</FormLabel>
                   <ScrollArea className="h-40 rounded-md border p-4">
                     <div className="space-y-3">
                     {users.length > 0 ? users.map((user) => (
-                      <FormField
-                        key={user.id}
-                        control={form.control}
-                        name="assignedToIds"
-                        render={({ field }) => (
-                          <FormItem
-                            key={user.id}
-                            className="flex flex-row items-center space-x-3 space-y-0"
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(user.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...field.value, user.id])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== user.id
-                                        )
-                                      )
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm font-normal cursor-pointer">
-                              {user.displayName}
-                            </FormLabel>
-                          </FormItem>
-                        )}
-                      />
+                      <div key={user.id} className="flex flex-row items-center space-x-3 space-y-0">
+                        <Checkbox
+                          checked={field.value?.includes(user.id)}
+                          onCheckedChange={(checked) => {
+                            return checked
+                              ? field.onChange([...(field.value || []), user.id])
+                              : field.onChange(
+                                  field.value?.filter((value: string) => value !== user.id)
+                                )
+                          }}
+                        />
+                        <Label className="text-sm font-normal cursor-pointer">
+                          {user.displayName}
+                        </Label>
+                      </div>
                     )) : (
                         <div className="text-center text-sm text-muted-foreground py-4">No team members found.</div>
                     )}
