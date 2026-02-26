@@ -142,7 +142,7 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                           return (
                             <div
                                 key={item.id}
-                                className="flex flex-row items-start space-x-3 space-y-0"
+                                className="flex flex-row items-center space-x-3 space-y-0"
                             >
                                 <Checkbox
                                     id={`att-${item.id}`}

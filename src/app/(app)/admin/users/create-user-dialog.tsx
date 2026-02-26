@@ -36,8 +36,6 @@ import { createUser } from './actions';
 import type { Teamspace } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const roles = ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'] as const;
-
 const formSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
   email: z.string().email('Invalid email address.'),
@@ -153,11 +151,11 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {roles.map(role => (
-                            <SelectItem key={role} value={role} className="capitalize">
-                            {role.replace(/_/g, ' ')}
-                            </SelectItem>
-                        ))}
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="sales_team_lead">Sales Team Lead</SelectItem>
+                          <SelectItem value="sales_executive">Sales Executive</SelectItem>
+                          <SelectItem value="marketer">Marketer</SelectItem>
+                          <SelectItem value="support">Support</SelectItem>
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -191,7 +189,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                            teamspaces.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                    className="flex flex-row items-center space-x-3 space-y-0"
                                 >
                                     <Checkbox
                                         id={`ts-${item.id}`}

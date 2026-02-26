@@ -104,7 +104,7 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
                     {users.length > 0 ? users.map((user) => (
                       <div
                         key={user.id}
-                        className="flex flex-row items-start space-x-3 space-y-0"
+                        className="flex flex-row items-center space-x-3 space-y-0"
                       >
                         <Checkbox
                           id={`bulk-user-${user.id}`}

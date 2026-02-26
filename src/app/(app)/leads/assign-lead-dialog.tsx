@@ -99,7 +99,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                     {users.length > 0 ? users.map((user) => (
                       <div
                         key={user.id}
-                        className="flex flex-row items-start space-x-3 space-y-0"
+                        className="flex flex-row items-center space-x-3 space-y-0"
                       >
                         <Checkbox
                           id={`user-${user.id}`}
