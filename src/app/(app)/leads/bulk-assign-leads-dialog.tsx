@@ -96,33 +96,41 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
             <FormField
               control={form.control}
               name="assignedToIds"
-              render={({ field }) => (
+              render={() => (
                 <FormItem>
                   <FormLabel>Team Members</FormLabel>
                   <ScrollArea className="h-40 rounded-md border p-4">
                     <div className="space-y-3">
                     {users.length > 0 ? users.map((user) => (
-                      <div
+                      <FormField
                         key={user.id}
-                        className="flex flex-row items-center space-x-3 space-y-0"
-                      >
-                        <Checkbox
-                          id={`bulk-user-${user.id}`}
-                          checked={field.value?.includes(user.id)}
-                          onCheckedChange={(checked) => {
-                            return checked
-                              ? field.onChange([...(field.value || []), user.id])
-                              : field.onChange(
-                                  (field.value || []).filter(
-                                    (value) => value !== user.id
-                                  )
-                                );
-                          }}
-                        />
-                        <label htmlFor={`bulk-user-${user.id}`} className="text-sm font-normal cursor-pointer ml-2">
-                          {user.displayName}
-                        </label>
-                      </div>
+                        control={form.control}
+                        name="assignedToIds"
+                        render={({ field }) => (
+                          <FormItem
+                            key={user.id}
+                            className="flex flex-row items-center space-x-3 space-y-0"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(user.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...field.value, user.id])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== user.id
+                                        )
+                                      )
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal cursor-pointer">
+                              {user.displayName}
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
                     )) : (
                         <div className="text-center text-sm text-muted-foreground py-4">No team members found.</div>
                     )}

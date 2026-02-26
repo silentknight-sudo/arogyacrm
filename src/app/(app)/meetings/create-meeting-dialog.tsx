@@ -132,7 +132,7 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
               <FormField
                 control={form.control}
                 name="attendeeIds"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Attendees</FormLabel>
                     <div className="max-h-40 overflow-y-auto space-y-2 rounded-md border p-2">
@@ -140,23 +140,33 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                       {allAttendees.length > 0 ? allAttendees.map((item) => {
                           const label = 'displayName' in item ? item.displayName : `${item.firstName} ${item.lastName}`;
                           return (
-                            <div
+                            <FormField
                                 key={item.id}
-                                className="flex flex-row items-center space-x-3 space-y-0"
-                            >
-                                <Checkbox
-                                    id={`att-${item.id}`}
-                                    checked={field.value?.includes(item.id)}
-                                    onCheckedChange={(checked) => {
-                                    return checked
-                                        ? field.onChange([...(field.value || []), item.id])
-                                        : field.onChange(
-                                            (field.value || []).filter((value) => value !== item.id)
-                                        )
-                                    }}
-                                />
-                                <label htmlFor={`att-${item.id}`} className="text-sm font-normal cursor-pointer ml-2">{label}</label>
-                            </div>
+                                control={form.control}
+                                name="attendeeIds"
+                                render={({ field }) => (
+                                    <FormItem
+                                        key={item.id}
+                                        className="flex flex-row items-center space-x-3 space-y-0"
+                                    >
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value?.includes(item.id)}
+                                                onCheckedChange={(checked) => {
+                                                    return checked
+                                                        ? field.onChange([...(field.value || []), item.id])
+                                                        : field.onChange(
+                                                            (field.value || []).filter((value) => value !== item.id)
+                                                        )
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormLabel className="text-sm font-normal cursor-pointer">
+                                            {label}
+                                        </FormLabel>
+                                    </FormItem>
+                                )}
+                            />
                           );
                       }) : (
                           <div className="text-center text-sm text-muted-foreground py-2">No team members found.</div>
