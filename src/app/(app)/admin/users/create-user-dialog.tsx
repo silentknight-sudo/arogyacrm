@@ -167,7 +167,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 <FormField
                   control={form.control}
                   name="teamspaceIds"
-                  render={() => (
+                  render={({ field }) => (
                     <FormItem>
                         <div className="mb-2">
                             <FormLabel className="text-base">Teamspaces</FormLabel>
@@ -189,37 +189,27 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                             </div>
                         ) : teamspaces.length > 0 ? (
                            teamspaces.map((item) => (
-                                <FormField
+                                <div
                                     key={item.id}
-                                    control={form.control}
-                                    name="teamspaceIds"
-                                    render={({ field }) => {
-                                        return (
-                                        <FormItem
-                                            key={item.id}
-                                            className="flex flex-row items-start space-x-3 space-y-0"
-                                        >
-                                            <FormControl>
-                                            <Checkbox
-                                                checked={field.value?.includes(item.id)}
-                                                onCheckedChange={(checked) => {
-                                                return checked
-                                                    ? field.onChange([...(field.value || []), item.id])
-                                                    : field.onChange(
-                                                        (field.value || [])?.filter(
-                                                        (value) => value !== item.id
-                                                        )
-                                                    )
-                                                }}
-                                            />
-                                            </FormControl>
-                                            <FormLabel className="font-normal cursor-pointer">
-                                            {item.name}
-                                            </FormLabel>
-                                        </FormItem>
-                                        )
-                                    }}
+                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                >
+                                    <Checkbox
+                                        id={`ts-${item.id}`}
+                                        checked={field.value?.includes(item.id)}
+                                        onCheckedChange={(checked) => {
+                                        return checked
+                                            ? field.onChange([...(field.value || []), item.id])
+                                            : field.onChange(
+                                                (field.value || [])?.filter(
+                                                (value) => value !== item.id
+                                                )
+                                            )
+                                        }}
                                     />
+                                    <label htmlFor={`ts-${item.id}`} className="text-sm font-normal cursor-pointer">
+                                        {item.name}
+                                    </label>
+                                </div>
                             ))
                         ) : (
                             <div className="text-sm text-muted-foreground p-4 text-center border rounded-lg">

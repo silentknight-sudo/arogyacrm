@@ -91,41 +91,33 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
             <FormField
               control={form.control}
               name="assignedToIds"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Team Members</FormLabel>
                   <ScrollArea className="h-40 rounded-md border p-4">
                     <div className="space-y-3">
                     {users.length > 0 ? users.map((user) => (
-                      <FormField
+                      <div
                         key={user.id}
-                        control={form.control}
-                        name="assignedToIds"
-                        render={({ field }) => (
-                          <FormItem
-                            key={user.id}
-                            className="flex flex-row items-start space-x-3 space-y-0"
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(user.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...(field.value || []), user.id])
-                                    : field.onChange(
-                                        (field.value || []).filter(
-                                          (value) => value !== user.id
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal cursor-pointer">
-                              {user.displayName}
-                            </FormLabel>
-                          </FormItem>
-                        )}
-                      />
+                        className="flex flex-row items-start space-x-3 space-y-0"
+                      >
+                        <Checkbox
+                          id={`user-${user.id}`}
+                          checked={field.value?.includes(user.id)}
+                          onCheckedChange={(checked) => {
+                            return checked
+                              ? field.onChange([...(field.value || []), user.id])
+                              : field.onChange(
+                                  (field.value || []).filter(
+                                    (value) => value !== user.id
+                                  )
+                                );
+                          }}
+                        />
+                        <label htmlFor={`user-${user.id}`} className="text-sm font-normal cursor-pointer">
+                          {user.displayName}
+                        </label>
+                      </div>
                     )) : (
                         <div className="text-center text-sm text-muted-foreground py-4">No team members found.</div>
                     )}
