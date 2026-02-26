@@ -38,7 +38,7 @@ service cloud.firestore {
           || (doc.data.assignedToIds != null && request.auth.uid in doc.data.assignedToIds)
           || isOwner(doc.data.organizerId)
           || isOwner(doc.data.callerId)
-          | isOwner(doc.data.uploadedById)
+          || isOwner(doc.data.uploadedById)
           || isOwner(doc.data.requestedById)
           || isOwner(doc.data.processedById)
           || isOwner(doc.data.userId);
@@ -65,10 +65,10 @@ service cloud.firestore {
     // Collection Rules
     // -------------------------------------------------------------------------
 
-    // Users can read their own profile. Admins can read any. 
+    // Users can read their own profile. Colleagues can read profiles. Admins can read any.
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
       allow create: if isAdmin(); // Only admins can create users
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();

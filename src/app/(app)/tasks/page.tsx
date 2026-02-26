@@ -1,5 +1,4 @@
 'use client';
-import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Task, TaskStatus, UserProfile } from '@/types';
@@ -8,12 +7,9 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useApp } from '@/context/app-context';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where, documentId } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateTaskDialog } from './create-task-dialog';
-import { getTeamspaceUsers } from '../leads/actions';
-import { useToast } from '@/hooks/use-toast';
-
 
 const statuses: TaskStatus[] = ['Todo', 'In Progress', 'Done'];
 
@@ -72,7 +68,6 @@ const TaskColumn = ({ status, tasks, isLoading }: { status: TaskStatus; tasks: T
 export default function TasksPage() {
   const { currentTeamspace } = useApp();
   const firestore = useFirestore();
-  const { toast } = useToast();
 
   const tasksQuery = useMemoFirebase(() =>
     currentTeamspace
@@ -82,31 +77,14 @@ export default function TasksPage() {
   
   const { data: tasks, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-
-  useEffect(() => {
-    if (currentTeamspace) {
-      setIsLoadingUsers(true);
-      getTeamspaceUsers(currentTeamspace.id).then(result => {
-        if (result.success && result.users) {
-          setUsers(result.users);
-        } else {
-          console.error("Failed to fetch users:", result.error);
-          toast({
-            variant: 'destructive',
-            title: 'Failed to Load Team Members',
-            description: result.error || 'An unexpected error occurred while fetching the user list.',
-          });
-          setUsers([]);
-        }
-        setIsLoadingUsers(false);
-      });
-    } else {
-        setUsers([]);
-        setIsLoadingUsers(false);
-    }
-  }, [currentTeamspace, toast]);
+  // Fetch team members directly on the client to avoid Admin SDK issues on Vercel
+  const usersQuery = useMemoFirebase(() =>
+    currentTeamspace && currentTeamspace.memberIds?.length > 0
+        ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
+        : null,
+    [firestore, currentTeamspace]
+  );
+  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const isLoading = isLoadingTasks || isLoadingUsers;
 
