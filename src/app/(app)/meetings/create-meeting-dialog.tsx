@@ -136,7 +136,8 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                   <FormItem>
                     <FormLabel>Attendees</FormLabel>
                     <div className="max-h-40 overflow-y-auto space-y-2 rounded-md border p-2">
-                      {allAttendees.map((item) => (
+                      <div className="space-y-3 p-2">
+                      {allAttendees.length > 0 ? allAttendees.map((item) => (
                         <FormField
                             key={item.id}
                             control={form.control}
@@ -145,6 +146,7 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                                 const label = 'displayName' in item ? item.displayName : `${item.firstName} ${item.lastName}`;
                                 return (
                                 <FormItem
+                                    key={item.id}
                                     className="flex flex-row items-start space-x-3 space-y-0"
                                 >
                                     <FormControl>
@@ -159,18 +161,21 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                                         }}
                                     />
                                     </FormControl>
-                                    <FormLabel className="font-normal">{label}</FormLabel>
+                                    <FormLabel className="font-normal cursor-pointer">{label}</FormLabel>
                                 </FormItem>
                                 )
                             }}
                         />
-                      ))}
+                      )) : (
+                          <div className="text-center text-sm text-muted-foreground py-2">No team members found.</div>
+                      )}
+                      </div>
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isPending || isLoading} className="w-full">
+              <Button type="submit" disabled={isPending || isLoading || allAttendees.length === 0} className="w-full">
                 {isPending ? 'Scheduling...' : 'Schedule Meeting'}
               </Button>
             </form>

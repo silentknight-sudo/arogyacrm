@@ -100,14 +100,16 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
                 <FormItem>
                   <FormLabel>Team Members</FormLabel>
                   <ScrollArea className="h-40 rounded-md border p-4">
-                    {users.map((user) => (
+                    <div className="space-y-3">
+                    {users.length > 0 ? users.map((user) => (
                       <FormField
                         key={user.id}
                         control={form.control}
                         name="assignedToIds"
                         render={({ field }) => (
                           <FormItem
-                            className="flex flex-row items-start space-x-3 space-y-0 mb-3"
+                            key={user.id}
+                            className="flex flex-row items-start space-x-3 space-y-0"
                           >
                             <FormControl>
                               <Checkbox
@@ -123,19 +125,22 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
                                 }}
                               />
                             </FormControl>
-                            <FormLabel className="font-normal">
+                            <FormLabel className="font-normal cursor-pointer">
                               {user.displayName}
                             </FormLabel>
                           </FormItem>
                         )}
                       />
-                    ))}
+                    )) : (
+                        <div className="text-center text-sm text-muted-foreground py-4">No team members found.</div>
+                    )}
+                    </div>
                   </ScrollArea>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isPending} className="w-full">
+            <Button type="submit" disabled={isPending || users.length === 0} className="w-full">
               {isPending ? 'Assigning...' : `Assign ${leads.length} Lead(s)`}
             </Button>
           </form>

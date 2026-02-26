@@ -31,7 +31,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/context/app-context';
-import type { LeadStatus } from '@/types';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,7 +45,7 @@ const formSchema = z.object({
   email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   productAsked: z.string().optional(),
   source: z.string().optional(),
-  status: z.enum(leadStatuses),
+  status: z.enum(['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost']),
   attributionFields: z.string().optional(),
 });
 

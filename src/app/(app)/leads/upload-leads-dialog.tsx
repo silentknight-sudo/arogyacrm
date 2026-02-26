@@ -43,9 +43,9 @@ const formSchema = z.object({
 });
 
 type UploadLeadsDialogProps = {
-  children: React.ReactNode;
   users: UserProfile[];
   isLoading: boolean;
+  children: React.ReactNode;
 };
 
 export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDialogProps) {
@@ -157,18 +157,20 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            {users.map(user => (
+                            {users.length > 0 ? users.map(user => (
                                 <SelectItem key={user.id} value={user.id}>
                                 {user.displayName} ({user.role.replace(/_/g, ' ')})
                                 </SelectItem>
-                            ))}
+                            )) : (
+                                <div className="p-4 text-center text-sm text-muted-foreground">No team members found.</div>
+                            )}
                             </SelectContent>
                         </Select>
                         <FormMessage />
                         </FormItem>
                     )}
                     />
-                    <Button type="submit" disabled={isPending} className="w-full">
+                    <Button type="submit" disabled={isPending || users.length === 0} className="w-full">
                     {isPending ? 'Importing...' : 'Import and Assign Leads'}
                     </Button>
                 </form>

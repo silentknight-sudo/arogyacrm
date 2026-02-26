@@ -33,7 +33,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createUser } from './actions';
-import type { Teamspace, UserRole } from '@/types';
+import type { Teamspace } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const roles = ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'] as const;
@@ -42,7 +42,7 @@ const formSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
   email: z.string().email('Invalid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
-  role: z.enum(roles),
+  role: z.enum(['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support']),
   teamspaceIds: z.array(z.string()).min(1, 'User must belong to at least one teamspace.'),
 });
 
@@ -175,6 +175,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                                 Select the teamspaces this user will belong to.
                             </FormDescription>
                         </div>
+                        <div className="space-y-2">
                         {isLoadingTeamspaces ? (
                             <div className="space-y-3">
                                 <div className="flex items-center space-x-2">
@@ -203,16 +204,16 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                                                 checked={field.value?.includes(item.id)}
                                                 onCheckedChange={(checked) => {
                                                 return checked
-                                                    ? field.onChange([...field.value, item.id])
+                                                    ? field.onChange([...(field.value || []), item.id])
                                                     : field.onChange(
-                                                        field.value?.filter(
+                                                        (field.value || [])?.filter(
                                                         (value) => value !== item.id
                                                         )
                                                     )
                                                 }}
                                             />
                                             </FormControl>
-                                            <FormLabel className="font-normal">
+                                            <FormLabel className="font-normal cursor-pointer">
                                             {item.name}
                                             </FormLabel>
                                         </FormItem>
@@ -225,6 +226,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                                 No teamspaces found. Please create one first.
                             </div>
                         )}
+                        </div>
                         <FormMessage />
                     </FormItem>
                   )}
