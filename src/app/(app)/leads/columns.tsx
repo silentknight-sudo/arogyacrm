@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -32,7 +33,7 @@ import Link from 'next/link';
 import { useApp } from '@/context/app-context';
 import { AssignLeadDialog } from './assign-lead-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { open: boolean; onOpenChange: (open: boolean) => void; result: AiLeadScoringAndPrioritizationOutput | null, leadName: string }) {
   if (!result) return null;
@@ -95,7 +96,7 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
 
 
-  const users = (table.options.meta as { users?: UserProfile[] })?.users || [];
+  const users = (table.options.meta as any)?.users || [];
   const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
 
@@ -109,7 +110,7 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
       toast({
         variant: "destructive",
         title: "AI Scoring Failed",
-        description: response.error,
+        description: response.error || 'An unknown error occurred.',
       });
     }
     setIsLoading(false);
@@ -148,7 +149,7 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
         toast({
           variant: 'destructive',
           title: 'Conversion Failed',
-          description: result.error,
+          description: result.error || 'An unknown error occurred.',
         });
       }
     });
@@ -265,9 +266,10 @@ export const columns: ColumnDef<Lead>[] = [
     accessorKey: 'assignedToIds',
     header: 'Assigned To',
     cell: ({ row, table }) => {
-        const assignedToIds = (row.getValue('assignedToIds') as string[]) || [];
-        const users = (table.options.meta as { users?: UserProfile[] })?.users || [];
-        const assignedUsers = assignedToIds.map(id => users.find(u => u.id === id)).filter(Boolean) as UserProfile[];
+        const assignedToIds = row.getValue('assignedToIds');
+        const ids = Array.isArray(assignedToIds) ? assignedToIds : [];
+        const users = (table.options.meta as any)?.users || [];
+        const assignedUsers = ids.map(id => users.find((u: any) => u.id === id)).filter(Boolean) as UserProfile[];
         
         if (assignedUsers.length === 0) {
             return <span className="text-muted-foreground">Unassigned</span>;
@@ -277,28 +279,26 @@ export const columns: ColumnDef<Lead>[] = [
         const remainingCount = assignedUsers.length - visibleUsers.length;
 
         return (
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="flex items-center -space-x-2">
-                            {visibleUsers.map(user => (
-                                <Avatar key={user.id} className="h-7 w-7 border-2 border-background">
-                                    <AvatarImage src={user.avatar} alt={user.displayName} />
-                                    <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            ))}
-                            {remainingCount > 0 && (
-                                <Avatar className="h-7 w-7 border-2 border-background">
-                                    <AvatarFallback>+{remainingCount}</AvatarFallback>
-                                </Avatar>
-                            )}
-                        </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        {assignedUsers.map(u => u.displayName).join(', ')}
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <div className="flex items-center -space-x-2">
+                        {visibleUsers.map(user => (
+                            <Avatar key={user.id} className="h-7 w-7 border-2 border-background">
+                                <AvatarImage src={user.avatar} alt={user.displayName} />
+                                <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                        ))}
+                        {remainingCount > 0 && (
+                            <Avatar className="h-7 w-7 border-2 border-background">
+                                <AvatarFallback>+{remainingCount}</AvatarFallback>
+                            </Avatar>
+                        )}
+                    </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                    {assignedUsers.map(u => u.displayName).join(', ')}
+                </TooltipContent>
+            </Tooltip>
         );
     }
   },

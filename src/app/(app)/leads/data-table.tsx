@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -10,7 +11,6 @@ import {
   getSortedRowModel,
   ColumnFiltersState,
   getFilteredRowModel,
-  Table,
 } from '@tanstack/react-table';
 
 import {
@@ -27,6 +27,7 @@ import React, { useState } from 'react';
 import type { Lead, UserProfile } from '@/types';
 import { Users as AssignIcon } from 'lucide-react';
 import { BulkAssignLeadsDialog } from './bulk-assign-leads-dialog';
+import { useApp } from '@/context/app-context';
 
 
 interface DataTableProps<TData, TValue> {
@@ -40,6 +41,7 @@ export function DataTable<TData, TValue>({
   data,
   users,
 }: DataTableProps<TData, TValue>) {
+  const { currentUser } = useApp();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -66,7 +68,8 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  const selectedLeads = table.getFilteredSelectedRowModel().rows.map(row => row.original as Lead);
+  const selectedLeads = table.getSelectedRowModel().rows.map(row => row.original as Lead);
+  const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   return (
     <div>
@@ -90,9 +93,9 @@ export function DataTable<TData, TValue>({
           }
           className="max-w-sm"
         />
-         {selectedLeads.length > 0 && (
+         {canAssign && selectedLeads.length > 0 && (
             <Button onClick={() => setBulkAssignDialogOpen(true)} className="ml-auto">
-                <AssignIcon className="mr-2"/>
+                <AssignIcon className="mr-2 h-4 w-4"/>
                 Assign Selected ({selectedLeads.length})
             </Button>
         )}
@@ -149,7 +152,7 @@ export function DataTable<TData, TValue>({
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
+          {table.getSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
         <Button
