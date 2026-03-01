@@ -34,7 +34,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   // Combined loading state: only ready when both auth and Firestore profile are settled
-  // If we have an authUser, we MUST wait for the profile to be ready
   const isUserLoading = isAuthLoading || (!!authUser && isProfileLoading);
 
   const [availableTeamspaces, setAvailableTeamspaces] = useState<Teamspace[]>([]);
@@ -58,8 +57,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Non-admin users fetch their individual teamspaces based on their profile IDs
   useEffect(() => {
     if (!isUserLoading && currentUser && currentUser.role !== 'admin') {
-      const teamspaceIds = currentUser.teamspaceIds;
-      if (!teamspaceIds || teamspaceIds.length === 0) {
+      const teamspaceIds = currentUser.teamspaceIds || [];
+      if (teamspaceIds.length === 0) {
         setAvailableTeamspaces([]);
         setAreTeamspacesLoading(false);
         return;
@@ -132,9 +131,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    await auth.signOut();
-    setAvailableTeamspaces([]);
+    // Clear state before signing out to prevent queries from failing with "auth: null"
     setCurrentTeamspaceState(null);
+    setAvailableTeamspaces([]);
+    await auth.signOut();
     router.push('/login');
   };
 

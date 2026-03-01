@@ -10,6 +10,7 @@ import {
   CollectionReference,
   Timestamp,
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -117,8 +118,13 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (error: FirestoreError) => {
-        // This logic extracts the path from either a ref or a query
+      (err: FirestoreError) => {
+        // Suppress permission errors if the user is currently signed out (common race condition during logout)
+        const auth = getAuth();
+        if (!auth.currentUser && err.code === 'permission-denied') {
+          return;
+        }
+
         const path: string =
           memoizedTargetRefOrQuery.type === 'collection'
             ? (memoizedTargetRefOrQuery as CollectionReference).path

@@ -2,57 +2,68 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- Base Helpers --
+    // -- Helper Functions --
+
+    // Check if the request is authenticated
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper to get the current user's profile document safely
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    // Safely get user profile data
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
     }
 
-    // Helper to check if the user profile exists
-    function userProfileExists() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    // Check if user profile exists
+    function userProfileExists(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid));
     }
 
-    // -- Role & Membership Checks --
+    // Admin check: Prioritizes token claim for performance, falls back to document check
     function isAdmin() {
-      return isSignedIn() && userProfileExists() && getUserData().role == 'admin';
+      return isSignedIn() && (
+        request.auth.token.role == 'admin' || 
+        (userProfileExists(request.auth.uid) && getUserData(request.auth.uid).role == 'admin')
+      );
     }
 
+    // Team membership check: Non-admins must be in the teamspaceIds array
     function isMember(teamspaceId) {
-      return isSignedIn() && userProfileExists() && (
-        getUserData().role == 'admin' || 
-        getUserData().teamspaceIds.hasAny([teamspaceId])
-      );
+      if (!isSignedIn()) return false;
+      if (isAdmin()) return true;
+      return userProfileExists(request.auth.uid) && 
+             teamspaceId in getUserData(request.auth.uid).teamspaceIds;
     }
 
     // -- Collection Rules --
 
-    // User Profiles: All team members can see each other for assignments/dropdowns
+    // User Profiles: All signed-in staff can see profiles for assignment dropdowns
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isAdmin();
-      allow update: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
-      allow delete: if isAdmin();
+      allow get, list: if isSignedIn();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
     }
 
-    // Products: Globally readable by the team
+    // Products: Global catalog readable by all authenticated staff
     match /products/{productId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    // Teamspaces: Access controlled by membership
+    // Teamspaces and nested data
     match /teamspaces/{teamspaceId} {
+      // Direct access to the teamspace document
       allow get: if isMember(teamspaceId);
-      allow list: if isAdmin(); // Non-admins access teamspaces via individual getDoc in AppProvider
+      
+      // Global listing of teamspaces is admin-only (staff fetch teams individually)
+      allow list: if isAdmin();
+      
+      // Manage teamspaces
       allow create, update, delete: if isAdmin();
 
-      // Catch-all for all sub-collections within a teamspace
-      match /{collection}/{docId} {
+      // ALL sub-collections (leads, deals, tasks, etc.)
+      // Recursive wildcard ensures consistent protection across all depths
+      match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }
     }
