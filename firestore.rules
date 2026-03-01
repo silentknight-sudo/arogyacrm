@@ -9,36 +9,26 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Safely get user profile data (only if document exists)
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    // Check if user profile exists
-    function userProfileExists() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    // Admin check: Prioritizes token claim, falls back to document check
+    // Safely check if the user is an admin
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.role == 'admin' || 
-        (userProfileExists() && getUserData().role == 'admin')
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }
 
-    // Team membership check: Non-admins must be in the teamspaceIds array
+    // Check if the user is a member of a specific teamspace
     function isMember(teamspaceId) {
-      if (!isSignedIn()) return false;
-      if (isAdmin()) return true;
-      return userProfileExists() && 
-             (teamspaceId in getUserData().teamspaceIds);
+      return isSignedIn() && (
+        isAdmin() || 
+        teamspaceId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamspaceIds
+      );
     }
 
     // -- Collection Rules --
 
     // User Profiles: All signed-in staff can see profiles for assignment dropdowns
-    // Explicit read permission at the document level ensures collection queries work
+    // This explicit match on the collection path ensures 'list' operations work
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isAdmin();

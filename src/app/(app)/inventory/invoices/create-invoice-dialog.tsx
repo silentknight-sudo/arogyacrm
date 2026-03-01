@@ -217,27 +217,29 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                   render={() => (
                     <FormItem>
                       <FormLabel>Line Items</FormLabel>
-                      <div className="space-y-2 mt-2 rounded-md border p-4">
-                          {fields.length > 0 ? fields.map((field) => (
-                          <div key={field.id} className="flex items-center justify-between">
-                              <div>
-                                  <p className="font-medium">{field.productName}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                      {field.quantity} x ₹{field.unitPrice.toFixed(2)}
-                                  </p>
-                              </div>
-                              <p className="font-medium">₹{field.subtotal.toFixed(2)}</p>
-                          </div>
-                          )) : (
-                              <p className="text-sm text-muted-foreground text-center">Select a sales order to see line items.</p>
-                          )}
-                          {fields.length > 0 && (
-                              <div className="flex justify-end items-center pt-4 mt-4 border-t">
-                                  <span className="text-muted-foreground mr-2">Total:</span>
-                                  <span className="font-bold text-lg">₹{totalAmount.toFixed(2)}</span>
-                              </div>
-                          )}
-                      </div>
+                      <FormControl>
+                        <div className="space-y-2 mt-2 rounded-md border p-4">
+                            {fields.length > 0 ? fields.map((field) => (
+                            <div key={field.id} className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-medium">{field.productName}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {field.quantity} x ₹{field.unitPrice.toFixed(2)}
+                                    </p>
+                                </div>
+                                <p className="font-medium">₹{field.subtotal.toFixed(2)}</p>
+                            </div>
+                            )) : (
+                                <p className="text-sm text-muted-foreground text-center">Select a sales order to see line items.</p>
+                            )}
+                            {fields.length > 0 && (
+                                <div className="flex justify-end items-center pt-4 mt-4 border-t">
+                                    <span className="text-muted-foreground mr-2">Total:</span>
+                                    <span className="font-bold text-lg">₹{totalAmount.toFixed(2)}</span>
+                                </div>
+                            )}
+                        </div>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

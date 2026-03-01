@@ -4,11 +4,18 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 import { ZodError } from 'zod';
 
 let app: App | undefined;
+
+/**
+ * Robust Admin SDK initialization.
+ * On Vercel or local environments without service account keys, 
+ * this will fail gracefully instead of crashing the process.
+ */
 if (!getApps().length) {
     try {
+        // Attempt automatic initialization (works in App Hosting/Cloud Functions)
         app = initializeApp();
     } catch (e) {
-        console.error('Firebase admin initialization error. This can happen in a local development environment if server credentials are not configured.', e);
+        console.warn('Firebase Admin SDK: Automatic initialization failed. Server actions requiring Admin privileges may fail if service account credentials are not provided via environment variables.');
     }
 } else {
     app = getApps()[0];
@@ -21,10 +28,10 @@ if (app) {
     adminDb = getFirestore(app);
     adminAuth = getAuth(app);
 } else {
+    // If initialization failed, provide a throwing proxy that explains the 500 error
     const initializationError = new Error(
-      'Firebase Admin SDK failed to initialize. This is likely due to missing server credentials. ' +
-      'In a local environment, set the GOOGLE_APPLICATION_CREDENTIALS environment variable. ' +
-      'In a managed environment (like App Hosting), ensure the service account has the correct permissions.'
+      'Firebase Admin SDK failed to initialize. This is likely because GOOGLE_APPLICATION_CREDENTIALS is not set in your environment (common on Vercel). ' +
+      'Please ensure you have configured your service account credentials if you are using Server Actions that require Admin access.'
     );
   
     const createThrowingProxy = (name: string) => new Proxy({}, {
@@ -37,16 +44,13 @@ if (app) {
     adminAuth = createThrowingProxy('Auth') as Auth;
 }
 
-
 export { adminDb, adminAuth };
 export const serverTimestamp = FieldValue.serverTimestamp;
 export { FieldValue };
 
-
 export function handleAdminSDKError(error: any): string {
     console.error('Admin SDK Action Error:', error);
 
-    // Specific Firebase Auth error codes
     if (error.code) {
         switch (error.code) {
             case 'auth/email-already-exists':
@@ -58,28 +62,9 @@ export function handleAdminSDKError(error: any): string {
         }
     }
 
-    // Zod validation errors
     if (error instanceof ZodError) {
         return `Validation Error: ${error.errors.map(e => e.message).join(', ')}`;
     }
     
-    const errorMessage = error.message || 'An unknown server error occurred.';
-    const lowerCaseError = errorMessage.toLowerCase();
-    
-    // Generic credential/permission errors
-    const credentialErrorKeywords = [
-        'could not access refresh token',
-        'could not load the default credentials',
-        'missing credentials',
-        'service account',
-        'permission denied',
-        'creds'
-    ];
-
-    if (credentialErrorKeywords.some(keyword => lowerCaseError.includes(keyword))) {
-        return 'Server Authentication Failed: The server could not authenticate with Firebase using Admin credentials. This is an environment configuration issue, not a bug in the application code. Please ensure your hosting environment has the necessary service account credentials and permissions.';
-    }
-
-    // Fallback to the original error message
-    return errorMessage;
+    return error.message || 'An unknown server error occurred.';
 }
