@@ -12,33 +12,33 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CreateCallDialog } from './create-call-dialog';
 
 export default function CallsPage() {
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, currentUser, isUserLoading } = useApp();
   const firestore = useFirestore();
 
   const callsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'calls'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
   
   const { data: calls, isLoading: isLoadingCalls } = useCollection<Call>(callsQuery);
 
   const contactsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'contacts'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
   const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
 
   const usersQuery = useMemoFirebase(() =>
-    currentTeamspace && currentTeamspace.memberIds?.length > 0
+    !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null,
-    [firestore, currentTeamspace]
+    [firestore, currentTeamspace, currentUser, isUserLoading]
   )
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-  const isLoading = isLoadingCalls || isLoadingContacts || isLoadingUsers;
+  const isLoading = isUserLoading || isLoadingCalls || isLoadingContacts || isLoadingUsers;
 
   return (
     <div className="space-y-4">

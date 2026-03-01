@@ -11,34 +11,34 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CreateMeetingDialog } from './create-meeting-dialog';
 
 export default function MeetingsPage() {
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, currentUser, isUserLoading } = useApp();
   const firestore = useFirestore();
 
   const meetingsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'meetings'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
   
   const { data: meetings, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
 
-  // Fetch team members directly on the client to avoid Admin SDK issues on Vercel
+  // Fetch team members directly on the client. Guarded by profile existence.
   const usersQuery = useMemoFirebase(() =>
-    currentTeamspace && currentTeamspace.memberIds?.length > 0
+    !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null,
-    [firestore, currentTeamspace]
+    [firestore, currentTeamspace, currentUser, isUserLoading]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const contactsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'contacts'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
   const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
 
-  const isLoading = isLoadingMeetings || isLoadingUsers || isLoadingContacts;
+  const isLoading = isUserLoading || isLoadingMeetings || isLoadingUsers || isLoadingContacts;
 
   return (
     <div className="space-y-4">

@@ -66,27 +66,27 @@ const TaskColumn = ({ status, tasks, isLoading }: { status: TaskStatus; tasks: T
 };
 
 export default function TasksPage() {
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, currentUser, isUserLoading } = useApp();
   const firestore = useFirestore();
 
   const tasksQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'tasks'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
   
   const { data: tasks, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  // Fetch team members directly on the client to avoid Admin SDK issues on Vercel
+  // Fetch team members directly on the client. Guarded by profile existence.
   const usersQuery = useMemoFirebase(() =>
-    currentTeamspace && currentTeamspace.memberIds?.length > 0
+    !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null,
-    [firestore, currentTeamspace]
+    [firestore, currentTeamspace, currentUser, isUserLoading]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-  const isLoading = isLoadingTasks || isLoadingUsers;
+  const isLoading = isUserLoading || isLoadingTasks || isLoadingUsers;
 
   return (
      <div className="flex flex-col h-full">

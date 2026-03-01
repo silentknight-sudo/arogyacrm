@@ -25,7 +25,7 @@ export default function LeadsPage() {
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // Fetch team members directly on the client to avoid Admin SDK issues on Vercel
+  // Fetch team members directly on the client. Guarded by profile existence.
   const usersQuery = useMemoFirebase(() =>
     !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 

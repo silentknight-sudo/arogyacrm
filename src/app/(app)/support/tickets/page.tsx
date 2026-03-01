@@ -11,34 +11,34 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CreateTicketDialog } from './create-ticket-dialog';
 
 export default function TicketsPage() {
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, currentUser, isUserLoading } = useApp();
   const firestore = useFirestore();
 
   const ticketsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'tickets'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
   
   const { data: tickets, isLoading: isLoadingTickets } = useCollection<Ticket>(ticketsQuery);
 
   const contactsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'contacts'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
   const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
 
-  // Fetch team members directly on the client to avoid Admin SDK issues on Vercel
+  // Fetch team members directly on the client. Guarded by profile existence.
   const usersQuery = useMemoFirebase(() =>
-    currentTeamspace && currentTeamspace.memberIds?.length > 0
+    !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null,
-    [firestore, currentTeamspace]
+    [firestore, currentTeamspace, currentUser, isUserLoading]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-  const isLoading = isLoadingTickets || isLoadingContacts || isLoadingUsers;
+  const isLoading = isUserLoading || isLoadingTickets || isLoadingContacts || isLoadingUsers;
 
   return (
     <div className="space-y-4">

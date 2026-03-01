@@ -11,30 +11,34 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CreatePurchaseOrderDialog } from './create-purchase-order-dialog';
 
 export default function PurchaseOrdersPage() {
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, currentUser, isUserLoading } = useApp();
   const firestore = useFirestore();
 
   const purchaseOrdersQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'purchaseOrders'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
   
   const { data: purchaseOrders, isLoading: isLoadingPOs } = useCollection<PurchaseOrder>(purchaseOrdersQuery);
 
-  // Fetch team members directly on the client to avoid Admin SDK issues on Vercel
+  // Fetch team members directly on the client. Guarded by profile existence.
   const usersQuery = useMemoFirebase(() =>
-    currentTeamspace && currentTeamspace.memberIds?.length > 0
+    !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null,
-    [firestore, currentTeamspace]
+    [firestore, currentTeamspace, currentUser, isUserLoading]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-  const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
+  const productsQuery = useMemoFirebase(() => 
+    !isUserLoading && currentUser 
+      ? query(collection(firestore, 'products')) 
+      : null
+  , [firestore, currentUser, isUserLoading]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
-  const isLoading = isLoadingPOs || isLoadingUsers || isLoadingProducts;
+  const isLoading = isUserLoading || isLoadingPOs || isLoadingUsers || isLoadingProducts;
 
   return (
     <div className="space-y-4">
