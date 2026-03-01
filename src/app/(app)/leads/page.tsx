@@ -16,25 +16,25 @@ export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
-  // Strict guard: only fire query when user, profile, and teamspace are fully ready
+  // Strict authentication and ready-state guard for the leads query
   const leadsQuery = useMemoFirebase(() => 
-    !isUserLoading && currentUser && currentTeamspace?.id
+    (!isUserLoading && currentUser && currentTeamspace?.id)
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'))
       : null
   , [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // Guarded team member query - ensure memberIds exists and is not empty
+  // Strict guard for the team member query
   const usersQuery = useMemoFirebase(() =>
-    !isUserLoading && currentUser && currentTeamspace?.memberIds?.length > 0
+    (!isUserLoading && currentUser && currentTeamspace?.memberIds?.length > 0)
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null,
     [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-  const isLoading = isUserLoading || isLoadingLeads || isLoadingUsers;
+  const isActuallyLoading = isUserLoading || isLoadingLeads || isLoadingUsers;
 
   return (
     <div className="space-y-6">
@@ -47,7 +47,7 @@ export default function LeadsPage() {
             </div>
              <div className="flex items-center space-x-2">
               {currentUser?.role === 'admin' && (
-                <UploadLeadsDialog users={users || []} isLoading={isLoading}>
+                <UploadLeadsDialog users={users || []} isLoading={isActuallyLoading}>
                   <Button variant="outline">
                     <Upload className="mr-2 h-4 w-4" />
                     Upload CSV
@@ -63,14 +63,14 @@ export default function LeadsPage() {
             </div>
         </div>
         
-        {isLoading && (
-            <div className="space-y-2 mt-4">
+        {isActuallyLoading ? (
+            <div className="space-y-4 mt-4">
                 <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-64 w-full" />
             </div>
+        ) : (
+            <DataTable columns={columns} data={leads || []} users={users || []} />
         )}
-        {!isLoading && <DataTable columns={columns} data={leads || []} users={users || []} />}
     </div>
   );
 }

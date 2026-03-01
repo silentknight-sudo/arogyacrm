@@ -28,41 +28,35 @@ if (!getApps().length) {
                     }),
                     projectId,
                 });
-            } else {
-                console.warn('Firebase Admin SDK: Missing credentials (FIREBASE_PRIVATE_KEY, etc.). Server actions requiring Admin privileges will fail.');
             }
         } catch (innerError) {
-            console.error('Firebase Admin SDK: Final initialization fallback failed:', innerError);
+            // Silent failure during module load to prevent 500 errors
         }
     }
 } else {
     app = getApps()[0];
 }
 
-let adminDb: Firestore;
-let adminAuth: Auth;
+/**
+ * We use proxies to prevent the server from crashing if credentials are missing.
+ * Errors will only be thrown when a method is actually called.
+ */
+const initializationError = new Error(
+  'Firebase Admin SDK failed to initialize. Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set.'
+);
 
-if (app) {
-    adminDb = getFirestore(app);
-    adminAuth = getAuth(app);
-} else {
-    const initializationError = new Error(
-      'Firebase Admin SDK failed to initialize. If you are on Vercel, please ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set in your Environment Variables.'
-    );
-  
-    const createThrowingProxy = (name: string) => new Proxy({}, {
-      get() {
-        throw initializationError;
-      }
-    });
-  
-    adminDb = createThrowingProxy('Firestore') as Firestore;
-    adminAuth = createThrowingProxy('Auth') as Auth;
-}
+const createThrowingProxy = (name: string) => new Proxy({}, {
+  get() {
+    throw initializationError;
+  }
+});
 
-export { adminDb, adminAuth };
-export const serverTimestamp = FieldValue.serverTimestamp;
+export const adminDb: Firestore = app ? getFirestore(app) : (createThrowingProxy('Firestore') as Firestore);
+export const adminAuth: Auth = app ? getAuth(app) : (createThrowingProxy('Auth') as Auth);
+
+// Safely export FieldValue and serverTimestamp
 export { FieldValue };
+export const serverTimestamp = () => FieldValue.serverTimestamp();
 
 export function handleAdminSDKError(error: any): string {
     console.error('Admin SDK Action Error:', error);
@@ -76,7 +70,7 @@ export function handleAdminSDKError(error: any): string {
             case 'auth/user-not-found':
                 return 'User not found.';
             case 'permission-denied':
-                return 'The server does not have permission to perform this action. Check service account roles.';
+                return 'The server does not have permission to perform this action.';
         }
     }
 

@@ -67,7 +67,8 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  const selectedLeads = table.getSelectedRowModel().rows.map(row => row.original as Lead);
+  const selectedRows = table.getSelectedRowModel().rows;
+  const selectedLeads = selectedRows.map(row => row.original as Lead);
   const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   return (
@@ -83,9 +84,9 @@ export function DataTable<TData, TValue>({
         leads={selectedLeads}
         users={users}
       />
-      <div className="flex items-center py-4">
+      <div className="flex items-center py-4 gap-2">
         <Input
-          placeholder="Filter by full name..."
+          placeholder="Filter by name..."
           value={(table.getColumn('fullName')?.getFilterValue() as string) ?? ''}
           onChange={(event) =>
             table.getColumn('fullName')?.setFilterValue(event.target.value)
@@ -93,7 +94,7 @@ export function DataTable<TData, TValue>({
           className="max-w-sm"
         />
          {canAssign && selectedLeads.length > 0 && (
-            <Button onClick={() => setBulkAssignDialogOpen(true)} className="ml-auto">
+            <Button onClick={() => setBulkAssignDialogOpen(true)} className="ml-auto" size="sm">
                 <AssignIcon className="mr-2 h-4 w-4"/>
                 Assign Selected ({selectedLeads.length})
             </Button>

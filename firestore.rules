@@ -5,7 +5,7 @@ service cloud.firestore {
     // -- Helper Functions --
 
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
 
     // Resilient check for admin role
@@ -18,16 +18,21 @@ service cloud.firestore {
 
     // Resilient check for teamspace membership
     function isMember(teamspaceId) {
+      if (!isSignedIn()) return false;
+      
+      // Admin bypass
+      if (request.auth.token.role == 'admin') return true;
+      
       let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return isSignedIn() && (
-        isAdmin() || 
-        (userDoc != null && teamspaceId in userDoc.data.teamspaceIds)
-      );
+      return userDoc != null && 
+             userDoc.data != null && 
+             userDoc.data.teamspaceIds != null && 
+             teamspaceId in userDoc.data.teamspaceIds;
     }
 
     // -- Collection Rules --
 
-    // User Profiles: All signed-in staff must be able to list/read profiles for assignments
+    // User Profiles: Essential for assignment and team lists
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isAdmin();
@@ -41,9 +46,8 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Teamspaces and nested CRM data
+    // Teamspaces: Root metadata
     match /teamspaces/{teamspaceId} {
-      // Direct access to the teamspace metadata
       allow get: if isMember(teamspaceId);
       allow list: if isAdmin();
       allow write: if isAdmin();

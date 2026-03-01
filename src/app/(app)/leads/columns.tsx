@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { ColumnDef, type Table as TanstackTable } from '@tanstack/react-table';
 import { MoreHorizontal, ArrowUpDown, Star, Bot, Users, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,20 +33,17 @@ import { useApp } from '@/context/app-context';
 import { AssignLeadDialog } from './assign-lead-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatDistanceToNow } from 'date-fns';
 
 function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { open: boolean; onOpenChange: (open: boolean) => void; result: AiLeadScoringAndPrioritizationOutput | null, leadName: string }) {
   if (!result) return null;
 
   const getPriorityBadgeColor = (priority: 'High' | 'Medium' | 'Low') => {
     switch (priority) {
-      case 'High':
-        return 'bg-red-500 hover:bg-red-500';
-      case 'Medium':
-        return 'bg-yellow-500 hover:bg-yellow-500';
-      case 'Low':
-        return 'bg-green-500 hover:bg-green-500';
-      default:
-        return 'bg-gray-500 hover:bg-gray-500';
+      case 'High': return 'bg-red-500 hover:bg-red-500';
+      case 'Medium': return 'bg-yellow-500 hover:bg-yellow-500';
+      case 'Low': return 'bg-green-500 hover:bg-green-500';
+      default: return 'bg-gray-500 hover:bg-gray-500';
     }
   }
 
@@ -95,10 +91,8 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   const [isConvertAlertOpen, setConvertAlertOpen] = useState(false);
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
 
-
   const users = (table.options.meta as any)?.users || [];
   const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
-
 
   const handleScoreLead = async () => {
     setIsLoading(true);
@@ -118,39 +112,21 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   
   const handleCopyId = () => {
     navigator.clipboard.writeText(lead.id).then(() => {
-      toast({
-        title: 'Copied!',
-        description: 'Lead ID copied to clipboard.',
-      });
-    }).catch(err => {
-      toast({
-        variant: 'destructive',
-        title: 'Copy Failed',
-        description: 'Could not copy ID to clipboard.',
-      });
-      console.error('Failed to copy ID: ', err);
+      toast({ title: 'Copied!', description: 'Lead ID copied to clipboard.' });
+    }).catch(() => {
+      toast({ variant: 'destructive', title: 'Copy Failed', description: 'Could not copy ID.' });
     });
   };
 
   const handleConvertLead = () => {
-    if (!currentUser) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You are not authenticated.' });
-      return;
-    }
+    if (!currentUser) return;
     startConvertTransition(async () => {
       const result = await convertLead({ leadId: lead.id, teamspaceId: lead.teamspaceId, currentUserId: currentUser.id });
       if (result.success) {
-        toast({
-          title: 'Lead Converted',
-          description: `Successfully converted ${lead.fullName} to a contact and account.`,
-        });
+        toast({ title: 'Lead Converted', description: `Successfully converted ${lead.fullName}.` });
         setConvertAlertOpen(false);
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Conversion Failed',
-          description: result.error || 'An unknown error occurred.',
-        });
+        toast({ variant: 'destructive', title: 'Conversion Failed', description: result.error });
       }
     });
   };
@@ -158,18 +134,13 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   return (
     <>
       <LeadScoringResultDialog open={isScoringDialogOpen} onOpenChange={setScoringDialogOpen} result={result} leadName={lead.fullName} />
-      <AssignLeadDialog
-        open={isAssignDialogOpen}
-        onOpenChange={setAssignDialogOpen}
-        lead={lead}
-        users={users}
-      />
+      <AssignLeadDialog open={isAssignDialogOpen} onOpenChange={setAssignDialogOpen} lead={lead} users={users} />
       <AlertDialog open={isConvertAlertOpen} onOpenChange={setConvertAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Convert this Lead?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create a new Account and Contact from '{lead.fullName}'. The lead's status will be set to 'Converted'. This action cannot be undone.
+              This will create a new Account and Contact from '{lead.fullName}'. The lead's status will be set to 'Converted'.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -218,6 +189,20 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   );
 };
 
+const CreatedAtCell = ({ dateString }: { dateString: string }) => {
+    const [formatted, setFormatted] = useState<string>('');
+    
+    useEffect(() => {
+        if (!dateString) return;
+        try {
+            setFormatted(formatDistanceToNow(new Date(dateString), { addSuffix: true }));
+        } catch (e) {
+            setFormatted('N/A');
+        }
+    }, [dateString]);
+
+    return <span>{formatted || '...'}</span>;
+};
 
 export const columns: ColumnDef<Lead>[] = [
   {
@@ -261,6 +246,7 @@ export const columns: ColumnDef<Lead>[] = [
   {
     accessorKey: 'email',
     header: 'Email',
+    cell: ({ row }) => <span className="truncate max-w-[150px] inline-block">{row.getValue('email') || '-'}</span>
   },
     {
     accessorKey: 'assignedToIds',
@@ -272,7 +258,7 @@ export const columns: ColumnDef<Lead>[] = [
         const assignedUsers = ids.map(id => users.find((u: any) => u.id === id)).filter(Boolean) as UserProfile[];
         
         if (assignedUsers.length === 0) {
-            return <span className="text-muted-foreground">Unassigned</span>;
+            return <span className="text-muted-foreground text-xs italic">Unassigned</span>;
         }
 
         const visibleUsers = assignedUsers.slice(0, 3);
@@ -314,23 +300,24 @@ export const columns: ColumnDef<Lead>[] = [
       return <Badge variant={variant} className="capitalize">{status}</Badge>;
     },
   },
-  {
-    accessorKey: 'source',
-    header: 'Source',
-  },
    {
     accessorKey: 'score',
     header: 'AI Score',
     cell: ({ row }) => {
       const score = row.original.score;
-      if (!score) return <span className="text-muted-foreground">-</span>
+      if (score === undefined || score === null) return <span className="text-muted-foreground">-</span>
       return (
         <div className="flex items-center gap-1">
-          <Star className="w-4 h-4 text-yellow-400" />
-          <span>{score}</span>
+          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+          <span className="font-semibold">{score}</span>
         </div>
       );
     },
+  },
+  {
+    accessorKey: 'createdAt',
+    header: 'Created',
+    cell: ({ row }) => <CreatedAtCell dateString={row.getValue('createdAt')} />,
   },
   {
     id: 'actions',
