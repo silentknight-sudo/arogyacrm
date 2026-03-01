@@ -2,79 +2,58 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- Authentication Helpers --
+    // -- Base Helpers --
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function userExists() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
+    // Helper to get the current user's profile document safely
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // -- Role & Membership Helpers --
+    // Helper to check if the user profile exists
+    function userProfileExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // -- Role & Membership Checks --
     function isAdmin() {
-      return userExists() && getUserData().role == 'admin';
+      return isSignedIn() && userProfileExists() && getUserData().role == 'admin';
     }
 
     function isMember(teamspaceId) {
-      return userExists() && getUserData().teamspaceIds.hasAny([teamspaceId]);
-    }
-
-    // -- Ownership Helpers --
-    function isOwner(data) {
-      return isSignedIn() && (
-        data.ownerId == request.auth.uid || 
-        data.assignedToId == request.auth.uid ||
-        (data.assignedToIds != null && request.auth.uid in data.assignedToIds) ||
-        data.userId == request.auth.uid ||
-        data.organizerId == request.auth.uid ||
-        data.callerId == request.auth.uid ||
-        data.uploadedById == request.auth.uid ||
-        data.requestedById == request.auth.uid ||
-        data.processedById == request.auth.uid
+      return isSignedIn() && userProfileExists() && (
+        getUserData().role == 'admin' || 
+        getUserData().teamspaceIds.hasAny([teamspaceId])
       );
     }
 
     // -- Collection Rules --
 
-    // User profiles: all team members can see each other
+    // User Profiles: All team members can see each other for assignments/dropdowns
     match /users/{userId} {
-      allow get, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow create: if isAdmin();
       allow update: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
       allow delete: if isAdmin();
     }
 
-    // Products: globally readable by the team
+    // Products: Globally readable by the team
     match /products/{productId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
-    // Teamspaces: strictly isolated per team
+    // Teamspaces: Access controlled by membership
     match /teamspaces/{teamspaceId} {
-      allow get: if isAdmin() || isMember(teamspaceId);
-      allow list: if isAdmin(); // Non-admins fetch individual docs via context
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin();
+      allow get: if isMember(teamspaceId);
+      allow list: if isAdmin(); // Non-admins access teamspaces via individual getDoc in AppProvider
+      allow create, update, delete: if isAdmin();
 
-      // Lead-specific rules
-      match /leads/{leadId} {
-        allow get, list: if isAdmin() || isMember(teamspaceId);
-        allow create: if isAdmin() || isMember(teamspaceId);
-        allow update: if isAdmin() || (isMember(teamspaceId) && (isOwner(resource.data) || isOwner(request.resource.data)));
-        allow delete: if isAdmin();
-      }
-
-      // All other teamspace content (contacts, deals, tasks, etc.)
+      // Catch-all for all sub-collections within a teamspace
       match /{collection}/{docId} {
-        allow get, list: if isAdmin() || isMember(teamspaceId);
-        allow create: if isAdmin() || isMember(teamspaceId);
-        allow update, delete: if isAdmin() || (isMember(teamspaceId) && isOwner(resource.data));
+        allow read, write: if isMember(teamspaceId);
       }
     }
   }

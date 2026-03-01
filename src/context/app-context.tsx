@@ -34,7 +34,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   // Combined loading state: only ready when both auth and Firestore profile are settled
-  const isUserLoading = isAuthLoading || isProfileLoading;
+  // If we have an authUser, we MUST wait for the profile to be ready
+  const isUserLoading = isAuthLoading || (!!authUser && isProfileLoading);
 
   const [availableTeamspaces, setAvailableTeamspaces] = useState<Teamspace[]>([]);
   const [areTeamspacesLoading, setAreTeamspacesLoading] = useState(true);

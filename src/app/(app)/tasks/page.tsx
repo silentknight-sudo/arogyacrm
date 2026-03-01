@@ -69,6 +69,7 @@ export default function TasksPage() {
   const { currentTeamspace, currentUser, isUserLoading } = useApp();
   const firestore = useFirestore();
 
+  // Guarded tasks query
   const tasksQuery = useMemoFirebase(() =>
     !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'tasks'))
@@ -77,7 +78,7 @@ export default function TasksPage() {
   
   const { data: tasks, isLoading: isLoadingTasks } = useCollection<Task>(tasksQuery);
   
-  // Fetch team members directly on the client. Guarded by profile existence.
+  // Guarded team member query
   const usersQuery = useMemoFirebase(() =>
     !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
