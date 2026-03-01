@@ -171,7 +171,7 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger disabled={isLoading}>
-                                <SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} />
+                                <SelectValue placeholder={isLoading ? "Select a contact" : "Select a contact"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>

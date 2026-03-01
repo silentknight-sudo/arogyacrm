@@ -18,36 +18,26 @@ type WithId<T> = T & { id: string };
 
 /**
  * Interface for the return value of the useDoc hook.
- * @template T Type of the document data.
  */
 export interface UseDocResult<T> {
-  data: WithId<T> | null; // Document data with ID, or null.
-  isLoading: boolean;       // True if loading.
-  error: FirestoreError | Error | null; // Error object, or null.
+  data: WithId<T> | null; 
+  isLoading: boolean;       
+  error: FirestoreError | Error | null; 
 }
 
-/**
- * Recursively serializes data, converting Firestore Timestamps and Date objects to ISO strings.
- * @param data The data to serialize.
- * @returns The serialized data.
- */
 function serializeData(data: any): any {
   if (data === null || data === undefined || typeof data !== 'object') {
     return data;
   }
-
   if (data instanceof Timestamp) {
     return data.toDate().toISOString();
   }
-  
   if (data instanceof Date) {
     return data.toISOString();
   }
-
   if (Array.isArray(data)) {
     return data.map(item => serializeData(item));
   }
-
   const newObj: { [key: string]: any } = {};
   for (const key in data) {
     if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -60,24 +50,11 @@ function serializeData(data: any): any {
 
 /**
  * React hook to subscribe to a single Firestore document in real-time.
- * Handles nullable references.
- * 
- * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
- * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
- * references
- *
- *
- * @template T Optional type for document data. Defaults to any.
- * @param {DocumentReference<DocumentData> | null | undefined} docRef -
- * The Firestore DocumentReference. Waits if null/undefined.
- * @returns {UseDocResult<T>} Object with data, isLoading, error.
  */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
 ): UseDocResult<T> {
-  type StateDataType = WithId<T> | null;
-
-  const [data, setData] = useState<StateDataType>(null);
+  const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
@@ -99,16 +76,16 @@ export function useDoc<T = any>(
           const serializedData = serializeData(snapshot.data() as T);
           setData({ ...(serializedData as T), id: snapshot.id });
         } else {
-          // Document does not exist
           setData(null);
         }
-        setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
+        setError(null); 
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // Suppress permission errors if the user is currently signed out
         const auth = getAuth();
         if (!auth.currentUser && err.code === 'permission-denied') {
+          setData(null);
+          setIsLoading(false);
           return;
         }
 
@@ -120,14 +97,12 @@ export function useDoc<T = any>(
         setError(contextualError)
         setData(null)
         setIsLoading(false)
-
-        // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
       }
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+  }, [memoizedDocRef]);
 
   return { data, isLoading, error };
 }

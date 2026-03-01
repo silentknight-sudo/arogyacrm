@@ -47,7 +47,6 @@ function serializeData(data: any): any {
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
- * Gracefully handles auth transitions and permission errors.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -79,10 +78,9 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // IMPORTANT: Suppress permission errors during logout or if user is missing
+        // Suppress permission errors during logout or if user is missing
         const auth = getAuth();
         if (!auth.currentUser || err.code === 'permission-denied') {
-          console.warn('Firestore permission denied (handled):', err.message);
           setData(null);
           setIsLoading(false);
           return;

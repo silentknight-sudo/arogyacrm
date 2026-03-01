@@ -4,12 +4,11 @@ service cloud.firestore {
 
     // -- Helper Functions --
 
-    // Check if the request is authenticated
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Safely check if the user is an admin
+    // Resilient check for admin role
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.role == 'admin' || 
@@ -17,18 +16,18 @@ service cloud.firestore {
       );
     }
 
-    // Check if the user is a member of a specific teamspace
+    // Resilient check for teamspace membership
     function isMember(teamspaceId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
       return isSignedIn() && (
         isAdmin() || 
-        teamspaceId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamspaceIds
+        (userDoc != null && teamspaceId in userDoc.data.teamspaceIds)
       );
     }
 
     // -- Collection Rules --
 
-    // User Profiles: All signed-in staff can see profiles for assignment dropdowns
-    // This explicit match on the collection path ensures 'list' operations work
+    // User Profiles: All signed-in staff must be able to list/read profiles for assignments
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isAdmin();
@@ -36,24 +35,20 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Products: Global catalog readable by all authenticated staff
+    // Products: Global catalog
     match /products/{productId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    // Teamspaces and nested data
+    // Teamspaces and nested CRM data
     match /teamspaces/{teamspaceId} {
-      // Direct access to the teamspace document
+      // Direct access to the teamspace metadata
       allow get: if isMember(teamspaceId);
-      
-      // Global listing of teamspaces is admin-only
       allow list: if isAdmin();
-      
-      // Manage teamspaces
-      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
 
-      // ALL sub-collections (leads, deals, tasks, etc.)
+      // PROTECT ALL NESTED DATA (leads, deals, tasks, invoices, etc.)
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }
