@@ -119,9 +119,12 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // Suppress permission errors if the user is currently signed out (common race condition during logout)
+        // Suppress permission errors if the user is currently signed out or query is invalid
+        // This handles race conditions during logout/login transitions
         const auth = getAuth();
-        if (!auth.currentUser && err.code === 'permission-denied') {
+        if (!auth.currentUser || err.code === 'permission-denied') {
+          setData(null);
+          setIsLoading(false);
           return;
         }
 

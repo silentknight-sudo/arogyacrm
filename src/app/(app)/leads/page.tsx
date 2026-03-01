@@ -18,19 +18,19 @@ export default function LeadsPage() {
 
   // Strict guard: only fire query when user, profile, and teamspace are fully ready
   const leadsQuery = useMemoFirebase(() => 
-    !isUserLoading && currentUser && currentTeamspace 
+    !isUserLoading && currentUser && currentTeamspace?.id
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'))
       : null
-  , [firestore, currentTeamspace, currentUser, isUserLoading]);
+  , [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // Guarded team member query
+  // Guarded team member query - ensure memberIds exists and is not empty
   const usersQuery = useMemoFirebase(() =>
-    !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
+    !isUserLoading && currentUser && currentTeamspace?.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null,
-    [firestore, currentTeamspace, currentUser, isUserLoading]
+    [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
