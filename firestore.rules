@@ -2,108 +2,79 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -------------------------------------------------------------------------
-    // Helper Functions
-    // -------------------------------------------------------------------------
-
+    // -- Authentication Helpers --
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    function userExists() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
-    
+
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    // -- Role & Membership Helpers --
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin';
+      return userExists() && getUserData().role == 'admin';
     }
 
-    function isTeamLead() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'sales_team_lead';
+    function isMember(teamspaceId) {
+      return userExists() && getUserData().teamspaceIds.hasAny([teamspaceId]);
     }
 
-    function isTeamspaceMember(teamspaceId) {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().teamspaceIds.hasAny([teamspaceId]);
+    // -- Ownership Helpers --
+    function isOwner(data) {
+      return isSignedIn() && (
+        data.ownerId == request.auth.uid || 
+        data.assignedToId == request.auth.uid ||
+        (data.assignedToIds != null && request.auth.uid in data.assignedToIds) ||
+        data.userId == request.auth.uid ||
+        data.organizerId == request.auth.uid ||
+        data.callerId == request.auth.uid ||
+        data.uploadedById == request.auth.uid ||
+        data.requestedById == request.auth.uid ||
+        data.processedById == request.auth.uid
+      );
     }
 
-    // Check if the user is the owner or assigned to a specific document
-    function isDocOwner(doc) {
-      return isOwner(doc.data.ownerId)
-          || isOwner(doc.data.assignedToId)
-          || (doc.data.assignedToIds != null && request.auth.uid in doc.data.assignedToIds)
-          || isOwner(doc.data.organizerId)
-          || isOwner(doc.data.callerId)
-          || isOwner(doc.data.uploadedById)
-          || isOwner(doc.data.requestedById)
-          || isOwner(doc.data.processedById)
-          || isOwner(doc.data.userId);
-    }
-    
-    // Check if the user making the request will be the owner of the new document
-    function isIncomingDocOwner() {
-        let data = request.resource.data;
-        return data.ownerId == request.auth.uid
-            || data.assignedToId == request.auth.uid
-            || (data.assignedToIds != null && request.auth.uid in data.assignedToIds)
-            || data.organizerId == request.auth.uid
-            || data.callerId == request.auth.uid
-            || data.uploadedById == request.auth.uid
-            || data.requestedById == request.auth.uid
-            || data.processedById == request.auth.uid
-            || data.userId == request.auth.uid;
-    }
-    
-    function salesExecAllowedLeadUpdateKeys() {
-        return ['status', 'notes', 'priority', 'reasoning', 'score', 'engagementScore', 'lastContacted', 'updatedAt'];
-    }
+    // -- Collection Rules --
 
-    // -------------------------------------------------------------------------
-    // Collection Rules
-    // -------------------------------------------------------------------------
-
-    // User profiles: All signed-in users can read profiles to see colleagues.
+    // User profiles: all team members can see each other
     match /users/{userId} {
       allow get, list: if isSignedIn();
       allow create: if isAdmin();
-      allow update: if isOwner(userId) || isAdmin();
+      allow update: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
       allow delete: if isAdmin();
     }
-    
-    // Products are public to all signed-in users, but only managed by admins
+
+    // Products: globally readable by the team
     match /products/{productId} {
-        allow get, list: if isSignedIn();
-        allow create, update, delete: if isAdmin();
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
-    // Teamspaces: Members can read. Admins manage.
+    // Teamspaces: strictly isolated per team
     match /teamspaces/{teamspaceId} {
-      allow get: if isTeamspaceMember(teamspaceId) || isAdmin();
-      allow list: if isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().teamspaceIds.hasAny([teamspaceId]));
-      allow create: if isAdmin();
-      allow update, delete: if isAdmin() || isOwner(resource.data.ownerId);
+      allow get: if isAdmin() || isMember(teamspaceId);
+      allow list: if isAdmin(); // Non-admins fetch individual docs via context
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin();
 
-      // Lead-specific rules for distribution workflow
+      // Lead-specific rules
       match /leads/{leadId} {
-        allow get, list: if isTeamspaceMember(teamspaceId) || isAdmin();
-        allow create: if (isTeamspaceMember(teamspaceId) || isAdmin()) && (isAdmin() || isTeamLead() || request.auth.uid in request.resource.data.assignedToIds);
-        allow update: if 
-            (isTeamspaceMember(teamspaceId) || isAdmin()) && (
-                isAdmin() || isTeamLead() ||
-                (request.auth.uid in resource.data.assignedToIds && 
-                 request.resource.data.diff(resource.data).affectedKeys().hasOnly(salesExecAllowedLeadUpdateKeys()))
-            );
-        allow delete: if (isTeamspaceMember(teamspaceId) || isAdmin()) && (isDocOwner(resource) || isAdmin() || isTeamLead());
+        allow get, list: if isAdmin() || isMember(teamspaceId);
+        allow create: if isAdmin() || isMember(teamspaceId);
+        allow update: if isAdmin() || (isMember(teamspaceId) && (isOwner(resource.data) || isOwner(request.resource.data)));
+        allow delete: if isAdmin();
       }
 
-      // Generic rule for all other teamspace subcollections.
+      // All other teamspace content (contacts, deals, tasks, etc.)
       match /{collection}/{docId} {
-        allow get, list: if isTeamspaceMember(teamspaceId) || isAdmin();
-        allow create: if (isTeamspaceMember(teamspaceId) || isAdmin()) && isIncomingDocOwner();
-        allow update, delete: if (isTeamspaceMember(teamspaceId) || isAdmin()) && (isDocOwner(resource) || isAdmin());
+        allow get, list: if isAdmin() || isMember(teamspaceId);
+        allow create: if isAdmin() || isMember(teamspaceId);
+        allow update, delete: if isAdmin() || (isMember(teamspaceId) && isOwner(resource.data));
       }
     }
   }

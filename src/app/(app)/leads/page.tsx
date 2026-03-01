@@ -16,7 +16,7 @@ export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
-  // Guard query with both currentUser and currentTeamspace to prevent unauthenticated access errors
+  // Strict guard: only fire query when user and teamspace are fully ready
   const leadsQuery = useMemoFirebase(() => 
     !isUserLoading && currentUser && currentTeamspace 
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'))
@@ -25,7 +25,6 @@ export default function LeadsPage() {
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // Fetch team members directly on the client. Guarded by profile existence.
   const usersQuery = useMemoFirebase(() =>
     !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 

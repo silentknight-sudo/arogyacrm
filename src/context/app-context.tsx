@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useMemo, useEffect } from '
 import { useRouter } from 'next/navigation';
 import type { UserProfile, Teamspace } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, query, where, documentId, getDoc } from 'firebase/firestore';
+import { doc, collection, query, getDoc } from 'firebase/firestore';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -33,10 +33,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   , [firestore, authUser]);
   const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  // Combined loading state
+  // Combined loading state: only ready when both auth and Firestore profile are settled
   const isUserLoading = isAuthLoading || isProfileLoading;
 
-  // New logic for fetching teamspaces
   const [availableTeamspaces, setAvailableTeamspaces] = useState<Teamspace[]>([]);
   const [areTeamspacesLoading, setAreTeamspacesLoading] = useState(true);
 
@@ -55,7 +54,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [adminTeamspaces, isAdminTeamspacesLoading, currentUser?.role, isUserLoading]);
   
-  // Non-admin users must fetch their teamspaces individually to comply with security rules
+  // Non-admin users fetch their individual teamspaces based on their profile IDs
   useEffect(() => {
     if (!isUserLoading && currentUser && currentUser.role !== 'admin') {
       const teamspaceIds = currentUser.teamspaceIds;
@@ -68,7 +67,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAreTeamspacesLoading(true);
       const fetchTeamspaces = async () => {
         try {
-          // This avoids a 'list' operation by fetching each document directly.
           const promises = teamspaceIds.map(id => getDoc(doc(firestore, 'teamspaces', id)));
           const docSnapshots = await Promise.all(promises);
           const teams = docSnapshots
@@ -85,7 +83,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       fetchTeamspaces();
     } else if (!isUserLoading && !currentUser) {
-      // Explicitly clear teamspaces when logged out
       setAvailableTeamspaces([]);
       setAreTeamspacesLoading(false);
     }
@@ -100,7 +97,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!currentTeamspace || !availableTeamspaces.some(ts => ts.id === currentTeamspace.id)) {
         setCurrentTeamspaceState(availableTeamspaces[0]);
       }
-    } else if (!areTeamspacesLoading) {
+    } else if (!isUserLoading && !areTeamspacesLoading) {
         setCurrentTeamspaceState(null);
     }
   }, [availableTeamspaces, currentTeamspace, areTeamspacesLoading, isUserLoading]);
@@ -135,7 +132,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await auth.signOut();
-    // Reset state immediately on logout
     setAvailableTeamspaces([]);
     setCurrentTeamspaceState(null);
     router.push('/login');

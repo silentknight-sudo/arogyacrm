@@ -7,11 +7,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
-  Bar,
-  BarChart,
   ResponsiveContainer,
-  XAxis,
-  YAxis,
   Tooltip,
   Legend,
   PieChart,
@@ -27,14 +23,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))'];
 
 export default function ReportsPage() {
-    const { currentTeamspace } = useApp();
+    const { currentTeamspace, currentUser, isUserLoading } = useApp();
     const firestore = useFirestore();
 
     const leadsQuery = useMemoFirebase(() =>
-        currentTeamspace
+        !isUserLoading && currentUser && currentTeamspace
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'))
             : null
-    , [firestore, currentTeamspace]);
+    , [firestore, currentTeamspace, currentUser, isUserLoading]);
 
     const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
