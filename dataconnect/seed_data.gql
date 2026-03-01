@@ -1,0 +1,120 @@
+mutation CreateDemoData @transaction @auth(level: PUBLIC, insecureReason: "This operation is for seeding demo data and can be public.") {
+  user_insertMany(data: [
+    {
+      id: "b455c1e5-8a2a-4f51-b8f2-895c202021c1",
+      email: "john.doe@example.com",
+      passwordHash: "hashed_password_john",
+      firstName: "John",
+      lastName: "Doe",
+      createdAt: "2023-01-01T10:00:00Z",
+      phoneNumber: "555-111-2222",
+      role: "Admin"
+    },
+    {
+      id: "f3c8d1e2-5b9e-4e6f-a7d0-123e456f7890",
+      email: "jane.smith@example.com",
+      passwordHash: "hashed_password_jane",
+      firstName: "Jane",
+      lastName: "Smith",
+      createdAt: "2023-01-02T11:00:00Z",
+      phoneNumber: "555-333-4444",
+      role: "Sales"
+    }
+  ])
+  account_insertMany(data: [
+    {
+      id: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      name: "Acme Corp",
+      createdAt: "2023-01-05T09:30:00Z",
+      industry: "Technology",
+      website: "https://www.acmecorp.com",
+      phoneNumber: "555-000-1111",
+      address: "123 Tech Lane, Techville",
+      description: "A leading tech company.",
+      ownerId: "b455c1e5-8a2a-4f51-b8f2-895c202021c1"
+    },
+    {
+      id: "e6f7a8b9-c0d1-2345-6789-0123456789ab",
+      name: "Globex Inc.",
+      createdAt: "2023-01-06T10:00:00Z",
+      industry: "Manufacturing",
+      website: "https://www.globexinc.com",
+      phoneNumber: "555-222-3333",
+      address: "456 Industrial Way, Manufactown",
+      description: "Global manufacturing solutions.",
+      ownerId: "f3c8d1e2-5b9e-4e6f-a7d0-123e456f7890"
+    }
+  ])
+  contact_insertMany(data: [
+    {
+      id: "1a2b3c4d-5e6f-7890-abcd-ef0123456789",
+      firstName: "Alice",
+      lastName: "Johnson",
+      email: "alice.j@acmecorp.com",
+      accountId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      createdAt: "2023-01-07T14:00:00Z",
+      jobTitle: "CTO",
+      phoneNumber: "555-444-5555",
+      ownerId: "b455c1e5-8a2a-4f51-b8f2-895c202021c1"
+    },
+    {
+      id: "9f8e7d6c-5b4a-3210-fedc-ba9876543210",
+      firstName: "Bob",
+      lastName: "Williams",
+      email: "bob.w@globexinc.com",
+      accountId: "e6f7a8b9-c0d1-2345-6789-0123456789ab",
+      createdAt: "2023-01-08T15:00:00Z",
+      jobTitle: "Procurement Manager",
+      phoneNumber: "555-666-7777",
+      ownerId: "f3c8d1e2-5b9e-4e6f-a7d0-123e456f7890"
+    }
+  ])
+  opportunity_insertMany(data: [
+    {
+      id: "0a1b2c3d-4e5f-6789-abcd-ef0123456789",
+      name: "Acme Corp New Software Deal",
+      amount: 50000.00,
+      stage: "Proposal Sent",
+      accountId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      createdAt: "2023-01-10T09:00:00Z",
+      expectedCloseDate: "2023-03-31",
+      contactId: "1a2b3c4d-5e6f-7890-abcd-ef0123456789",
+      ownerId: "b455c1e5-8a2a-4f51-b8f2-895c202021c1"
+    },
+    {
+      id: "5f4e3d2c-1b0a-9876-fedc-ba9876543210",
+      name: "Globex Inc. Hardware Upgrade",
+      amount: 120000.00,
+      stage: "Negotiation",
+      accountId: "e6f7a8b9-c0d1-2345-6789-0123456789ab",
+      createdAt: "2023-01-11T10:00:00Z",
+      expectedCloseDate: "2023-04-15",
+      contactId: "9f8e7d6c-5b4a-3210-fedc-ba9876543210",
+      ownerId: "f3c8d1e2-5b9e-4e6f-a7d0-123e456f7890"
+    }
+  ])
+  interaction_insertMany(data: [
+    {
+      id: "c7d8e9f0-1a2b-3c4d-5e6f-789012345678",
+      type: "Call",
+      date: "2023-01-12T10:30:00Z",
+      description: "Discussed software requirements with Alice Johnson.",
+      userId: "b455c1e5-8a2a-4f51-b8f2-895c202021c1",
+      contactId: "1a2b3c4d-5e6f-7890-abcd-ef0123456789",
+      createdAt: "2023-01-12T10:35:00Z",
+      accountId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      opportunityId: "0a1b2c3d-4e5f-6789-abcd-ef0123456789"
+    },
+    {
+      id: "f1e2d3c4-5b6a-7890-abcd-ef0123456789",
+      type: "Meeting",
+      date: "2023-01-13T11:00:00Z",
+      description: "Presented hardware upgrade options to Bob Williams.",
+      userId: "f3c8d1e2-5b9e-4e6f-a7d0-123e456f7890",
+      contactId: "9f8e7d6c-5b4a-3210-fedc-ba9876543210",
+      createdAt: "2023-01-13T12:00:00Z",
+      accountId: "e6f7a8b9-c0d1-2345-6789-0123456789ab",
+      opportunityId: "5f4e3d2c-1b0a-9876-fedc-ba9876543210"
+    }
+  ])
+}

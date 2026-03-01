@@ -1,0 +1,53 @@
+type User @table {
+  email: String!
+  passwordHash: String!
+  firstName: String!
+  lastName: String!
+  createdAt: Timestamp!
+  phoneNumber: String
+  role: String
+}
+
+type Account @table {
+  name: String!
+  createdAt: Timestamp!
+  industry: String
+  website: String
+  phoneNumber: String
+  address: String
+  description: String
+  owner: User
+}
+
+type Contact @table {
+  firstName: String!
+  lastName: String!
+  email: String!
+  account: Account!
+  createdAt: Timestamp!
+  jobTitle: String
+  phoneNumber: String
+  owner: User
+}
+
+type Opportunity @table {
+  name: String!
+  amount: Float!
+  stage: String!
+  account: Account!
+  createdAt: Timestamp!
+  expectedCloseDate: Date
+  contact: Contact
+  owner: User
+}
+
+type Interaction @table {
+  type: String!
+  date: Timestamp!
+  description: String!
+  user: User!
+  contact: Contact!
+  createdAt: Timestamp!
+  account: Account
+  opportunity: Opportunity
+}

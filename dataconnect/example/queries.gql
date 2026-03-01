@@ -1,0 +1,42 @@
+query ListAccounts @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  accounts {
+    id
+    name
+    industry
+    owner {
+      id
+      firstName
+      lastName
+    }
+  }
+}
+
+mutation CreateContact($firstName: String!, $lastName: String!, $email: String!, $accountId: UUID!) @auth(level: USER) {
+  contact_insert(data: {
+    firstName: $firstName,
+    lastName: $lastName,
+    email: $email,
+    accountId: $accountId,
+    createdAt_expr: "request.time",
+    ownerId_expr: "auth.uid"
+  })
+}
+
+query GetMyOpportunities @auth(level: USER) {
+  opportunities(where: {ownerId: {eq_expr: "auth.uid"}}) {
+    id
+    name
+    amount
+    stage
+    account {
+      name
+    }
+    expectedCloseDate
+  }
+}
+
+mutation UpdateOpportunityStage($id: UUID!, $newStage: String!) @auth(level: USER) {
+  opportunity_update(key: {id: $id}, data: {
+    stage: $newStage
+  })
+}
