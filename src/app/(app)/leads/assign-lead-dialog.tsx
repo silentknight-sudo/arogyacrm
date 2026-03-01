@@ -100,6 +100,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                     {users.length > 0 ? users.map((user) => (
                       <div key={user.id} className="flex flex-row items-center space-x-3 space-y-0">
                         <Checkbox
+                          id={`user-${user.id}`}
                           checked={field.value?.includes(user.id)}
                           onCheckedChange={(checked) => {
                             return checked
@@ -109,7 +110,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                                 )
                           }}
                         />
-                        <Label className="text-sm font-normal cursor-pointer">
+                        <Label htmlFor={`user-${user.id}`} className="text-sm font-normal cursor-pointer">
                           {user.displayName}
                         </Label>
                       </div>

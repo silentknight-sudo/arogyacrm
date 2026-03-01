@@ -34,6 +34,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const formSchema = z.object({
   title: z.string().min(2, 'Title is required.'),
@@ -110,9 +111,9 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
             Fill out the details to schedule a new meeting.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[60vh] pr-4">
+        <ScrollArea className="max-h-[80vh] px-1">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
               <FormField control={form.control} name="title" render={({ field }) => (
                 <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Quarterly Review" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
@@ -143,6 +144,7 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                           return (
                             <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0">
                                 <Checkbox
+                                    id={`att-${item.id}`}
                                     checked={field.value?.includes(item.id)}
                                     onCheckedChange={(checked) => {
                                         return checked
@@ -152,7 +154,7 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
                                             )
                                     }}
                                 />
-                                <Label className="text-sm font-normal cursor-pointer">
+                                <Label htmlFor={`att-${item.id}`} className="text-sm font-normal cursor-pointer">
                                     {label}
                                 </Label>
                             </div>
@@ -171,7 +173,7 @@ export function CreateMeetingDialog({ children, users, contacts, isLoading }: Cr
               </Button>
             </form>
           </Form>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

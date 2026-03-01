@@ -39,6 +39,7 @@ import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { LineItemSchema } from '../schemas';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const purchaseOrderStatuses = ['Pending', 'Ordered', 'Received', 'Cancelled'] as const;
 
@@ -143,9 +144,9 @@ export function CreatePurchaseOrderDialog({ children, products, isLoading }: Cre
             Fill out the form to create a new purchase order.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[70vh] pr-4">
+        <ScrollArea className="max-h-[80vh] px-1">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
                  <FormField control={form.control} name="supplierName" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Supplier Name</FormLabel>
@@ -217,26 +218,24 @@ export function CreatePurchaseOrderDialog({ children, products, isLoading }: Cre
                   render={() => (
                     <FormItem>
                       <FormLabel>Line Items</FormLabel>
-                      <FormControl>
-                        <div className="space-y-2 mt-2">
-                          {fields.map((field, index) => (
-                            <div key={field.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                              <div className="grid grid-cols-3 gap-2 flex-grow">
-                                  <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
-                                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
-                                      <SelectContent>{products.length > 0 ? products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">No products found.</div>}</SelectContent>
-                                  </Select>
-                                  <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
-                                  <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
-                                  <Input type="number" placeholder="Subtotal" value={field.subtotal} readOnly/>
-                              </div>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                      <div className="space-y-2 mt-2">
+                        {fields.map((field, index) => (
+                          <div key={field.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                            <div className="grid grid-cols-3 gap-2 flex-grow">
+                                <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
+                                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
+                                    <SelectContent>{products.length > 0 ? products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">No products found.</div>}</SelectContent>
+                                </Select>
+                                <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
+                                <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
+                                <Input type="number" placeholder="Subtotal" value={field.subtotal} readOnly/>
                             </div>
-                          ))}
-                        </div>
-                      </FormControl>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                       <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
                       </Button>
@@ -249,7 +248,7 @@ export function CreatePurchaseOrderDialog({ children, products, isLoading }: Cre
               </Button>
             </form>
           </Form>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

@@ -36,6 +36,7 @@ import { createUser } from './actions';
 import type { Teamspace } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const formSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -97,9 +98,9 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
             Fill out the form to create a new user and assign their role and teamspaces.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[60vh] pr-4">
+        <ScrollArea className="max-h-[80vh] px-1">
             <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
                 <FormField
                 control={form.control}
                 name="displayName"
@@ -184,6 +185,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                            teamspaces.map((item) => (
                                 <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0">
                                     <Checkbox
+                                        id={`ts-${item.id}`}
                                         checked={field.value?.includes(item.id)}
                                         onCheckedChange={(checked) => {
                                             return checked
@@ -193,7 +195,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                                                 )
                                         }}
                                     />
-                                    <Label className="text-sm font-normal cursor-pointer">
+                                    <Label htmlFor={`ts-${item.id}`} className="text-sm font-normal cursor-pointer">
                                         {item.name}
                                     </Label>
                                 </div>
@@ -213,7 +215,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 </Button>
             </form>
             </Form>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
