@@ -35,24 +35,24 @@ export default function Dashboard() {
     const firestore = useFirestore();
 
     const newLeadsQuery = useMemoFirebase(() => 
-        currentTeamspace 
+        !isUserLoading && currentUser && currentTeamspace 
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'), where('status', '==', 'New'))
             : null
-    , [firestore, currentTeamspace]);
+    , [firestore, currentTeamspace, currentUser, isUserLoading]);
     const { data: newLeads, isLoading: isLoadingLeads } = useCollection<Lead>(newLeadsQuery);
 
     const wonDealsQuery = useMemoFirebase(() => 
-        currentTeamspace 
+        !isUserLoading && currentUser && currentTeamspace 
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'), where('stage', '==', 'Won'))
             : null
-    , [firestore, currentTeamspace]);
+    , [firestore, currentTeamspace, currentUser, isUserLoading]);
     const { data: wonDeals, isLoading: isLoadingWonDeals } = useCollection<Deal>(wonDealsQuery);
 
     const allDealsQuery = useMemoFirebase(() => 
-        currentTeamspace 
+        !isUserLoading && currentUser && currentTeamspace 
             ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'))
             : null
-    , [firestore, currentTeamspace]);
+    , [firestore, currentTeamspace, currentUser, isUserLoading]);
     const { data: allDeals, isLoading: isLoadingAllDeals } = useCollection<Deal>(allDealsQuery);
 
     const [totalRevenue, setTotalRevenue] = useState<number | null>(null);

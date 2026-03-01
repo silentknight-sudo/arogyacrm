@@ -53,11 +53,15 @@ function ProductCard({ product }: { product: Product }) {
 
 export default function ProductsPage() {
   const firestore = useFirestore();
-  const { currentUser } = useApp();
+  const { currentUser, isUserLoading } = useApp();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   
-  const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
-  const { data: products, isLoading } = useCollection<Product>(productsQuery);
+  const productsQuery = useMemoFirebase(() => 
+    !isUserLoading && currentUser 
+      ? query(collection(firestore, 'products')) 
+      : null
+  , [firestore, currentUser, isUserLoading]);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
   const categories = useMemo(() => {
     if (!products) return [];
@@ -75,6 +79,8 @@ export default function ProductsPage() {
     if (selectedCategories.length === 0) return products;
     return products.filter(p => selectedCategories.includes(p.category));
   }, [products, selectedCategories]);
+
+  const isLoading = isUserLoading || isLoadingProducts;
 
   return (
     <div className="space-y-4">

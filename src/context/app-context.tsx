@@ -33,28 +33,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   , [firestore, authUser]);
   const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
+  // Combined loading state
+  const isUserLoading = isAuthLoading || isProfileLoading;
+
   // New logic for fetching teamspaces
   const [availableTeamspaces, setAvailableTeamspaces] = useState<Teamspace[]>([]);
   const [areTeamspacesLoading, setAreTeamspacesLoading] = useState(true);
 
   // Admin users can subscribe to all teamspaces in real-time
   const adminTeamspacesQuery = useMemoFirebase(() =>
-    currentUser?.role === 'admin'
+    !isUserLoading && currentUser?.role === 'admin'
       ? query(collection(firestore, 'teamspaces'))
       : null
-  , [firestore, currentUser]);
+  , [firestore, currentUser, isUserLoading]);
   const { data: adminTeamspaces, isLoading: isAdminTeamspacesLoading } = useCollection<Teamspace>(adminTeamspacesQuery);
   
   useEffect(() => {
-    if (currentUser?.role === 'admin') {
+    if (!isUserLoading && currentUser?.role === 'admin') {
       setAvailableTeamspaces(adminTeamspaces || []);
       setAreTeamspacesLoading(isAdminTeamspacesLoading);
     }
-  }, [adminTeamspaces, isAdminTeamspacesLoading, currentUser?.role]);
+  }, [adminTeamspaces, isAdminTeamspacesLoading, currentUser?.role, isUserLoading]);
   
   // Non-admin users must fetch their teamspaces individually to comply with security rules
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'admin') {
+    if (!isUserLoading && currentUser && currentUser.role !== 'admin') {
       const teamspaceIds = currentUser.teamspaceIds;
       if (!teamspaceIds || teamspaceIds.length === 0) {
         setAvailableTeamspaces([]);
@@ -81,22 +84,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
 
       fetchTeamspaces();
+    } else if (!isUserLoading && !currentUser) {
+      // Explicitly clear teamspaces when logged out
+      setAvailableTeamspaces([]);
+      setAreTeamspacesLoading(false);
     }
-  }, [currentUser, firestore]);
+  }, [currentUser, isUserLoading, firestore]);
 
 
   const [currentTeamspace, setCurrentTeamspaceState] = useState<Teamspace | null>(null);
   const [theme, setThemeState] = useState<Theme>('system');
 
   useEffect(() => {
-    if (availableTeamspaces && availableTeamspaces.length > 0) {
+    if (!isUserLoading && availableTeamspaces && availableTeamspaces.length > 0) {
       if (!currentTeamspace || !availableTeamspaces.some(ts => ts.id === currentTeamspace.id)) {
         setCurrentTeamspaceState(availableTeamspaces[0]);
       }
     } else if (!areTeamspacesLoading) {
         setCurrentTeamspaceState(null);
     }
-  }, [availableTeamspaces, currentTeamspace, areTeamspacesLoading]);
+  }, [availableTeamspaces, currentTeamspace, areTeamspacesLoading, isUserLoading]);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('arogya-crm-theme') as Theme | null;
@@ -128,12 +135,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await auth.signOut();
+    // Reset state immediately on logout
+    setAvailableTeamspaces([]);
+    setCurrentTeamspaceState(null);
     router.push('/login');
   };
 
   const value = {
     currentUser: currentUser ?? null,
-    isUserLoading: isAuthLoading || isProfileLoading,
+    isUserLoading,
     currentTeamspace,
     setCurrentTeamspace,
     availableTeamspaces: availableTeamspaces || [],

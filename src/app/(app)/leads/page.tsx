@@ -13,27 +13,28 @@ import { PlusCircle, Upload } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 
 export default function LeadsPage() {
-  const { currentUser, currentTeamspace } = useApp();
+  const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
+  // Guard query with both currentUser and currentTeamspace to prevent unauthenticated access errors
   const leadsQuery = useMemoFirebase(() => 
-    currentTeamspace 
+    !isUserLoading && currentUser && currentTeamspace 
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
   // Fetch team members directly on the client to avoid Admin SDK issues on Vercel
   const usersQuery = useMemoFirebase(() =>
-    currentTeamspace && currentTeamspace.memberIds?.length > 0
+    !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null,
-    [firestore, currentTeamspace]
+    [firestore, currentTeamspace, currentUser, isUserLoading]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-  const isLoading = isLoadingLeads || isLoadingUsers;
+  const isLoading = isUserLoading || isLoadingLeads || isLoadingUsers;
 
   return (
     <div className="space-y-6">

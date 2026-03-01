@@ -13,16 +13,18 @@ import { CreateAccountDialog } from './create-account-dialog';
 
 
 export default function AccountsPage() {
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, currentUser, isUserLoading } = useApp();
   const firestore = useFirestore();
 
   const accountsQuery = useMemoFirebase(() =>
-    currentTeamspace
+    !isUserLoading && currentUser && currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'accounts'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace, currentUser, isUserLoading]);
   
-  const { data: accounts, isLoading } = useCollection<Account>(accountsQuery);
+  const { data: accounts, isLoading: isLoadingAccounts } = useCollection<Account>(accountsQuery);
+
+  const isLoading = isUserLoading || isLoadingAccounts;
 
   return (
     <div className="space-y-4">
