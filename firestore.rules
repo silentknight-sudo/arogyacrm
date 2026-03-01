@@ -15,20 +15,24 @@ service cloud.firestore {
     }
     
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(path) ? get(path).data : null;
     }
 
     function isAdmin() {
-      return isSignedIn() && getUserData().role == 'admin';
+      let data = getUserData();
+      return isSignedIn() && data != null && data.role == 'admin';
     }
 
     function isTeamLead() {
-      return isSignedIn() && getUserData().role == 'sales_team_lead';
+      let data = getUserData();
+      return isSignedIn() && data != null && data.role == 'sales_team_lead';
     }
 
     function isTeamspaceMember(teamspaceId) {
+      let data = getUserData();
       // A user is a member if their user document's teamspaceIds array contains the teamspaceId.
-      return isSignedIn() && getUserData().teamspaceIds.hasAny([teamspaceId]);
+      return isSignedIn() && data != null && data.teamspaceIds.hasAny([teamspaceId]);
     }
 
     // Check if the user is the owner of a specific document
@@ -91,7 +95,7 @@ service cloud.firestore {
       // Lead-specific rules for distribution workflow
       match /leads/{leadId} {
         allow get, list: if isTeamspaceMember(teamspaceId) || isAdmin();
-        allow create: if (isTeamspaceMember(teamspaceId) || isAdmin()) && request.auth.uid in request.resource.data.assignedToIds;
+        allow create: if (isTeamspaceMember(teamspaceId) || isAdmin()) && (request.auth.uid in request.resource.data.assignedToIds || isAdmin() || isTeamLead());
         allow update: if 
             isTeamspaceMember(teamspaceId) && (
                 // Admins and Team Leads can update anything
