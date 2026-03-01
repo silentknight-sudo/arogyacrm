@@ -32,7 +32,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createQuote } from './actions';
 import { useApp } from '@/context/app-context';
-import type { Account, Contact, Product, QuoteStatus } from '@/types';
+import type { Account, Contact, Product } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
@@ -148,49 +148,122 @@ export function CreateQuoteDialog({ children, accounts, contacts, products, isLo
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>Quote Name</FormLabel><FormControl><Input placeholder="Corporate Wellness Package Q3" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem>
+                      <FormLabel>Quote Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Corporate Wellness Package Q3" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                 )} />
                  <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="accountId" render={({ field }) => (
-                        <FormItem><FormLabel>Account</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select an account"} /></SelectTrigger></FormControl><SelectContent>{accounts.length > 0 ? accounts.map(a => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No accounts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem>
+                          <FormLabel>Account</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger disabled={isLoading}>
+                                <SelectValue placeholder={isLoading ? "Loading..." : "Select an account"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {accounts.length > 0 ? accounts.map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                              )) : <div className="p-2 text-sm text-muted-foreground text-center">No accounts found.</div>}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
                     )} />
                     <FormField control={form.control} name="contactId" render={({ field }) => (
-                        <FormItem><FormLabel>Contact (Optional)</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem>
+                          <FormLabel>Contact (Optional)</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger disabled={isLoading}>
+                                <SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {contacts.length > 0 ? contacts.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>
+                              )) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
                     )} />
                 </div>
                  <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="validUntil" render={({ field }) => (
-                        <FormItem className="flex flex-col"><FormLabel>Valid Until</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Valid Until</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
                     )} />
                     <FormField control={form.control} name="status" render={({ field }) => (
-                        <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{quoteStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {quoteStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
                     )} />
                 </div>
-                <div>
-                  <FormLabel>Line Items</FormLabel>
-                  <div className="space-y-2 mt-2">
-                    {fields.map((field, index) => (
-                      <div key={field.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                        <div className="grid grid-cols-3 gap-2 flex-grow">
-                            <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
-                                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
-                                <SelectContent>{products.length > 0 ? products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">No products found.</div>}</SelectContent>
-                            </Select>
-                            <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
-                            <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
-                            <Input type="number" placeholder="Subtotal" value={field.subtotal} readOnly/>
+                <FormField
+                  control={form.control}
+                  name="lineItems"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Line Items</FormLabel>
+                      <FormControl>
+                        <div className="space-y-2 mt-2">
+                          {fields.map((field, index) => (
+                            <div key={field.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                              <div className="grid grid-cols-3 gap-2 flex-grow">
+                                  <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
+                                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
+                                      <SelectContent>{products.length > 0 ? products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">No products found.</div>}</SelectContent>
+                                  </Select>
+                                  <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
+                                  <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
+                                  <Input type="number" placeholder="Subtotal" value={field.subtotal} readOnly/>
+                              </div>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
-                  </Button>
-                  <FormMessage>{form.formState.errors.lineItems?.message}</FormMessage>
-                </div>
+                      </FormControl>
+                      <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
+                      </Button>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
                 {isSubmitting ? 'Creating Quote...' : 'Create Quote'}
               </Button>

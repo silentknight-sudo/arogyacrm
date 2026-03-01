@@ -32,7 +32,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createPurchaseOrder } from './actions';
 import { useApp } from '@/context/app-context';
-import type { Product, UserProfile, PurchaseOrderStatus } from '@/types';
+import type { Product, UserProfile } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
@@ -57,7 +57,7 @@ type CreatePurchaseOrderDialogProps = {
   isLoading: boolean;
 };
 
-export function CreatePurchaseOrderDialog({ children, users, products, isLoading }: CreatePurchaseOrderDialogProps) {
+export function CreatePurchaseOrderDialog({ children, products, isLoading }: CreatePurchaseOrderDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
@@ -85,7 +85,7 @@ export function CreatePurchaseOrderDialog({ children, users, products, isLoading
         ...currentItem,
         productId: product.id,
         productName: product.name,
-        unitPrice: product.price, // Or a different cost price if available
+        unitPrice: product.price,
         subtotal: product.price * currentItem.quantity,
       });
     }
@@ -147,44 +147,103 @@ export function CreatePurchaseOrderDialog({ children, users, products, isLoading
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                  <FormField control={form.control} name="supplierName" render={({ field }) => (
-                    <FormItem><FormLabel>Supplier Name</FormLabel><FormControl><Input placeholder="Global Ingredients Inc." {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem>
+                      <FormLabel>Supplier Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Global Ingredients Inc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                  )} />
                  <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="orderDate" render={({ field }) => (
-                        <FormItem className="flex flex-col"><FormLabel>Order Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Order Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
                     )} />
                     <FormField control={form.control} name="expectedDeliveryDate" render={({ field }) => (
-                        <FormItem className="flex flex-col"><FormLabel>Expected Delivery</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Expected Delivery</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
                     )} />
                 </div>
                  <FormField control={form.control} name="status" render={({ field }) => (
-                    <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{purchaseOrderStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {purchaseOrderStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                 )} />
-                <div>
-                  <FormLabel>Line Items</FormLabel>
-                  <div className="space-y-2 mt-2">
-                    {fields.map((field, index) => (
-                      <div key={field.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                        <div className="grid grid-cols-3 gap-2 flex-grow">
-                            <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
-                                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
-                                <SelectContent>{products.length > 0 ? products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">No products found.</div>}</SelectContent>
-                            </Select>
-                            <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
-                            <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
-                            <Input type="number" placeholder="Subtotal" value={field.subtotal} readOnly/>
+                <FormField
+                  control={form.control}
+                  name="lineItems"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Line Items</FormLabel>
+                      <FormControl>
+                        <div className="space-y-2 mt-2">
+                          {fields.map((field, index) => (
+                            <div key={field.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                              <div className="grid grid-cols-3 gap-2 flex-grow">
+                                  <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
+                                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
+                                      <SelectContent>{products.length > 0 ? products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">No products found.</div>}</SelectContent>
+                                  </Select>
+                                  <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
+                                  <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
+                                  <Input type="number" placeholder="Subtotal" value={field.subtotal} readOnly/>
+                              </div>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
-                  </Button>
-                  <FormMessage>{form.formState.errors.lineItems?.message}</FormMessage>
-                </div>
+                      </FormControl>
+                      <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
+                      </Button>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
                 {isSubmitting ? 'Creating Order...' : 'Create Purchase Order'}
               </Button>

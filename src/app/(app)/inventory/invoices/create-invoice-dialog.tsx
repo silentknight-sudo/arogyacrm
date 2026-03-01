@@ -32,7 +32,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createInvoice } from './actions';
 import { useApp } from '@/context/app-context';
-import type { Account, SalesOrder, InvoiceStatus } from '@/types';
+import type { Account, SalesOrder } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
@@ -57,7 +57,7 @@ type CreateInvoiceDialogProps = {
   isLoading: boolean;
 };
 
-export function CreateInvoiceDialog({ children, accounts, salesOrders, isLoading }: CreateInvoiceDialogProps) {
+export function CreateInvoiceDialog({ children, salesOrders, isLoading }: CreateInvoiceDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
@@ -136,45 +136,113 @@ export function CreateInvoiceDialog({ children, accounts, salesOrders, isLoading
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField control={form.control} name="salesOrderId" render={({ field }) => (
-                    <FormItem><FormLabel>From Sales Order</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a sales order"} /></SelectTrigger></FormControl><SelectContent>{salesOrders.length > 0 ? salesOrders.map(so => (<SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No sales orders found.</div>}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem>
+                      <FormLabel>From Sales Order</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger disabled={isLoading}>
+                            <SelectValue placeholder={isLoading ? "Loading..." : "Select a sales order"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {salesOrders.length > 0 ? salesOrders.map(so => (
+                            <SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>
+                          )) : <div className="p-2 text-sm text-muted-foreground text-center">No sales orders found.</div>}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                 )} />
                  <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="invoiceDate" render={({ field }) => (
-                        <FormItem className="flex flex-col"><FormLabel>Invoice Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Invoice Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
                     )} />
                     <FormField control={form.control} name="dueDate" render={({ field }) => (
-                        <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Due Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
                     )} />
                 </div>
                  <FormField control={form.control} name="status" render={({ field }) => (
-                    <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{invoiceStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {invoiceStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                 )} />
 
-                <div>
-                    <FormLabel>Line Items</FormLabel>
-                    <div className="space-y-2 mt-2 rounded-md border p-4">
-                        {fields.length > 0 ? fields.map((field) => (
-                        <div key={field.id} className="flex items-center justify-between">
-                            <div>
-                                <p className="font-medium">{field.productName}</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {field.quantity} x ₹{field.unitPrice.toFixed(2)}
-                                </p>
+                <FormField
+                  control={form.control}
+                  name="lineItems"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Line Items</FormLabel>
+                      <FormControl>
+                        <div className="space-y-2 mt-2 rounded-md border p-4">
+                            {fields.length > 0 ? fields.map((field) => (
+                            <div key={field.id} className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-medium">{field.productName}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {field.quantity} x ₹{field.unitPrice.toFixed(2)}
+                                    </p>
+                                </div>
+                                <p className="font-medium">₹{field.subtotal.toFixed(2)}</p>
                             </div>
-                            <p className="font-medium">₹{field.subtotal.toFixed(2)}</p>
+                            )) : (
+                                <p className="text-sm text-muted-foreground text-center">Select a sales order to see line items.</p>
+                            )}
+                            {fields.length > 0 && (
+                                <div className="flex justify-end items-center pt-4 mt-4 border-t">
+                                    <span className="text-muted-foreground mr-2">Total:</span>
+                                    <span className="font-bold text-lg">₹{totalAmount.toFixed(2)}</span>
+                                </div>
+                            )}
                         </div>
-                        )) : (
-                            <p className="text-sm text-muted-foreground text-center">Select a sales order to see line items.</p>
-                        )}
-                        {fields.length > 0 && (
-                            <div className="flex justify-end items-center pt-4 mt-4 border-t">
-                                <span className="text-muted-foreground mr-2">Total:</span>
-                                <span className="font-bold text-lg">₹{totalAmount.toFixed(2)}</span>
-                            </div>
-                        )}
-                    </div>
-                    <FormMessage>{form.formState.errors.lineItems?.message}</FormMessage>
-                </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
               <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
                 {isSubmitting ? 'Creating Invoice...' : 'Create Invoice'}
