@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AppProvider } from '@/context/app-context';
 import { FirebaseClientProvider } from '@/firebase';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -39,6 +40,7 @@ export default function RootLayout({
             </TooltipProvider>
           </AppProvider>
         </FirebaseClientProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
