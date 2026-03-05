@@ -78,7 +78,7 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // Suppress permission errors during logout or if user is missing
+        // Suppress permission errors during logout or initialization race conditions
         const auth = getAuth();
         if (!auth.currentUser || err.code === 'permission-denied') {
           setData(null);

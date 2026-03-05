@@ -5,12 +5,13 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 /**
  * Permanent fix for Vercel 500 errors and Dev Environment Auth prompts.
  * This logic avoids triggering Google Cloud credential lookups unless it's certain
- * that valid credentials or a supported environment exist.
+ * that valid credentials or a supported server environment exist.
  */
 function getAdminApp(): App | null {
     if (getApps().length > 0) return getApps()[0];
 
-    // 1. Check for Vercel / Manual Environment Variables (The Permanent Solution for Hosting)
+    // 1. Check for Vercel / Manual Environment Variables
+    // Copy these from your Firebase Service Account JSON to Vercel Environment Variables.
     const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
@@ -30,9 +31,11 @@ function getAdminApp(): App | null {
         }
     }
 
-    // 2. Only attempt automatic initialization if we are in a known Google Cloud environment
-    // (Google App Hosting, Cloud Run, etc.) to prevent the "Grant Access" prompt in other dev tools.
-    if (process.env.K_SERVICE || process.env.FUNCTIONS_EMULATOR || process.env.GOOGLE_CLOUD_PROJECT) {
+    // 2. Only attempt automatic initialization if we are in a verified Google Cloud environment.
+    // This prevents the "Grant Access" prompt from recurring in interactive dev tools like IDX.
+    const isCloudEnvironment = !!(process.env.K_SERVICE || process.env.FUNCTIONS_EMULATOR || process.env.GOOGLE_CLOUD_PROJECT);
+    
+    if (isCloudEnvironment) {
         try {
             return initializeApp();
         } catch (e) {

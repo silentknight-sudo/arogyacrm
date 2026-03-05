@@ -8,17 +8,12 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // Helper to get user profile data safely
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
     // Resilient check for admin role
     function isAdmin() {
       if (!isSignedIn()) return false;
-      // Priority 1: Check token (fastest)
+      // Fast check via token
       if (request.auth.token.role == 'admin') return true;
-      // Priority 2: Fallback to document check
+      // Fallback to document check
       let path = /databases/$(database)/documents/users/$(request.auth.uid);
       return exists(path) && get(path).data.role == 'admin';
     }
@@ -35,12 +30,10 @@ service cloud.firestore {
 
     // -- Collection Rules --
 
-    // User Profiles: Required for directory lookups and assignments
+    // User Profiles
     match /users/{userId} {
       allow read: if isSignedIn(); 
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // Global Products catalog
@@ -51,8 +44,7 @@ service cloud.firestore {
 
     // Teamspace Scoped Data
     match /teamspaces/{teamspaceId} {
-      allow get: if isTeamspaceMember(teamspaceId);
-      allow list: if isTeamspaceMember(teamspaceId);
+      allow get, list: if isTeamspaceMember(teamspaceId);
       allow write: if isAdmin();
 
       // SPECIFIC RULES FOR LEADS (Assignment-based access)
@@ -62,13 +54,14 @@ service cloud.firestore {
         // Executives only see/edit their assigned leads. 
         // Team Leads and Marketers can see all leads in their teamspace.
         allow read, write: if isTeamspaceMember(teamspaceId) && (
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['sales_team_lead', 'marketer', 'admin']) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['sales_team_lead', 'marketer']) ||
           (resource != null && request.auth.uid in resource.data.assignedToIds) ||
           (resource == null && request.auth.uid in request.resource.data.assignedToIds)
         );
       }
 
-      // PROTECT ALL OTHER NESTED DATA (deals, tasks, invoices, etc.)
+      // PROTECT ALL OTHER NESTED DATA
       match /{allPaths=**} {
         allow read, write: if isTeamspaceMember(teamspaceId);
       }

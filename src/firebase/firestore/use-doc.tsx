@@ -82,8 +82,9 @@ export function useDoc<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
+        // Suppress permission errors during auth transitions
         const auth = getAuth();
-        if (!auth.currentUser && err.code === 'permission-denied') {
+        if (!auth.currentUser || err.code === 'permission-denied') {
           setData(null);
           setIsLoading(false);
           return;
