@@ -56,7 +56,12 @@ export const adminAuth: Auth = app ? getAuth(app) : (createThrowingProxy('Auth')
 
 // Safely export FieldValue and serverTimestamp
 export { FieldValue };
-export const serverTimestamp = () => FieldValue.serverTimestamp();
+export const serverTimestamp = () => {
+    // Return a function that generates the timestamp if SDK is available
+    if (app) return FieldValue.serverTimestamp();
+    // Fallback for module-level calls during boot
+    return new Date().toISOString(); 
+};
 
 export function handleAdminSDKError(error: any): string {
     console.error('Admin SDK Action Error:', error);

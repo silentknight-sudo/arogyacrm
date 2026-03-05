@@ -16,16 +16,24 @@ export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
-  // Strict authentication and ready-state guard for the leads query
-  const leadsQuery = useMemoFirebase(() => 
-    (!isUserLoading && currentUser && currentTeamspace?.id)
-      ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'))
-      : null
-  , [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+  // Optimized query with role-based filtering to comply with security rules
+  const leadsQuery = useMemoFirebase(() => {
+    if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+    
+    const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
+    
+    // Security Restriction: Sales Executives only see leads explicitly assigned to them
+    if (currentUser.role === 'sales_executive') {
+      return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
+    }
+    
+    // Admins and Team Leads see all leads in the teamspace
+    return query(leadsRef);
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // Strict guard for the team member query
+  // Strict guard for the team member directory query
   const usersQuery = useMemoFirebase(() =>
     (!isUserLoading && currentUser && currentTeamspace?.memberIds?.length > 0)
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
@@ -42,11 +50,13 @@ export default function LeadsPage() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Leads</h1>
                 <p className="text-muted-foreground">
-                    Manage your prospective customers and track their journey.
+                    {currentUser?.role === 'sales_executive' 
+                      ? 'Your assigned prospective customers.' 
+                      : 'Manage your prospective customers and track their journey.'}
                 </p>
             </div>
              <div className="flex items-center space-x-2">
-              {currentUser?.role === 'admin' && (
+              {(currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead') && (
                 <UploadLeadsDialog users={users || []} isLoading={isActuallyLoading}>
                   <Button variant="outline">
                     <Upload className="mr-2 h-4 w-4" />
