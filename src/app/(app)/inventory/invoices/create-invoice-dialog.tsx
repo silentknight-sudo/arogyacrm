@@ -10,7 +10,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
@@ -74,6 +73,7 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
 
   const { fields } = useFieldArray({ control: form.control, name: 'lineItems' });
   const watchedSalesOrderId = form.watch('salesOrderId');
+  const watchedLineItems = form.watch('lineItems') || [];
 
   useEffect(() => {
     if (watchedSalesOrderId) {
@@ -92,7 +92,7 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
     }
     setIsSubmitting(true);
     
-    const totalAmount = values.lineItems.reduce((sum, item) => sum + item.subtotal, 0);
+    const totalAmount = values.lineItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
     const result = await createInvoice({
       ...values,
@@ -121,7 +121,7 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
     setIsSubmitting(false);
   };
 
-  const totalAmount = form.watch('lineItems').reduce((acc, item) => acc + (item.subtotal || 0), 0);
+  const totalAmount = watchedLineItems.reduce((acc, item) => acc + (item.subtotal || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -211,39 +211,31 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                     </FormItem>
                 )} />
 
-                <FormField
-                  control={form.control}
-                  name="lineItems"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Line Items</FormLabel>
-                      <FormControl>
-                        <div className="space-y-2 mt-2 rounded-md border p-4">
-                            {fields.length > 0 ? fields.map((field) => (
-                            <div key={field.id} className="flex items-center justify-between">
-                                <div>
-                                    <p className="font-medium">{field.productName}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {field.quantity} x ₹{field.unitPrice.toFixed(2)}
-                                    </p>
-                                </div>
-                                <p className="font-medium">₹{field.subtotal.toFixed(2)}</p>
-                            </div>
-                            )) : (
-                                <p className="text-sm text-muted-foreground text-center">Select a sales order to see line items.</p>
-                            )}
-                            {fields.length > 0 && (
-                                <div className="flex justify-end items-center pt-4 mt-4 border-t">
-                                    <span className="text-muted-foreground mr-2">Total:</span>
-                                    <span className="font-bold text-lg">₹{totalAmount.toFixed(2)}</span>
-                                </div>
-                            )}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-2">
+                  <FormLabel>Line Items</FormLabel>
+                  <div className="space-y-2 mt-2 rounded-md border p-4">
+                      {fields.length > 0 ? fields.map((field) => (
+                      <div key={field.id} className="flex items-center justify-between">
+                          <div>
+                              <p className="font-medium">{field.productName}</p>
+                              <p className="text-sm text-muted-foreground">
+                                  {field.quantity} x ₹{field.unitPrice.toFixed(2)}
+                              </p>
+                          </div>
+                          <p className="font-medium">₹{field.subtotal.toFixed(2)}</p>
+                      </div>
+                      )) : (
+                          <p className="text-sm text-muted-foreground text-center">Select a sales order to see line items.</p>
+                      )}
+                      {fields.length > 0 && (
+                          <div className="flex justify-end items-center pt-4 mt-4 border-t">
+                              <span className="text-muted-foreground mr-2">Total:</span>
+                              <span className="font-bold text-lg">₹{totalAmount.toFixed(2)}</span>
+                          </div>
+                      )}
+                  </div>
+                  <FormMessage>{form.formState.errors.lineItems?.message}</FormMessage>
+                </div>
 
               <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
                 {isSubmitting ? 'Creating Invoice...' : 'Create Invoice'}

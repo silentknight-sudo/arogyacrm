@@ -13,22 +13,28 @@ import { ArrowLeft, Edit, Mail, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect, useState } from 'react';
 
 export default function LeadDetailPage() {
-  const params = useParams();
-  const { id } = params;
+  const params = useParams() || {};
+  const id = params.id as string;
   const { currentTeamspace } = useApp();
   const firestore = useFirestore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const leadRef = useMemoFirebase(() => 
     currentTeamspace && id
-      ? doc(firestore, 'teamspaces', currentTeamspace.id, 'leads', id as string)
+      ? doc(firestore, 'teamspaces', currentTeamspace.id, 'leads', id)
       : null
   , [firestore, currentTeamspace, id]);
   
   const { data: lead, isLoading } = useDoc<Lead>(leadRef);
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return <div className="space-y-4">
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-64 w-full" />
@@ -40,7 +46,7 @@ export default function LeadDetailPage() {
     notFound();
   }
 
-  const interactionLogs: InteractionLog[] = []; // Replace with actual data fetching if available
+  const interactionLogs: InteractionLog[] = [];
 
   return (
     <div className="flex flex-col gap-6">
