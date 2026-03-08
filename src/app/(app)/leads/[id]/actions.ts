@@ -4,6 +4,7 @@ import { getLeadInteractionSummary, LeadInteractionSummaryInput } from '@/ai/flo
 import type { Lead, InteractionLog } from '@/types';
 import { formatISO } from 'date-fns';
 import { adminDb } from '@/firebase/admin';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 async function getInteractionLogsForLead(teamspaceId: string, leadId: string): Promise<InteractionLog[]> {
     try {
@@ -17,7 +18,7 @@ async function getInteractionLogsForLead(teamspaceId: string, leadId: string): P
             .limit(10)
             .get();
 
-        return snapshot.docs.map(doc => {
+        return snapshot.docs.map((doc: QueryDocumentSnapshot) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -29,7 +30,6 @@ async function getInteractionLogsForLead(teamspaceId: string, leadId: string): P
         });
     } catch (error) {
         console.error('Error fetching interaction logs:', error);
-        // Fallback: return empty list if index isn't ready or query fails
         return [];
     }
 }
