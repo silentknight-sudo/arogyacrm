@@ -12,10 +12,10 @@ export async function scoreLeadWithAI(lead: Lead) {
       engagementScore: lead.engagementScore || 0,
       leadSource: lead.source || 'Unknown',
       demographicData: {
-        industry: lead.demographicData?.industry,
-        companySize: lead.demographicData?.companySize,
-        jobTitle: lead.demographicData?.jobTitle,
-        country: lead.demographicData?.country,
+        industry: lead.demographicData?.industry || '',
+        companySize: lead.demographicData?.companySize || '',
+        jobTitle: lead.demographicData?.jobTitle || '',
+        country: lead.demographicData?.country || '',
       },
       productAsked: lead.productAsked,
       leadStatus: lead.status,
@@ -42,12 +42,13 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
   try {
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = AssignLeadSchema.parse(values);
 
-    // Secure Verification: Only Admins or Team Leads can reassign
+    // Verify privileges: Only Admins or Team Leads can reassign
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const role = currentUserDoc.data()?.role;
+    if (!currentUserDoc.exists) throw new Error('User context not found.');
     
-    if (!currentUserDoc.exists || !['admin', 'sales_team_lead'].includes(role)) {
-      throw new Error('Unauthorized: Only admins or team leads can reassign prospects.');
+    const role = currentUserDoc.data()?.role;
+    if (!['admin', 'sales_team_lead'].includes(role)) {
+      throw new Error('Unauthorized: Only admins or team leads can delegate prospects.');
     }
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
@@ -128,8 +129,8 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
       name: `${leadData.fullName}'s Company`,
       ownerId: currentUserId,
       teamspaceId: teamspaceId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       phone: leadData.phone,
     };
     
@@ -144,14 +145,14 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
       teamspaceId: teamspaceId,
       ownerId: currentUserId,
       avatar: `https://picsum.photos/seed/${contactRef.id}/100/100`,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
     const batch = adminDb.batch();
     batch.set(accountRef, newAccountData);
     batch.set(contactRef, newContactData);
-    batch.update(leadRef, { status: 'Converted', updatedAt: serverTimestamp() });
+    batch.update(leadRef, { status: 'Converted', updatedAt: FieldValue.serverTimestamp() });
     
     await batch.commit();
 
