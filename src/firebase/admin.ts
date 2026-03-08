@@ -5,7 +5,7 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 /**
  * HYPER-RESILIENT PEM PARSER
  * Specifically engineered to handle Vercel's environment variable formats.
- * Detects literal \n strings, removes wrapping quotes, and aligns PEM headers.
+ * Detects literal \n strings, handles double-escaped backslashes, and perfectly aligns PEM headers.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
@@ -13,12 +13,13 @@ function formatPrivateKey(key: string | undefined): string {
   let cleaned = key.trim();
 
   // 1. Remove wrapping quotes if present (common dashboard artifact)
-  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
     cleaned = cleaned.substring(1, cleaned.length - 1);
   }
 
-  // 2. Convert literal "\n" character sequences into actual newlines
-  cleaned = cleaned.replace(/\\n/g, '\n');
+  // 2. Convert literal "\n" character sequences into true newline characters
+  // Also handles double-escaped backslashes common in some CI/CD environments
+  cleaned = cleaned.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n');
 
   // 3. Force proper PEM framing to prevent parser rejection
   const header = '-----BEGIN PRIVATE KEY-----';
@@ -27,7 +28,7 @@ function formatPrivateKey(key: string | undefined): string {
   if (!cleaned.includes(header)) cleaned = `${header}\n${cleaned}`;
   if (!cleaned.includes(footer)) cleaned = `${cleaned}\n${footer}`;
 
-  // 4. Ensure no double-headers/footers were created
+  // 4. Ensure no double-headers or whitespace noise was created during the process
   cleaned = cleaned.replace(new RegExp(`(${header}\\s*)+`, 'g'), `${header}\n`);
   cleaned = cleaned.replace(new RegExp(`(\\s*${footer})+`, 'g'), `\n${footer}`);
 
@@ -89,9 +90,17 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
 
 export { FieldValue };
 
+/**
+ * Consistent error handler for the Premium CRM.
+ */
 export function handleAdminSDKError(error: any): string {
   console.error('Admin SDK Operation Failed:', error);
-  if (error.message?.includes('private key')) return 'Secure Key Error: Ensure FIREBASE_PRIVATE_KEY is correct in Vercel.';
-  if (error.code === 'permission-denied') return 'Security Error: Insufficient service account permissions.';
-  return error.message || 'A server-side error occurred.';
+  const msg = error.message || '';
+  if (msg.includes('private key') || msg.includes('PEM')) {
+    return 'Secure Key Error: Ensure FIREBASE_PRIVATE_KEY is correct in Vercel.';
+  }
+  if (error.code === 'permission-denied') {
+    return 'Security Error: Insufficient service account permissions.';
+  }
+  return msg || 'A server-side error occurred.';
 }

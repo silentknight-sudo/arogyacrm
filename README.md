@@ -2,9 +2,9 @@
 
 A high-end, production-ready CRM built for Ayurvedic wellness supplement businesses. Optimized for zero-error deployment on Vercel with a premium enterprise UI.
 
-## Vercel Deployment Setup
+## Vercel Deployment Setup (CRITICAL)
 
-To prevent **Error 500** and ensure stable Admin SDK initialization, you MUST configure the following Environment Variables in your Vercel Project Settings:
+To prevent **PEM Parsing Errors** and ensure the Admin SDK initializes correctly, configure these variables in Vercel:
 
 ### 1. Required Variables
 | Key | Value Source |
@@ -17,11 +17,10 @@ To prevent **Error 500** and ensure stable Admin SDK initialization, you MUST co
 When adding `FIREBASE_PRIVATE_KEY` to Vercel:
 1. Copy the value of `private_key` from your JSON file.
 2. It should start with `-----BEGIN PRIVATE KEY-----` and end with `-----END PRIVATE KEY-----`.
-3. Paste the **entire block** into the Vercel "Value" field.
-4. Our resilient parser will automatically handle any newline escaping or formatting issues.
+3. **Pasting Method**: Paste the *entire block* including the `\n` characters if they are present. Our industrial parser will automatically sanitize quotes, newlines, and double-escapes.
 
 ## Advanced Features
-- **Industrial Admin Singleton**: Zero-crash initialization for serverless environments.
-- **Glassmorphic UI**: Premium "Forest & Gold" aesthetic with advanced micro-interactions.
-- **AI-Powered Insights**: Automated lead scoring and interaction summarization.
-- **Scalable Discovery**: Robust member-based filtering for all assignments.
+- **Hyper-Resilient Admin Singleton**: Zero-crash initialization specifically engineered for Vercel's multi-line environment variables.
+- **Glassmorphic UI**: Premium "Forest & Gold" aesthetic with advanced `backdrop-blur-3xl` and herbal gradients.
+- **AI-Powered Insights**: Automated lead scoring and interaction summarization via Genkit.
+- **Scalable Discovery**: Robust `array-contains` member filtering for enterprise-scale teams.

@@ -29,7 +29,7 @@ import type { Lead, UserProfile } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const formSchema = z.object({
-  assignedToIds: z.array(z.string()).min(1, 'Select at least one team member.'),
+  assignedToIds: z.array(z.string()).min(1, 'Select at least one wellness specialist.'),
 });
 
 type AssignLeadDialogProps = {
@@ -66,20 +66,26 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
       });
 
       if (result.success) {
-        toast({ title: 'Lead Delegated', description: `Successfully updated assignments for ${lead.fullName}.` });
+        toast({ title: 'Lead Delegated', description: `Successfully updated specialists for ${lead.fullName}.` });
         onOpenChange(false);
       } else {
-        toast({ variant: 'destructive', title: 'Assignment Failed', description: result.error });
+        toast({ 
+          variant: 'destructive', 
+          title: 'Assignment Failed', 
+          description: result.error || 'Check your environment configuration.' 
+        });
       }
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-[2.5rem] p-10 border-none shadow-2xl bg-card/95 backdrop-blur-2xl">
-        <DialogHeader className="mb-6">
-          <DialogTitle className="text-3xl font-black tracking-tight text-primary">Assign Prospect</DialogTitle>
-          <DialogDescription className="text-lg font-medium text-muted-foreground/80">Delegate {lead.fullName} to your wellness specialists.</DialogDescription>
+      <DialogContent className="sm:max-w-md rounded-[2.5rem] p-10 border-none shadow-2xl bg-[#0D1F0B]/95 backdrop-blur-3xl text-white">
+        <DialogHeader className="mb-8">
+          <DialogTitle className="text-3xl font-black tracking-tight text-[#4ade80]">Assign Prospect</DialogTitle>
+          <DialogDescription className="text-lg font-medium text-white/60">
+            Delegate <span className="text-white font-bold">{lead.fullName}</span> to your wellness specialists.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
@@ -88,8 +94,8 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
               name="assignedToIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/50 px-2">Select Team Members</FormLabel>
-                  <ScrollArea className="h-72 rounded-[2rem] border bg-muted/20 p-6 shadow-inner">
+                  <FormLabel className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40 px-2">Select Team Members</FormLabel>
+                  <ScrollArea className="h-72 rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-inner">
                     <div className="space-y-6">
                     {users.length > 0 ? users.map((user) => (
                       <div key={user.id} className="flex flex-row items-center space-x-4 space-y-0 group">
@@ -101,15 +107,15 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                               ? field.onChange([...(field.value || []), user.id])
                               : field.onChange(field.value?.filter(v => v !== user.id))
                           }}
-                          className="rounded-full h-6 w-6 border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          className="rounded-full h-6 w-6 border-2 border-[#4ade80]/30 data-[state=checked]:bg-[#4ade80] data-[state=checked]:border-[#4ade80]"
                         />
-                        <Label htmlFor={`user-${user.id}`} className="text-sm font-bold cursor-pointer group-hover:text-primary transition-colors flex flex-col gap-0.5">
+                        <Label htmlFor={`user-${user.id}`} className="text-sm font-bold cursor-pointer group-hover:text-[#4ade80] transition-colors flex flex-col gap-0.5">
                           {user.displayName}
-                          <span className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.1em]">{user.role.replace(/_/g, ' ')}</span>
+                          <span className="text-[10px] text-white/40 font-black uppercase tracking-[0.1em]">{user.role.replace(/_/g, ' ')}</span>
                         </Label>
                       </div>
                     )) : (
-                        <div className="text-center text-sm text-muted-foreground font-medium py-16">No eligible team members found.</div>
+                        <div className="text-center text-sm text-white/30 font-medium py-16 italic">Searching for specialists...</div>
                     )}
                     </div>
                   </ScrollArea>
@@ -117,8 +123,8 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-16 text-lg font-black rounded-2xl herbal-gradient shadow-2xl shadow-primary/30 gold-glow hover:scale-[1.02] transition-transform">
-              {isPending ? 'Processing Assignment...' : 'Confirm Delegation'}
+            <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-16 text-lg font-black rounded-2xl herbal-gradient shadow-2xl shadow-[#2D5A27]/40 gold-glow hover:scale-[1.02] transition-transform">
+              {isPending ? 'Processing Delegation...' : 'Confirm Delegation'}
             </Button>
           </form>
         </Form>
