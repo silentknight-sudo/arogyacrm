@@ -4,7 +4,7 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
  * Robust, lazy initialization for the Firebase Admin SDK.
- * Optimized for Vercel, GCP, and local development.
+ * Optimized for Vercel and production environments.
  */
 function getAdminApp(): App | null {
   if (getApps().length > 0) return getApps()[0];
@@ -26,13 +26,13 @@ function getAdminApp(): App | null {
   }
 
   // STRATEGY 2: Environment Discovery (GCP / App Hosting)
-  // We only attempt this in specific environments to avoid trust prompts in local dev
+  // Only attempt automatic discovery in environments where it's expected to be quiet.
   const isServerless = !!(process.env.K_SERVICE || process.env.VERCEL || process.env.FUNCTIONS_EMULATOR);
-  if (isServerless) {
+  if (isServerless && !privateKey) {
     try {
       return initializeApp();
     } catch (e) {
-      // Fail silently during build/discovery phases
+      // Fail silently to avoid build-time crashes.
     }
   }
 
@@ -40,19 +40,13 @@ function getAdminApp(): App | null {
 }
 
 /**
- * Proxy-based lazy initialization. 
- * Prevents build-time crashes and unnecessary trust prompts.
+ * Proxy-based lazy initialization to prevent build-time crashes and auth prompts.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(_, prop) {
     if (prop === 'then') return undefined;
     const app = getAdminApp();
-    if (!app) {
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn('Admin SDK Firestore requested but app not initialized. Verify environment variables.');
-        }
-        return undefined;
-    }
+    if (!app) return undefined;
     const db = getFirestore(app);
     return (db as any)[prop];
   }
@@ -62,12 +56,7 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
   get(_, prop) {
     if (prop === 'then') return undefined;
     const app = getAdminApp();
-    if (!app) {
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn('Admin SDK Auth requested but app not initialized. Verify environment variables.');
-        }
-        return undefined;
-    }
+    if (!app) return undefined;
     const auth = getAuth(app);
     return (auth as any)[prop];
   }
@@ -75,7 +64,7 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
 
 export { FieldValue };
 
-/** Safe helper for server timestamps */
+/** Safe helper for server timestamps that works even during hydration. */
 export const serverTimestamp = () => {
   try {
     return FieldValue.serverTimestamp();
