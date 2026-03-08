@@ -14,7 +14,6 @@ function formatPrivateKey(key: string | undefined): string {
   let cleaned = key.trim().replace(/^['"]+|['"]+$/g, '');
 
   // 2. Resolve literal "\n" character sequences (from dashboards or JSON pasting)
-  // We use a global regex to catch all instances.
   cleaned = cleaned.replace(/\\n/g, '\n');
 
   // 3. Ensure the PEM headers/footers are present and correctly separated
@@ -92,6 +91,7 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
 });
 
 export { FieldValue };
+export const serverTimestamp = () => FieldValue.serverTimestamp();
 
 export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);
