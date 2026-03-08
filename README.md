@@ -11,7 +11,7 @@ To prevent **Error 500** and ensure stable Admin SDK initialization, you MUST co
 | :--- | :--- |
 | `FIREBASE_PROJECT_ID` | `project_id` from your service account JSON |
 | `FIREBASE_CLIENT_EMAIL` | `client_email` from your service account JSON |
-| `FIREBASE_PRIVATE_KEY` | `private_key` (Include the entire string with BEGIN/END blocks) |
+| `FIREBASE_PRIVATE_KEY` | `private_key` (Paste the entire block including BEGIN/END lines) |
 
 ### 2. Getting Your Credentials
 1. Go to the [Firebase Console](https://console.firebase.google.com/).

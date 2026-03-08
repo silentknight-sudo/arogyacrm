@@ -4,8 +4,7 @@ import { adminDb, FieldValue, handleAdminSDKError, serverTimestamp } from '@/fir
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
-import type { Lead, UserProfile } from '@/types';
-
+import type { Lead } from '@/types';
 
 export async function scoreLeadWithAI(lead: Lead) {
   try {
@@ -44,14 +43,8 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = AssignLeadSchema.parse(values);
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    if (!currentUserDoc.exists) {
-      throw new Error('Verification failed.');
-    }
-    const currentUserData = currentUserDoc.data();
-    const userRole = currentUserData?.role;
-
-    if (userRole !== 'admin' && userRole !== 'sales_team_lead') {
-      throw new Error('Unauthorized.');
+    if (!currentUserDoc.exists || !['admin', 'sales_team_lead'].includes(currentUserDoc.data()?.role)) {
+      throw new Error('Unauthorized: Only admins or team leads can reassign leads.');
     }
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);

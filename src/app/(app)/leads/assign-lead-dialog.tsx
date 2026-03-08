@@ -53,14 +53,13 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You are not authenticated.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Session expired. Please log in again.' });
       return;
     }
     startTransition(async () => {
-      // Use currentTeamspace.id explicitly to ensure robustness
       const result = await assignLead({
         leadId: lead.id,
-        teamspaceId: currentTeamspace.id,
+        teamspaceId: currentTeamspace.id, // Use reliable ID from context
         newAssignedToIds: values.assignedToIds,
         currentUserId: currentUser.id,
       });
@@ -68,7 +67,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
       if (result.success) {
         toast({
           title: 'Lead Assigned',
-          description: `Lead "${lead.fullName}" has been assigned successfully.`,
+          description: `Successfully updated assignments for ${lead.fullName}.`,
         });
         onOpenChange(false);
       } else {
