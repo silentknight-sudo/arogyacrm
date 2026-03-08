@@ -35,7 +35,7 @@ const AssignLeadSchema = z.object({
   leadId: z.string().min(1),
   teamspaceId: z.string().min(1),
   newAssignedToIds: z.array(z.string()).min(1, 'At least one user must be assigned.'),
-  currentUserId: z.string().min(1), // User performing the action
+  currentUserId: z.string().min(1),
 });
 
 export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
@@ -45,19 +45,13 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
     if (!currentUserDoc.exists) {
-      throw new Error('Could not verify your identity.');
+      throw new Error('Verification failed.');
     }
     const currentUserData = currentUserDoc.data();
     const userRole = currentUserData?.role;
 
-    // Security Check: Only admin or sales_team_lead can assign
     if (userRole !== 'admin' && userRole !== 'sales_team_lead') {
-      throw new Error('You do not have permission to assign leads.');
-    }
-
-    // Security Check: Ensure user is part of the teamspace
-    if (userRole !== 'admin' && !currentUserData?.teamspaceIds?.includes(teamspaceId)) {
-        throw new Error('You do not belong to this teamspace.');
+      throw new Error('Unauthorized.');
     }
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
@@ -73,63 +67,9 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     return { success: true };
 
   } catch (error: any) {
-    const errorMessage = handleAdminSDKError(error);
-    return { success: false, error: errorMessage };
+    return { success: false, error: handleAdminSDKError(error) };
   }
 }
-
-const BulkAssignLeadsSchema = z.object({
-  leadIds: z.array(z.string()).min(1, 'At least one lead must be selected.'),
-  teamspaceId: z.string().min(1),
-  newAssignedToIds: z.array(z.string()).min(1, 'At least one user must be assigned.'),
-  currentUserId: z.string().min(1),
-});
-
-export async function bulkAssignLeads(values: z.infer<typeof BulkAssignLeadsSchema>)
-: Promise<{ success: boolean; error?: string }> {
-  try {
-    const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = BulkAssignLeadsSchema.parse(values);
-
-    const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    if (!currentUserDoc.exists) {
-      throw new Error('Could not verify your identity.');
-    }
-    const currentUserData = currentUserDoc.data();
-    const userRole = currentUserData?.role;
-
-    if (userRole !== 'admin' && userRole !== 'sales_team_lead') {
-      throw new Error('You do not have permission to assign leads.');
-    }
-
-    if (userRole !== 'admin' && !currentUserData?.teamspaceIds?.includes(teamspaceId)) {
-        throw new Error('You do not belong to this teamspace.');
-    }
-    
-    const batch = adminDb.batch();
-    const leadsCollectionRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
-
-    leadIds.forEach(leadId => {
-      const leadRef = leadsCollectionRef.doc(leadId);
-      batch.update(leadRef, {
-        assignedToIds: newAssignedToIds,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    });
-
-    await batch.commit();
-
-    revalidatePath('/leads');
-    // Also revalidate individual lead pages if they are ever visited
-    leadIds.forEach(leadId => revalidatePath(`/leads/${leadId}`));
-
-    return { success: true };
-
-  } catch (error: any) {
-    const errorMessage = handleAdminSDKError(error);
-    return { success: false, error: errorMessage };
-  }
-}
-
 
 const ConvertLeadSchema = z.object({
   leadId: z.string().min(1),
@@ -149,10 +89,9 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
     const leadData = leadDoc.data() as Lead;
 
     if (leadData.status === 'Converted') {
-        throw new Error("Lead has already been converted.");
+        throw new Error("Lead already converted.");
     }
 
-    // 1. Create Account
     const accountRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('accounts').doc();
     const newAccountData = {
       id: accountRef.id,
@@ -164,7 +103,6 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
       phone: leadData.phone,
     };
     
-    // 2. Create Contact
     const contactRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('contacts').doc();
     const newContactData = {
       id: contactRef.id,
@@ -180,7 +118,6 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
       updatedAt: serverTimestamp(),
     };
 
-    // 3. Create a batch to ensure atomic write
     const batch = adminDb.batch();
     batch.set(accountRef, newAccountData);
     batch.set(contactRef, newContactData);
@@ -189,7 +126,6 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
     await batch.commit();
 
     revalidatePath('/leads');
-    revalidatePath(`/leads/${leadId}`);
     revalidatePath('/contacts');
     revalidatePath('/accounts');
 
@@ -197,36 +133,4 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
   } catch (error: any) {
     return { success: false, error: handleAdminSDKError(error) };
   }
-}
-
-export async function getTeamspaceUsers(teamspaceId: string): Promise<{ success: boolean; users?: UserProfile[], error?: string; }> {
-    try {
-        if (!teamspaceId) {
-            return { success: true, users: [] };
-        }
-
-        const usersSnapshot = await adminDb.collection('users').where('teamspaceIds', 'array-contains', teamspaceId).get();
-        if (usersSnapshot.empty) {
-            return { success: true, users: [] };
-        }
-        
-        const users = usersSnapshot.docs.map(doc => {
-            const docData = doc.data();
-            // Deeply and recursively scan for Firestore Timestamps and convert to ISO strings
-            const serialize = (data: any): any => {
-                if (data === null || data === undefined || typeof data !== 'object') return data;
-                if (typeof data.toDate === 'function') return data.toDate().toISOString();
-                if (Array.isArray(data)) return data.map(serialize);
-                return Object.fromEntries(Object.entries(data).map(([k, v]) => [k, serialize(v)]));
-            };
-
-            const serializedData = serialize(docData);
-            return { ...serializedData, id: doc.id } as UserProfile;
-        });
-        
-        return { success: true, users: users };
-    } catch (error: any) {
-        const errorMessage = handleAdminSDKError(error);
-        return { success: false, error: errorMessage };
-    }
 }

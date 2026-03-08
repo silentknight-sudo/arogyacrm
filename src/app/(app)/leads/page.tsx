@@ -3,13 +3,13 @@
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, documentId } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Sparkles } from 'lucide-react';
+import { PlusCircle, Upload, Sparkles, Filter } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 
 export default function LeadsPage() {
@@ -27,39 +27,39 @@ export default function LeadsPage() {
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // Scalable user discovery: Fetch all users who belong to this teamspace
+  // Advanced User Discovery: Fetching by ID list from currentTeamspace.memberIds
   const usersQuery = useMemoFirebase(() => {
-    return (!isUserLoading && currentUser && currentTeamspace?.id)
-        ? query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id)) 
+    return (!isUserLoading && currentUser && currentTeamspace?.memberIds?.length > 0)
+        ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null;
-  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+  }, [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const loading = isUserLoading || isLoadingLeads || isLoadingUsers;
 
   return (
-    <div className="space-y-8 pb-10">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-4xl font-black tracking-tight text-primary">Prospect Pipeline</h1>
-                <p className="text-muted-foreground font-medium flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-accent" />
-                    {currentUser?.role === 'sales_executive' ? 'Your focus area for today.' : 'Overview of all active opportunities.'}
+    <div className="space-y-10 pb-12">
+        <div className="flex items-end justify-between flex-wrap gap-6">
+            <div className="flex flex-col gap-2">
+                <h1 className="text-5xl font-black tracking-tighter text-primary">Prospect Pipeline</h1>
+                <p className="text-xl text-muted-foreground font-semibold flex items-center gap-3">
+                    <Sparkles className="h-6 w-6 text-accent" />
+                    {currentUser?.role === 'sales_executive' ? 'Personalized high-intent focus area.' : 'Global overview of team opportunities.'}
                 </p>
             </div>
-             <div className="flex items-center gap-3">
+             <div className="flex items-center gap-4">
               {(currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead') && (
                 <UploadLeadsDialog users={users || []} isLoading={loading}>
-                  <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-6 py-6 font-bold">
-                    <Upload className="mr-2 h-4 w-4" />
+                  <Button variant="outline" className="rounded-[1.25rem] border-primary/20 hover:bg-primary/5 px-8 py-7 font-black tracking-tight text-base shadow-sm">
+                    <Upload className="mr-3 h-5 w-5" />
                     Bulk Import
                   </Button>
                 </UploadLeadsDialog>
               )}
               <CreateLeadDialog>
-                  <Button className="rounded-2xl herbal-gradient shadow-2xl shadow-primary/20 px-8 py-6 text-base font-bold gold-glow">
-                      <PlusCircle className="mr-2 h-5 w-5" />
+                  <Button className="rounded-[1.25rem] herbal-gradient shadow-2xl shadow-primary/30 px-10 py-7 text-lg font-black gold-glow scale-105 hover:scale-110 active:scale-95 transition-all">
+                      <PlusCircle className="mr-3 h-6 w-6" />
                       Add Lead
                   </Button>
               </CreateLeadDialog>
@@ -67,12 +67,12 @@ export default function LeadsPage() {
         </div>
         
         {loading ? (
-            <div className="space-y-4">
-                <Skeleton className="h-16 w-full rounded-3xl" />
-                <Skeleton className="h-[500px] w-full rounded-3xl" />
+            <div className="space-y-6">
+                <Skeleton className="h-20 w-full rounded-[2.5rem]" />
+                <Skeleton className="h-[600px] w-full rounded-[2.5rem]" />
             </div>
         ) : (
-            <div className="premium-card p-2 bg-card/50 backdrop-blur-sm overflow-hidden">
+            <div className="premium-card p-3 bg-card/40 backdrop-blur-2xl overflow-hidden border-primary/5">
               <DataTable columns={columns} data={leads || []} users={users || []} />
             </div>
         )}

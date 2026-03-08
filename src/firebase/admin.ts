@@ -10,7 +10,6 @@ function getAdminApp(): App | null {
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (privateKey) {
-    // Handle Vercel's potentially escaped newlines or literal quotes
     privateKey = privateKey.replace(/\\n/g, '\n');
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
       privateKey = privateKey.substring(1, privateKey.length - 1);
@@ -32,19 +31,15 @@ function getAdminApp(): App | null {
 }
 
 /**
- * Industrial-grade Lazy Proxy.
- * Prevents Next.js from mistaking this for a Promise during builds.
- * Ensures initialization only happens upon first method call.
+ * Robust Lazy Proxy for Admin Firestore.
+ * Throws a clear error if credentials are missing to prevent "undefined reading doc" crashes.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
     if (prop === 'then' || prop === 'constructor') return undefined;
     const app = getAdminApp();
     if (!app) {
-      return (...args: any[]) => {
-        console.error('Firebase Admin accessed without credentials.');
-        return undefined;
-      };
+      throw new Error('Firebase Admin SDK is not initialized. Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set in your environment variables.');
     }
     const db = getFirestore(app);
     const value = (db as any)[prop];
@@ -57,10 +52,7 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
     if (prop === 'then' || prop === 'constructor') return undefined;
     const app = getAdminApp();
     if (!app) {
-      return (...args: any[]) => {
-        console.error('Firebase Admin Auth accessed without credentials.');
-        return undefined;
-      };
+      throw new Error('Firebase Admin Auth is not initialized. Ensure environment variables are set.');
     }
     const auth = getAuth(app);
     const value = (auth as any)[prop];
