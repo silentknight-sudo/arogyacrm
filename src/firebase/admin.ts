@@ -3,22 +3,23 @@ import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
- * Hyper-resilient private key formatter.
- * Definitively handles literal \n, multi-line strings, and Vercel dashboard artifacts.
+ * HYPER-RESILIENT PEM PARSER
+ * Handles literal \n characters, accidental quotes, and multi-line strings 
+ * commonly found in Vercel/CI environment variables.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
   
-  // 1. Remove any wrapping double quotes
+  // 1. Remove wrapping quotes often injected by dashboard copy-pasting
   let cleaned = key.trim();
   if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
     cleaned = cleaned.substring(1, cleaned.length - 1);
   }
 
-  // 2. Convert literal "\n" strings into actual newline characters
+  // 2. Convert literal "\n" strings into true newline characters
   cleaned = cleaned.replace(/\\n/g, '\n');
 
-  // 3. Ensure the key has proper headers and structure
+  // 3. Force presence of BEGIN/END headers to prevent PEM truncation errors
   if (!cleaned.includes('-----BEGIN PRIVATE KEY-----')) {
     cleaned = `-----BEGIN PRIVATE KEY-----\n${cleaned}`;
   }
@@ -30,7 +31,8 @@ function formatPrivateKey(key: string | undefined): string {
 }
 
 /**
- * Robust Admin SDK Initializer.
+ * INDUSTRIAL ON-DEMAND INITIALIZER
+ * Prevents build-time crashes by deferring initialization until the first method call.
  */
 function initializeAdmin(): App {
   if (getApps().length > 0) return getApps()[0];
@@ -40,49 +42,41 @@ function initializeAdmin(): App {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    throw new Error('MISSING_FIREBASE_ENV_VARS: Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set in Vercel.');
+    throw new Error('MISSING_FIREBASE_CREDENTIALS: Check Vercel Environment Variables.');
   }
-
-  const privateKey = formatPrivateKey(rawPrivateKey);
 
   try {
     return initializeApp({
-      credential: cert({ projectId, clientEmail, privateKey }),
+      credential: cert({ 
+        projectId, 
+        clientEmail, 
+        privateKey: formatPrivateKey(rawPrivateKey) 
+      }),
       projectId,
     });
   } catch (error: any) {
-    console.error('Firebase Admin SDK: Initialization Failed:', error);
+    console.error('Firebase Admin SDK Initialization Failed:', error);
     throw error;
   }
 }
 
 /**
- * Lazy Proxy for Firestore.
- * Prevents crashes during build/SSR by initializing ONLY when a method is called.
- * Explicitly blocks 'then' to prevent Next.js from mistaking it for a Promise.
+ * LAZY PROXY SYSTEM
+ * Explicitly blocks 'then' to prevent Next.js from mistaking the SDK for a Promise during builds.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
-    if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') {
-      return undefined;
-    }
-    const app = initializeAdmin();
-    const db = getFirestore(app);
+    if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') return undefined;
+    const db = getFirestore(initializeAdmin());
     const value = (db as any)[prop];
     return typeof value === 'function' ? value.bind(db) : value;
   }
 });
 
-/**
- * Lazy Proxy for Auth.
- */
 export const adminAuth: Auth = new Proxy({} as Auth, {
   get(target, prop) {
-    if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') {
-      return undefined;
-    }
-    const app = initializeAdmin();
-    const auth = getAuth(app);
+    if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') return undefined;
+    const auth = getAuth(initializeAdmin());
     const value = (auth as any)[prop];
     return typeof value === 'function' ? value.bind(auth) : value;
   }
@@ -99,8 +93,8 @@ export const serverTimestamp = () => {
 };
 
 export function handleAdminSDKError(error: any): string {
-  console.error('Admin SDK Error:', error);
-  if (error.code === 'auth/email-already-exists') return 'This email address is already in use.';
-  if (error.code === 'permission-denied') return 'Insufficient permissions.';
+  console.error('Industrial Admin Error:', error);
+  if (error.code === 'auth/email-already-exists') return 'Email address already registered.';
+  if (error.code === 'permission-denied') return 'Security: Insufficient permissions.';
   return error.message || 'A secure server-side error occurred.';
 }

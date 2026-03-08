@@ -69,19 +69,16 @@
   .premium-card {
     @apply bg-card border border-primary/5 shadow-[0_10px_40px_rgba(0,0,0,0.03)] hover:shadow-[0_25px_70px_rgba(45,90,39,0.15)] hover:-translate-y-2 transition-all duration-500 rounded-[2.5rem];
   }
-  .sidebar-link {
-    @apply flex items-center gap-3 rounded-[1.25rem] px-5 py-4 text-sm font-bold transition-all hover:bg-primary/5 hover:text-primary active:scale-95 text-muted-foreground;
-  }
-  .sidebar-link-active {
-    @apply bg-primary text-primary-foreground shadow-2xl shadow-primary/40 hover:bg-primary hover:text-primary-foreground scale-105;
-  }
   .herbal-gradient {
     @apply bg-gradient-to-br from-[#2D5A27] via-[#1A3A17] to-[#0D1F0B] border-none text-white;
   }
   .gold-glow {
     @apply shadow-[0_0_25px_rgba(212,175,55,0.3)];
   }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-[1.25rem] px-5 py-4 text-sm font-bold transition-all hover:bg-primary/5 hover:text-primary active:scale-95 text-muted-foreground;
+  }
+  .sidebar-link-active {
+    @apply bg-primary text-primary-foreground shadow-2xl shadow-primary/40 hover:bg-primary hover:text-primary-foreground scale-105;
   }
 }
