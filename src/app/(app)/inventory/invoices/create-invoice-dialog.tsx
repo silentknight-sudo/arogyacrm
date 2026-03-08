@@ -115,14 +115,14 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl rounded-2xl overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Create New Invoice</DialogTitle>
-          <DialogDescription>Generate an invoice from a confirmed sales order.</DialogDescription>
+          <DialogTitle className="text-2xl font-bold text-primary">Create New Invoice</DialogTitle>
+          <DialogDescription>Generate a professional invoice from a sales order.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[80vh] pr-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4 pt-2">
                 <FormField
                   control={form.control}
                   name="salesOrderId"
@@ -131,12 +131,14 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                       <FormLabel>From Sales Order</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger disabled={isLoading}>
+                          <SelectTrigger className="rounded-xl" disabled={isLoading}>
                             <SelectValue placeholder="Select sales order" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {salesOrders.map(so => (<SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>))}
+                        <SelectContent className="rounded-xl">
+                          {salesOrders.map(so => (
+                            <SelectItem key={so.id} value={so.id}>{so.orderNumber} (₹{so.totalAmount})</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -150,13 +152,13 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
-                                <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                <Button variant="outline" className={cn("rounded-xl pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
                                   {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent className="w-auto p-0 rounded-2xl" align="start">
                               <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                             </PopoverContent>
                           </Popover>
@@ -169,13 +171,13 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
-                                <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                <Button variant="outline" className={cn("rounded-xl pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
                                   {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent className="w-auto p-0 rounded-2xl" align="start">
                               <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                             </PopoverContent>
                           </Popover>
@@ -192,46 +194,41 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                       <FormLabel>Status</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                         </FormControl>
-                        <SelectContent>{invoiceStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent>
+                        <SelectContent className="rounded-xl">
+                          {invoiceStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                        </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                 )} />
 
-                <FormField
-                  control={form.control}
-                  name="lineItems"
-                  render={() => (
-                    <FormItem className="space-y-4">
-                      <FormLabel>Items Preview</FormLabel>
-                      <div className="rounded-md border p-4 space-y-3 bg-muted/30">
-                          {watchedLineItems.length > 0 ? watchedLineItems.map((item, index) => (
-                            <div key={index} className="flex items-center justify-between text-sm">
-                                <div className="space-y-0.5">
-                                    <p className="font-semibold">{item.productName}</p>
-                                    <p className="text-xs text-muted-foreground">{item.quantity} x ₹{item.unitPrice.toFixed(2)}</p>
-                                </div>
-                                <p className="font-bold">₹{item.subtotal.toFixed(2)}</p>
+                <div className="space-y-4">
+                  <FormLabel className="text-base font-semibold">Items Preview</FormLabel>
+                  <div className="rounded-2xl border bg-muted/20 p-4 space-y-3">
+                      {watchedLineItems.length > 0 ? watchedLineItems.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between text-sm py-1">
+                            <div className="space-y-0.5">
+                                <p className="font-bold text-foreground">{item.productName}</p>
+                                <p className="text-xs text-muted-foreground">{item.quantity} x ₹{item.unitPrice.toFixed(2)}</p>
                             </div>
-                          )) : (
-                              <p className="text-sm text-muted-foreground text-center py-4">Select an order to preview.</p>
-                          )}
-                          {watchedLineItems.length > 0 && (
-                              <div className="flex justify-end items-center pt-4 border-t border-border/50">
-                                  <span className="text-xs text-muted-foreground mr-3 uppercase tracking-wider">Grand Total:</span>
-                                  <span className="font-extrabold text-xl text-primary">₹{totalAmount.toFixed(2)}</span>
-                              </div>
-                          )}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                            <p className="font-mono font-bold">₹{item.subtotal.toFixed(2)}</p>
+                        </div>
+                      )) : (
+                          <p className="text-sm text-muted-foreground text-center py-6">Select a sales order to preview items.</p>
+                      )}
+                      {watchedLineItems.length > 0 && (
+                          <div className="flex justify-end items-center pt-4 border-t border-border/50 mt-2">
+                              <span className="text-xs text-muted-foreground mr-3 uppercase tracking-widest font-bold">Grand Total:</span>
+                              <span className="font-extrabold text-2xl text-primary font-mono">₹{totalAmount.toFixed(2)}</span>
+                          </div>
+                      )}
+                  </div>
+                </div>
 
-              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                {isSubmitting ? 'Processing...' : 'Create Invoice'}
+              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full h-12 text-lg rounded-xl shadow-lg shadow-primary/20">
+                {isSubmitting ? 'Processing...' : 'Finalize & Create Invoice'}
               </Button>
             </form>
           </Form>

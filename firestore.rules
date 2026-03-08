@@ -13,48 +13,49 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && getUserData().role == 'admin';
+      let data = getUserData();
+      return isSignedIn() && data != null && data.role == 'admin';
     }
 
     function isRole(role) {
-      return isSignedIn() && getUserData().role == role;
+      let data = getUserData();
+      return isSignedIn() && data != null && data.role == role;
     }
 
     function isMember(teamspaceId) {
-      return isSignedIn() && (
-        isAdmin() || 
-        teamspaceId in getUserData().teamspaceIds
+      let data = getUserData();
+      return isSignedIn() && data != null && (
+        data.role == 'admin' || 
+        (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
       );
     }
 
     // -- RULES --
 
-    // User Directory: Allow all staff to see names/roles for assignment dropdowns
     match /users/{userId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    // Global Catalog
     match /products/{productId} {
       allow read: if isSignedIn();
       allow write: if isAdmin() || isRole('support');
     }
 
-    // Teamspace Scoped Data
     match /teamspaces/{teamspaceId} {
       allow get, list: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      // STRICT LEADS: Assignment-based access for Executives
       match /leads/{leadId} {
+        // Higher roles get full access
         allow read, write: if isAdmin() || isRole('sales_team_lead') || isRole('marketer');
+        
+        // Executives only see leads assigned to them
         allow read, write: if isRole('sales_executive') && 
                              isMember(teamspaceId) && 
-                             (resource == null || request.auth.uid in resource.data.assignedToIds);
+                             (resource == null || (resource.data.assignedToIds != null && request.auth.uid in resource.data.assignedToIds));
       }
 
-      // Catch-all for other subcollections
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }

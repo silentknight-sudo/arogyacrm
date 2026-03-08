@@ -32,9 +32,10 @@ export default function LeadsPage() {
 
   const usersQuery = useMemoFirebase(() => {
     const memberIds = currentTeamspace?.memberIds;
-    const isValidMemberIds = Array.isArray(memberIds) && memberIds.length > 0;
+    // Robust check for memberIds existence and length to prevent TypeScript build errors
+    const hasMembers = Array.isArray(memberIds) && memberIds.length > 0;
     
-    return (!isUserLoading && currentUser && isValidMemberIds)
+    return (!isUserLoading && currentUser && hasMembers)
         ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
         : null;
   }, [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]);
@@ -45,26 +46,26 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-                <h1 className="text-2xl font-bold tracking-tight">Leads</h1>
+                <h1 className="text-3xl font-extrabold tracking-tight text-primary">Leads</h1>
                 <p className="text-muted-foreground">
                     {currentUser?.role === 'sales_executive' 
                       ? 'Your assigned prospective customers.' 
-                      : 'Manage your prospective customers and track their journey.'}
+                      : 'Manage and track prospective customers.'}
                 </p>
             </div>
-             <div className="flex items-center space-x-2">
+             <div className="flex items-center gap-3">
               {(currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead') && (
                 <UploadLeadsDialog users={users || []} isLoading={isActuallyLoading}>
-                  <Button variant="outline">
+                  <Button variant="outline" className="shadow-sm">
                     <Upload className="mr-2 h-4 w-4" />
-                    Upload CSV
+                    Import CSV
                   </Button>
                 </UploadLeadsDialog>
               )}
               <CreateLeadDialog>
-                  <Button>
+                  <Button className="shadow-lg shadow-primary/20">
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Add Lead
                   </Button>
@@ -73,12 +74,14 @@ export default function LeadsPage() {
         </div>
         
         {isActuallyLoading ? (
-            <div className="space-y-4 mt-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-64 w-full" />
+            <div className="space-y-4">
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <Skeleton className="h-[400px] w-full rounded-xl" />
             </div>
         ) : (
-            <DataTable columns={columns} data={leads || []} users={users || []} />
+            <div className="premium-card rounded-2xl p-1 bg-card/50 backdrop-blur-sm">
+              <DataTable columns={columns} data={leads || []} users={users || []} />
+            </div>
         )}
     </div>
   );

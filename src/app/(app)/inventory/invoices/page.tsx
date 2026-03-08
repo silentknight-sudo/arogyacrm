@@ -6,7 +6,7 @@ import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
-import type { Invoice, SalesOrder, Product } from '@/types';
+import type { Invoice, SalesOrder } from '@/types';
 import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateInvoiceDialog } from './create-invoice-dialog';
@@ -30,18 +30,13 @@ export default function InvoicesPage() {
     , [firestore, currentTeamspace]);
   const { data: salesOrders, isLoading: isLoadingSalesOrders } = useCollection<SalesOrder>(salesOrdersQuery);
 
-  const productsQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'products'))
-  , [firestore]);
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
-
-  const isLoading = isUserLoading || isLoadingInvoices || isLoadingSalesOrders || isLoadingProducts;
+  const isLoading = isUserLoading || isLoadingInvoices || isLoadingSalesOrders;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
         <div className="flex items-center justify-between">
             <div>
-                <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
+                <h1 className="text-3xl font-extrabold tracking-tight text-primary">Invoices</h1>
                 <p className="text-muted-foreground">
                     Create and manage customer invoices.
                 </p>
@@ -51,21 +46,23 @@ export default function InvoicesPage() {
                   salesOrders={salesOrders || []}
                   isLoading={isLoading}
                 >
-                    <Button>
+                    <Button className="shadow-lg shadow-primary/20">
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Create Invoice
+                        New Invoice
                     </Button>
                 </CreateInvoiceDialog>
             </div>
         </div>
-        {isLoading && (
-            <div className="space-y-2">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
+        {isLoading ? (
+            <div className="space-y-4">
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <Skeleton className="h-[400px] w-full rounded-xl" />
+            </div>
+        ) : (
+            <div className="premium-card rounded-2xl p-1">
+              <DataTable columns={columns} data={invoices || []} />
             </div>
         )}
-        {!isLoading && <DataTable columns={columns} data={invoices || []} />}
     </div>
   );
 }

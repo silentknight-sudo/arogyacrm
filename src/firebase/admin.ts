@@ -5,17 +5,19 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 function getAdminApp(): App | null {
   if (getApps().length > 0) return getApps()[0];
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (privateKey) {
     privateKey = privateKey.replace(/\\n/g, '\n');
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-        privateKey = privateKey.substring(1, privateKey.length - 1);
+      privateKey = privateKey.substring(1, privateKey.length - 1);
     }
   }
 
+  // ONLY attempt initialization if we have credentials. 
+  // This prevents the "Trust" prompts in development.
   if (projectId && clientEmail && privateKey) {
     try {
       return initializeApp({
@@ -27,7 +29,8 @@ function getAdminApp(): App | null {
     }
   }
 
-  if (process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIRESTORE_EMULATOR_HOST) {
+  // Fallback for local emulator environments if explicitly requested
+  if (process.env.FIRESTORE_EMULATOR_HOST) {
     try {
       return initializeApp({ projectId: projectId || 'demo-project' });
     } catch (e) {}
@@ -36,15 +39,17 @@ function getAdminApp(): App | null {
   return null;
 }
 
+/**
+ * A Proxy that delays initialization until a property is accessed.
+ * Crucially, it blocks 'then' to prevent Next.js from awaiting it as a Promise.
+ */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
     if (prop === 'then') return undefined;
     const app = getAdminApp();
     if (!app) {
       return (...args: any[]) => {
-        if (typeof prop === 'string' && ['collection', 'doc'].includes(prop)) {
-            console.error(`Firebase Admin SDK: Firestore accessed before configuration. Key: ${prop}`);
-        }
+        console.error(`Firebase Admin SDK: Firestore accessed before configuration. Missing Environment Variables.`);
         return undefined;
       };
     }
@@ -60,7 +65,7 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
     const app = getAdminApp();
     if (!app) {
       return (...args: any[]) => {
-        console.error(`Firebase Admin SDK: Auth accessed before configuration. Key: ${prop}`);
+        console.error(`Firebase Admin SDK: Auth accessed before configuration. Missing Environment Variables.`);
         return undefined;
       };
     }

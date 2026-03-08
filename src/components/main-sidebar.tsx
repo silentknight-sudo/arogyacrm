@@ -22,6 +22,7 @@ import {
     ChevronDown,
     Settings,
     LayoutGrid,
+    Leaf,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -83,36 +84,27 @@ export function MainSidebar({ className }: { className?: string }) {
   const { currentUser } = useApp();
 
   return (
-    <aside className={cn("flex-col border-r bg-card/50 backdrop-blur-xl luxury-shadow", className)}>
-      <div className="flex h-16 items-center px-6 mb-4">
-        <Link href="/" className="flex items-center gap-2 group">
-           <div className="p-2 bg-primary rounded-xl shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
-             <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5"
-             >
-              <path d="M5 22V8a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14H5z" />
-              <path d="M2 22V6.25a1 1 0 0 1 1.34-.95l1.66.55a1 1 0 0 0 1.01-.2l1.65-1.1a1 1 0 0 1 1.01-.2l1.66.55a1 1 0 0 0 1.01-.2l1.65-1.1a1 1 0 0 1 1.01-.2l1.66.55A1 1 0 0 0 19 6.25V22H2z" />
-             </svg>
+    <aside className={cn("flex-col glass-sidebar", className)}>
+      <div className="flex h-20 items-center px-6 mb-2">
+        <Link href="/" className="flex items-center gap-3 group">
+           <div className="p-2.5 bg-primary rounded-2xl shadow-xl shadow-primary/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+             <Leaf className="h-6 w-6 text-white" />
            </div>
-          <span className="font-bold tracking-tight text-lg text-primary">Arogya CRM</span>
+          <div className="flex flex-col">
+            <span className="font-black tracking-tighter text-xl text-primary leading-tight">AROGYA</span>
+            <span className="text-[10px] font-bold text-muted-foreground tracking-[0.2em] -mt-1 uppercase">Wellness CRM</span>
+          </div>
         </Link>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 pb-10 space-y-6">
-        <nav className="grid items-start gap-1">
+      <div className="flex-1 overflow-y-auto px-4 pb-10 space-y-6 scrollbar-thin">
+        <nav className="grid items-start gap-1.5">
           {currentUser?.role === 'admin' && (
              <Collapsible key="Admin" defaultOpen={pathname.startsWith('/admin')} className="mb-2">
-                <CollapsibleTrigger className="flex w-full items-center justify-between px-2 mb-2">
-                    <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">ADMINISTRATION</span>
-                    <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform duration-300" />
+                <CollapsibleTrigger className="flex w-full items-center justify-between px-3 mb-2 group">
+                    <span className="text-[10px] font-extrabold tracking-[0.15em] text-muted-foreground uppercase group-hover:text-primary">ADMINISTRATION</span>
+                    <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform duration-300 group-data-[state=open]:rotate-180" />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1">
+                <CollapsibleContent className="space-y-1 animate-in fade-in-0 slide-in-from-top-1">
                     <Link href="/admin" className={cn('sidebar-link', pathname === '/admin' && 'sidebar-link-active')}>
                         <Settings className="h-4 w-4" /> <span>Dashboard</span>
                     </Link>
@@ -127,18 +119,18 @@ export function MainSidebar({ className }: { className?: string }) {
           )}
           {menuItems.map((section) => (
              <Collapsible key={section.title} defaultOpen={section.items.some(item => pathname.startsWith(item.href))} className="mb-2">
-                <CollapsibleTrigger className="flex w-full items-center justify-between px-2 mb-2 group">
-                    <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase group-hover:text-primary transition-colors">{section.title}</span>
-                    <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform duration-300" />
+                <CollapsibleTrigger className="flex w-full items-center justify-between px-3 mb-2 group">
+                    <span className="text-[10px] font-extrabold tracking-[0.15em] text-muted-foreground uppercase group-hover:text-primary transition-colors">{section.title}</span>
+                    <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform duration-300 group-data-[state=open]:rotate-180" />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1">
+                <CollapsibleContent className="space-y-1 animate-in fade-in-0 slide-in-from-top-1">
                     {section.items.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                         return (
                             <Link key={item.href} href={item.href} className={cn('sidebar-link', isActive && 'sidebar-link-active')}>
                                 <Icon className="h-4 w-4" />
-                                <span className="font-medium">{item.label}</span>
+                                <span className="font-semibold">{item.label}</span>
                             </Link>
                         );
                     })}
