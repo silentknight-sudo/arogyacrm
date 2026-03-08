@@ -24,47 +24,47 @@ const getAgentFallback = (agentName: string) => {
 }
 
 
-export function ActivityTimeline({ logs }: { logs: InteractionLog[] }) {
+export function ActivityTimeline({ logs = [] }: { logs: InteractionLog[] }) {
     const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return (
-        <Card>
+        <Card className="premium-card">
             <CardHeader>
-                <CardTitle>Activity Timeline</CardTitle>
-                <CardDescription>A log of all interactions with this lead.</CardDescription>
+                <CardTitle className="text-xl font-bold text-primary">Activity Timeline</CardTitle>
+                <CardDescription>A log of all interactions with this wellness prospect.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="space-y-4 mb-6">
-                    <Textarea placeholder="Add a note, log an email, or schedule a meeting..." />
-                    <div className="flex justify-end gap-2">
-                        <Button variant="outline"> <Plus className="mr-2"/> Log Activity</Button>
-                        <Button> <Send className="mr-2"/> Send Email</Button>
+                <div className="space-y-4 mb-8">
+                    <Textarea className="rounded-2xl bg-muted/20 border-primary/5 focus-visible:ring-primary/20" placeholder="Add a note, log an email, or schedule a wellness strategy session..." />
+                    <div className="flex justify-end gap-3">
+                        <Button variant="outline" className="rounded-xl font-bold"> <Plus className="mr-2 h-4 w-4"/> Log Activity</Button>
+                        <Button className="rounded-xl herbal-gradient shadow-lg shadow-primary/20 font-bold"> <Send className="mr-2 h-4 w-4"/> Send Email</Button>
                     </div>
                 </div>
 
                 <div className="space-y-8 relative">
-                     {sortedLogs.length > 0 && <div className="absolute left-5 top-2 bottom-2 w-0.5 bg-border -translate-x-1/2" />}
+                     {sortedLogs.length > 0 && <div className="absolute left-5 top-2 bottom-2 w-px bg-primary/10 -translate-x-1/2" />}
                     {sortedLogs.map((log) => {
                         const agent = log.agent || 'System';
                         return (
-                            <div key={log.id} className="flex gap-4 items-start relative">
-                                <span className="flex items-center justify-center w-10 h-10 rounded-full bg-muted border z-10">
-                                    {iconMap[log.type]}
+                            <div key={log.id} className="flex gap-4 items-start relative group">
+                                <span className="flex items-center justify-center w-10 h-10 rounded-full bg-card border border-primary/10 shadow-sm z-10 group-hover:scale-110 transition-transform text-primary">
+                                    {iconMap[log.type] || <PenSquare className="h-5 w-5" />}
                                 </span>
-                                <div className="flex-1 space-y-1">
+                                <div className="flex-1 space-y-1 bg-muted/10 p-4 rounded-2xl border border-primary/5">
                                     <div className="flex items-center justify-between">
-                                        <p className="font-semibold">{log.type}</p>
-                                        <time className="text-xs text-muted-foreground">
+                                        <p className="font-bold text-primary">{log.type}</p>
+                                        <time className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
                                             {formatDistanceToNow(new Date(log.date), { addSuffix: true })}
                                         </time>
                                     </div>
-                                    <p className="text-sm text-muted-foreground">{log.notes}</p>
-                                    <div className="flex items-center gap-2 pt-1">
-                                        <Avatar className="h-5 w-5">
+                                    <p className="text-sm text-muted-foreground leading-relaxed">{log.notes}</p>
+                                    <div className="flex items-center gap-2 pt-2">
+                                        <Avatar className="h-6 w-6 border-2 border-background">
                                             <AvatarImage src={getAgentAvatar(agent)} />
-                                            <AvatarFallback>{getAgentFallback(agent)}</AvatarFallback>
+                                            <AvatarFallback className="text-[10px]">{getAgentFallback(agent)}</AvatarFallback>
                                         </Avatar>
-                                        <span className="text-xs text-muted-foreground">{agent}</span>
+                                        <span className="text-xs font-bold text-muted-foreground">{agent}</span>
                                     </div>
                                 </div>
                             </div>
@@ -73,8 +73,8 @@ export function ActivityTimeline({ logs }: { logs: InteractionLog[] }) {
                 </div>
 
                 {logs.length === 0 && (
-                    <div className="text-center text-muted-foreground py-8 border-t mt-6">
-                        No activities logged yet.
+                    <div className="text-center text-muted-foreground py-16 border-t border-dashed mt-6 italic">
+                        No strategic activities logged yet.
                     </div>
                 )}
             </CardContent>
