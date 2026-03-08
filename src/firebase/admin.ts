@@ -2,10 +2,6 @@ import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
-/**
- * Robust, lazy initialization for the Firebase Admin SDK.
- * Optimized for Vercel and zero-prompt development.
- */
 function getAdminApp(): App | null {
   if (getApps().length > 0) return getApps()[0];
 
@@ -14,14 +10,12 @@ function getAdminApp(): App | null {
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (privateKey) {
-    // Robust parsing for Vercel multiline private keys
     privateKey = privateKey.replace(/\\n/g, '\n');
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
         privateKey = privateKey.substring(1, privateKey.length - 1);
     }
   }
 
-  // STRATEGY 1: Explicit credentials (Vercel / Production)
   if (projectId && clientEmail && privateKey) {
     try {
       return initializeApp({
@@ -33,7 +27,6 @@ function getAdminApp(): App | null {
     }
   }
 
-  // STRATEGY 2: Emulator Discovery
   if (process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIRESTORE_EMULATOR_HOST) {
     try {
       return initializeApp({ projectId: projectId || 'demo-project' });
@@ -43,13 +36,9 @@ function getAdminApp(): App | null {
   return null;
 }
 
-/**
- * Proxy-based lazy initialization.
- * Prevents module-level crashes during Next.js build phase.
- */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
-    if (prop === 'then') return undefined; // Prevent it from being treated as a Promise
+    if (prop === 'then') return undefined;
     const app = getAdminApp();
     if (!app) {
       return (...args: any[]) => {

@@ -32,7 +32,9 @@ export default function LeadsPage() {
 
   const usersQuery = useMemoFirebase(() => {
     const memberIds = currentTeamspace?.memberIds;
-    return (!isUserLoading && currentUser && memberIds && memberIds.length > 0)
+    const isValidMemberIds = Array.isArray(memberIds) && memberIds.length > 0;
+    
+    return (!isUserLoading && currentUser && isValidMemberIds)
         ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
         : null;
   }, [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]);

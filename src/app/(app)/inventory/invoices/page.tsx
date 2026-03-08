@@ -6,13 +6,13 @@ import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
-import type { Invoice, Account, SalesOrder } from '@/types';
+import type { Invoice, SalesOrder, Product } from '@/types';
 import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateInvoiceDialog } from './create-invoice-dialog';
 
 export default function InvoicesPage() {
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
   const invoicesQuery = useMemoFirebase(() =>
@@ -30,7 +30,12 @@ export default function InvoicesPage() {
     , [firestore, currentTeamspace]);
   const { data: salesOrders, isLoading: isLoadingSalesOrders } = useCollection<SalesOrder>(salesOrdersQuery);
 
-  const isLoading = isLoadingInvoices || isLoadingSalesOrders;
+  const productsQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'products'))
+  , [firestore]);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+
+  const isLoading = isUserLoading || isLoadingInvoices || isLoadingSalesOrders || isLoadingProducts;
 
   return (
     <div className="space-y-4">

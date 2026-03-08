@@ -18,7 +18,6 @@ import {
     Ticket,
     Undo2,
     ShieldAlert,
-    BarChart3,
     LayoutDashboard,
     ChevronDown,
     Settings,
@@ -84,7 +83,7 @@ export function MainSidebar({ className }: { className?: string }) {
   const { currentUser } = useApp();
 
   return (
-    <aside className={cn("flex-col border-r bg-card/50 backdrop-blur-xl", className)}>
+    <aside className={cn("flex-col border-r bg-card/50 backdrop-blur-xl luxury-shadow", className)}>
       <div className="flex h-16 items-center px-6 mb-4">
         <Link href="/" className="flex items-center gap-2 group">
            <div className="p-2 bg-primary rounded-xl shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
