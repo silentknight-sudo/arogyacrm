@@ -2,7 +2,7 @@
 
 import { adminDb, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
-import type { CollectionReference } from 'firebase-admin/firestore';
+import type { CollectionReference, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 const COLLECTIONS_TO_DELETE = [
   'leads',
@@ -31,7 +31,7 @@ async function deleteCollection(collectionRef: CollectionReference, batchSize: n
 
   while (snapshot.size > 0) {
     const batch = adminDb.batch();
-    snapshot.docs.forEach((doc) => {
+    snapshot.docs.forEach((doc: QueryDocumentSnapshot) => {
       batch.delete(doc.ref);
     });
     await batch.commit();
