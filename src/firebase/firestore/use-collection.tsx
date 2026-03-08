@@ -75,7 +75,8 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // Suppress permission errors during logout or initialization transitions
+        // SUPPRESS RACE CONDITION ERRORS: During login/logout or initial load, Firestore
+        // might throw a momentary permission denial before the auth token is attached.
         const auth = getAuth();
         if (!auth.currentUser || err.code === 'permission-denied') {
           setData(null);

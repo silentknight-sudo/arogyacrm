@@ -31,7 +31,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createInvoice } from './actions';
 import { useApp } from '@/context/app-context';
-import type { Account, SalesOrder } from '@/types';
+import type { SalesOrder } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
@@ -52,7 +52,6 @@ const formSchema = z.object({
 
 type CreateInvoiceDialogProps = {
   children: React.ReactNode;
-  accounts: Account[];
   salesOrders: SalesOrder[];
   isLoading: boolean;
 };
@@ -214,7 +213,7 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                 )} />
 
                 <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Line Items</h4>
+                  <h4 className="text-sm font-medium">Line Items Preview</h4>
                   <div className="rounded-md border p-4 space-y-3 bg-muted/30">
                       {watchedLineItems.length > 0 ? watchedLineItems.map((item, index) => (
                         <div key={index} className="flex items-center justify-between text-sm">
@@ -236,7 +235,7 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                   </div>
                 </div>
 
-              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full h-12 text-lg shadow-elevated">
+              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full h-12 text-lg">
                 {isSubmitting ? 'Processing...' : 'Create Invoice'}
               </Button>
             </form>

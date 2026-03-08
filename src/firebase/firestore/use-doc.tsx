@@ -82,7 +82,8 @@ export function useDoc<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // Suppress permission errors during auth transitions
+        // SUPPRESS RACE CONDITION ERRORS: During login/logout or initial load, Firestore
+        // might throw a momentary permission denial before the auth token is attached.
         const auth = getAuth();
         if (!auth.currentUser || err.code === 'permission-denied') {
           setData(null);

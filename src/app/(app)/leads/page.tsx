@@ -16,13 +16,13 @@ export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
-  // STRICTOR QUERIES: Aligned with new Security Rules
+  // STRICTOR QUERIES: Aligned with assignment-based security rules
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // SECURITY ALIGNMENT: Executives must request their own leads or Firestore denies the request
+    // SECURITY ALIGNMENT: Executives must request their own leads specifically, or Firestore denies the request
     if (currentUser.role === 'sales_executive') {
       return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
     }

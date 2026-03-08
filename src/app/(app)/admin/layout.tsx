@@ -14,15 +14,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
-    // This effect handles redirecting non-admin users away from this section.
-    // It only runs on the client after hydration is complete.
-    if (mounted && !isUserLoading && currentUser && currentUser.role !== 'admin') {
-      router.replace('/dashboard'); 
+    // REDIRECT PROTECTION: Only permit admins to view this layout.
+    // We wait for hydration and user state to be settled.
+    if (mounted && !isUserLoading) {
+      if (!currentUser || currentUser.role !== 'admin') {
+        router.replace('/dashboard'); 
+      }
     }
   }, [currentUser, isUserLoading, router, mounted]);
 
-  // Prevent rendering server-side to avoid context errors before hydration
-  if (!mounted) return null;
+  // Prevent rendering server-side or during initial hydration to avoid context mismatch
+  if (!mounted || isUserLoading) return null;
+
+  // Final check before rendering protected content
+  if (currentUser?.role !== 'admin') return null;
 
   return <>{children}</>;
 }

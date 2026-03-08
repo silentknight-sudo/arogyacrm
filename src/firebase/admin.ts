@@ -24,7 +24,7 @@ function getAdminApp(): App | null {
     }
   }
 
-  // Only auto-discover in true GCP environments, avoiding IDE prompts
+  // Only auto-discover in true GCP environments, avoiding IDE prompts in local dev
   const isCloudEnvironment = !!(process.env.K_SERVICE || process.env.FUNCTIONS_EMULATOR || process.env.GOOGLE_CLOUD_PROJECT);
   if (isCloudEnvironment) {
     try {
@@ -40,13 +40,14 @@ const initializationError = (service: string) =>
 
 /**
  * We use Proxies to ensure the server doesn't crash during build or if variables are missing.
- * The error is only thrown when the service is actually called.
+ * The error is only thrown when the service is actually called in a Server Action.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(_, prop) {
     const app = getAdminApp();
     if (!app) throw initializationError('Firestore');
-    return (getFirestore(app) as any)[prop];
+    const db = getFirestore(app);
+    return (db as any)[prop];
   }
 });
 
@@ -54,7 +55,8 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
   get(_, prop) {
     const app = getAdminApp();
     if (!app) throw initializationError('Auth');
-    return (getAuth(app) as any)[prop];
+    const auth = getAuth(app);
+    return (auth as any)[prop];
   }
 });
 
