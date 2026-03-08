@@ -11,7 +11,15 @@ function getAdminApp(): App | null {
 
   const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (privateKey) {
+    // Handle both escaped \n and literal newlines common in Vercel env UI
+    privateKey = privateKey.replace(/\\n/g, '\n');
+    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+        privateKey = privateKey.substring(1, privateKey.length - 1);
+    }
+  }
 
   // STRATEGY 1: Explicit credentials (Vercel / Production)
   if (projectId && clientEmail && privateKey) {
@@ -26,7 +34,7 @@ function getAdminApp(): App | null {
   }
 
   // STRATEGY 2: Environment Discovery (GCP / App Hosting)
-  // Only attempt automatic discovery in environments where it's expected to be quiet.
+  // Only attempt automatic discovery in serverless environments to avoid build-time hangs.
   const isServerless = !!(process.env.K_SERVICE || process.env.VERCEL || process.env.FUNCTIONS_EMULATOR);
   if (isServerless && !privateKey) {
     try {
@@ -41,7 +49,7 @@ function getAdminApp(): App | null {
 
 /**
  * Proxy-based lazy initialization to prevent build-time crashes and auth prompts.
- * Blocks 'then' to avoid being treated as a Promise by Next.js.
+ * Explicitly blocks 'then' to avoid being treated as a Promise by Next.js.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
