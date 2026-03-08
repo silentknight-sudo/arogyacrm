@@ -41,7 +41,7 @@ type AssignLeadDialogProps = {
 
 export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLeadDialogProps) {
   const { toast } = useToast();
-  const { currentUser } = useApp();
+  const { currentUser, currentTeamspace } = useApp();
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -52,14 +52,15 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!currentUser) {
+    if (!currentUser || !currentTeamspace) {
       toast({ variant: 'destructive', title: 'Error', description: 'You are not authenticated.' });
       return;
     }
     startTransition(async () => {
+      // Use currentTeamspace.id explicitly to ensure robustness
       const result = await assignLead({
         leadId: lead.id,
-        teamspaceId: lead.teamspaceId,
+        teamspaceId: currentTeamspace.id,
         newAssignedToIds: values.assignedToIds,
         currentUserId: currentUser.id,
       });
@@ -67,7 +68,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
       if (result.success) {
         toast({
           title: 'Lead Assigned',
-          description: `Lead "${lead.fullName}" has been assigned.`,
+          description: `Lead "${lead.fullName}" has been assigned successfully.`,
         });
         onOpenChange(false);
       } else {
@@ -82,23 +83,23 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
-          <DialogTitle>Assign Lead: {lead.fullName}</DialogTitle>
-          <DialogDescription>Select one or more users to assign this lead to.</DialogDescription>
+          <DialogTitle className="text-xl font-bold">Assign Lead: {lead.fullName}</DialogTitle>
+          <DialogDescription>Select the specialists who will nurture this prospect.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="assignedToIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Team Members</FormLabel>
-                  <ScrollArea className="h-40 rounded-md border p-4">
-                    <div className="space-y-3">
+                  <FormLabel className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Team Members</FormLabel>
+                  <ScrollArea className="h-56 rounded-2xl border bg-muted/20 p-4">
+                    <div className="space-y-4">
                     {users.length > 0 ? users.map((user) => (
-                      <div key={user.id} className="flex flex-row items-center space-x-3 space-y-0">
+                      <div key={user.id} className="flex flex-row items-center space-x-3 space-y-0 group">
                         <Checkbox
                           id={`user-${user.id}`}
                           checked={field.value?.includes(user.id)}
@@ -109,13 +110,15 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                                   field.value?.filter((value: string) => value !== user.id)
                                 )
                           }}
+                          className="rounded-full h-5 w-5"
                         />
-                        <Label htmlFor={`user-${user.id}`} className="text-sm font-normal cursor-pointer">
+                        <Label htmlFor={`user-${user.id}`} className="text-sm font-semibold cursor-pointer group-hover:text-primary transition-colors">
                           {user.displayName}
+                          <span className="ml-2 text-[10px] text-muted-foreground uppercase">{user.role.replace(/_/g, ' ')}</span>
                         </Label>
                       </div>
                     )) : (
-                        <div className="text-center text-sm text-muted-foreground py-4">No team members found.</div>
+                        <div className="text-center text-sm text-muted-foreground py-8">No team members found in this workspace.</div>
                     )}
                     </div>
                   </ScrollArea>
@@ -123,8 +126,8 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isPending || users.length === 0} className="w-full">
-              {isPending ? 'Assigning...' : 'Update Assignment'}
+            <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-12 text-lg rounded-xl herbal-gradient shadow-xl shadow-primary/20">
+              {isPending ? 'Processing...' : 'Save Assignments'}
             </Button>
           </form>
         </Form>
