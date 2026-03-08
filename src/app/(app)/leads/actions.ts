@@ -64,6 +64,40 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
   }
 }
 
+const BulkAssignSchema = z.object({
+  leadIds: z.array(z.string()).min(1),
+  teamspaceId: z.string().min(1),
+  newAssignedToIds: z.array(z.string()).min(1),
+  currentUserId: z.string().min(1),
+});
+
+export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
+: Promise<{ success: boolean; error?: string }> {
+  try {
+    const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = BulkAssignSchema.parse(values);
+
+    const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
+    if (!currentUserDoc.exists || !['admin', 'sales_team_lead'].includes(currentUserDoc.data()?.role)) {
+      throw new Error('Unauthorized: Only admins or team leads can reassign leads.');
+    }
+
+    const batch = adminDb.batch();
+    leadIds.forEach(id => {
+      const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
+      batch.update(ref, {
+        assignedToIds: newAssignedToIds,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
+    revalidatePath('/leads');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
 const ConvertLeadSchema = z.object({
   leadId: z.string().min(1),
   teamspaceId: z.string().min(1),

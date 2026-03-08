@@ -4,31 +4,30 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
  * HYPER-RESILIENT PEM PARSER
- * Specifically engineered to handle Vercel's environment variable formats.
- * Detects literal \n strings, handles double-escaped backslashes, and perfectly aligns PEM headers.
+ * engineered to handle service account keys from various environment formats.
+ * Detects literal \n strings, handles double-escaped backslashes, and aligns PEM headers.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
   
   let cleaned = key.trim();
 
-  // 1. Remove wrapping quotes if present (common dashboard artifact)
-  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+  // 1. Remove wrapping quotes if present
+  if ((cleaned.startsWith('"') && cleaned.assignedToIds?.includes('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
     cleaned = cleaned.substring(1, cleaned.length - 1);
   }
 
-  // 2. Convert literal "\n" character sequences into true newline characters
-  // Also handles double-escaped backslashes common in some CI/CD environments
+  // 2. Convert literal "\n" sequences into true newline characters
   cleaned = cleaned.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n');
 
-  // 3. Force proper PEM framing to prevent parser rejection
+  // 3. Force proper PEM framing
   const header = '-----BEGIN PRIVATE KEY-----';
   const footer = '-----END PRIVATE KEY-----';
 
   if (!cleaned.includes(header)) cleaned = `${header}\n${cleaned}`;
   if (!cleaned.includes(footer)) cleaned = `${cleaned}\n${footer}`;
 
-  // 4. Ensure no double-headers or whitespace noise was created during the process
+  // 4. Cleanup any accidental double-headers or noise
   cleaned = cleaned.replace(new RegExp(`(${header}\\s*)+`, 'g'), `${header}\n`);
   cleaned = cleaned.replace(new RegExp(`(\\s*${footer})+`, 'g'), `\n${footer}`);
 
@@ -51,7 +50,7 @@ function initializeAdmin(): App {
     if (!projectId) missing.push('FIREBASE_PROJECT_ID');
     if (!clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
     if (!rawPrivateKey) missing.push('FIREBASE_PRIVATE_KEY');
-    throw new Error(`MISSING_ENVIRONMENT_VARIABLES: ${missing.join(', ')}. Ensure these are set in Vercel.`);
+    throw new Error(`MISSING_ENVIRONMENT_VARIABLES: ${missing.join(', ')}. Ensure these are set in your hosting provider's settings or .env file.`);
   }
 
   try {
@@ -97,7 +96,7 @@ export function handleAdminSDKError(error: any): string {
   console.error('Admin SDK Operation Failed:', error);
   const msg = error.message || '';
   if (msg.includes('private key') || msg.includes('PEM')) {
-    return 'Secure Key Error: Ensure FIREBASE_PRIVATE_KEY is correct in Vercel.';
+    return 'Secure Key Error: The Firebase Private Key is invalid or missing. Please check your environment variables (FIREBASE_PRIVATE_KEY).';
   }
   if (error.code === 'permission-denied') {
     return 'Security Error: Insufficient service account permissions.';
