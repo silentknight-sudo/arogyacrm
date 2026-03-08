@@ -4,7 +4,7 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
  * Robust, lazy initialization for the Firebase Admin SDK.
- * Optimized for Vercel and production environments.
+ * Optimized for Vercel and zero-prompt development.
  */
 function getAdminApp(): App | null {
   if (getApps().length > 0) return getApps()[0];
@@ -14,7 +14,7 @@ function getAdminApp(): App | null {
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (privateKey) {
-    // Handle both escaped \n and literal newlines common in Vercel env UI
+    // Robust parsing for Vercel multiline private keys
     privateKey = privateKey.replace(/\\n/g, '\n');
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
         privateKey = privateKey.substring(1, privateKey.length - 1);
@@ -29,40 +29,41 @@ function getAdminApp(): App | null {
         projectId,
       });
     } catch (e) {
-      console.error('Explicit Admin SDK Init Failed:', e);
+      console.error('Firebase Admin SDK: Explicit Init Failed:', e);
     }
   }
 
-  // STRATEGY 2: Environment Discovery (GCP / App Hosting)
-  // Only attempt automatic discovery in serverless environments to avoid build-time hangs.
-  const isServerless = !!(process.env.K_SERVICE || process.env.VERCEL || process.env.FUNCTIONS_EMULATOR);
-  if (isServerless && !privateKey) {
+  // STRATEGY 2: Emulator Discovery
+  if (process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIRESTORE_EMULATOR_HOST) {
     try {
-      return initializeApp();
-    } catch (e) {
-      // Fail silently to avoid build-time crashes or trust prompts.
-    }
+      return initializeApp({ projectId: projectId || 'demo-project' });
+    } catch (e) {}
   }
 
+  // PREVENT BUILD HANGS: If no credentials exist during build, return null
+  // instead of triggering automatic GCP metadata discovery (which prompts IDX/Cloud Code).
   return null;
 }
 
 /**
- * Proxy-based lazy initialization to prevent build-time crashes and auth prompts.
- * Explicitly blocks 'then' to avoid being treated as a Promise by Next.js.
+ * Proxy-based lazy initialization.
+ * Prevents module-level crashes during Next.js build phase.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
     if (prop === 'then') return undefined;
     const app = getAdminApp();
     if (!app) {
-      if (typeof prop === 'string' && !['constructor', 'toJSON', 'prototype'].includes(prop)) {
-        console.warn(`Admin SDK not initialized. Accessing: ${prop}`);
-      }
-      return undefined;
+      // Return a safe "null-safe" thrower for methods, prevents 500 errors on import
+      return (...args: any[]) => {
+        const error = new Error(`Firebase Admin SDK is not configured. Missing environment variables for method: ${String(prop)}`);
+        console.error(error.message);
+        throw error;
+      };
     }
     const db = getFirestore(app);
-    return (db as any)[prop];
+    const value = (db as any)[prop];
+    return typeof value === 'function' ? value.bind(db) : value;
   }
 });
 
@@ -70,9 +71,14 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
   get(target, prop) {
     if (prop === 'then') return undefined;
     const app = getAdminApp();
-    if (!app) return undefined;
+    if (!app) {
+      return (...args: any[]) => {
+        throw new Error(`Firebase Admin SDK is not configured. Missing environment variables for method: ${String(prop)}`);
+      };
+    }
     const auth = getAuth(app);
-    return (auth as any)[prop];
+    const value = (auth as any)[prop];
+    return typeof value === 'function' ? value.bind(auth) : value;
   }
 });
 

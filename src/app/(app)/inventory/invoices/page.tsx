@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -24,13 +23,6 @@ export default function InvoicesPage() {
   
   const { data: invoices, isLoading: isLoadingInvoices } = useCollection<Invoice>(invoicesQuery);
 
-  const accountsQuery = useMemoFirebase(() =>
-    currentTeamspace
-      ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'accounts'))
-      : null
-  , [firestore, currentTeamspace]);
-  const { data: accounts, isLoading: isLoadingAccounts } = useCollection<Account>(accountsQuery);
-
   const salesOrdersQuery = useMemoFirebase(() =>
     currentTeamspace
         ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'salesOrders'))
@@ -38,7 +30,7 @@ export default function InvoicesPage() {
     , [firestore, currentTeamspace]);
   const { data: salesOrders, isLoading: isLoadingSalesOrders } = useCollection<SalesOrder>(salesOrdersQuery);
 
-  const isLoading = isLoadingInvoices || isLoadingAccounts || isLoadingSalesOrders;
+  const isLoading = isLoadingInvoices || isLoadingSalesOrders;
 
   return (
     <div className="space-y-4">
@@ -51,7 +43,6 @@ export default function InvoicesPage() {
             </div>
             <div className="flex items-center space-x-2">
                 <CreateInvoiceDialog 
-                  accounts={accounts || []}
                   salesOrders={salesOrders || []}
                   isLoading={isLoading}
                 >
@@ -73,5 +64,3 @@ export default function InvoicesPage() {
     </div>
   );
 }
-
-    
