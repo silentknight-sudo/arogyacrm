@@ -5,35 +5,27 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 /**
  * HYPER-RESILIENT PEM PARSER
  * Specifically engineered to handle service account keys from various environment formats.
- * Corrects literal \n strings, double-escaped backslashes, and malformed boundaries.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
   
-  // 1. Remove wrapping quotes and excessive whitespace
-  let cleaned = key.trim().replace(/^['"]+|['"]+$/g, '');
-
-  // 2. Resolve literal "\n" character sequences (from dashboards or JSON pasting)
+  let cleaned = key.trim();
+  
+  // Handle literal "\n" character sequences
   cleaned = cleaned.replace(/\\n/g, '\n');
+  
+  // Remove wrapping quotes if present
+  cleaned = cleaned.replace(/^['"]+|['"]+$/g, '');
 
-  // 3. Ensure the PEM headers/footers are present and correctly separated
   const header = '-----BEGIN PRIVATE KEY-----';
   const footer = '-----END PRIVATE KEY-----';
 
-  // If the key was pasted without headers, wrap it.
   if (!cleaned.includes(header)) cleaned = `${header}\n${cleaned}`;
   if (!cleaned.includes(footer)) cleaned = `${cleaned}\n${footer}`;
-
-  // 4. Final normalization of newlines
-  cleaned = cleaned.replace(/\n\n+/g, '\n');
 
   return cleaned;
 }
 
-/**
- * INDUSTRIAL ON-DEMAND INITIALIZER
- * Prevents build-time crashes and "Error 500" loops by deferring setup.
- */
 function initializeAdmin(): App {
   if (getApps().length > 0) return getApps()[0];
 
@@ -41,14 +33,8 @@ function initializeAdmin(): App {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  // Diagnostics for troubleshooting
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    const missing = [];
-    if (!projectId) missing.push('FIREBASE_PROJECT_ID');
-    if (!clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
-    if (!rawPrivateKey) missing.push('FIREBASE_PRIVATE_KEY');
-    
-    throw new Error(`CRITICAL_ENVIRONMENT_ERROR: Missing variables [${missing.join(', ')}].`);
+    throw new Error('CRITICAL_ENVIRONMENT_ERROR: Missing Firebase Admin credentials.');
   }
 
   try {
@@ -65,8 +51,7 @@ function initializeAdmin(): App {
 
 /**
  * LAZY PROXY SYSTEM
- * Explicitly blocks Promise-like lookups (then, toJSON) to prevent Next.js from
- * mistaking the SDK for a Promise during the build process.
+ * Blocks build-time Promise resolution to prevent Next.js from crashing during 'npm run build'.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
@@ -97,7 +82,7 @@ export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);
   const msg = error.message || '';
   if (msg.includes('private key') || msg.includes('PEM')) {
-    return 'Secure Key Error: The Firebase Private Key formatting is invalid. Check your environment variables.';
+    return 'Secure Key Error: Private Key formatting is invalid. Check environment variables.';
   }
   return msg || 'A secure server-side operation failed.';
 }

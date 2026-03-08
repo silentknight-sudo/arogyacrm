@@ -2,6 +2,7 @@
 
 import { adminDb, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
+import type { CollectionReference } from 'firebase-admin/firestore';
 
 const COLLECTIONS_TO_DELETE = [
   'leads',
@@ -23,7 +24,7 @@ const COLLECTIONS_TO_DELETE = [
   'activityLogs',
 ];
 
-async function deleteCollection(collectionRef: FirebaseFirestore.CollectionReference, batchSize: number) {
+async function deleteCollection(collectionRef: CollectionReference, batchSize: number) {
   const query = collectionRef.limit(batchSize);
 
   let snapshot = await query.get();
@@ -53,16 +54,14 @@ export async function resetAllData(adminUserId: string): Promise<{ success: bool
     for (const teamspaceDoc of teamspacesSnapshot.docs) {
       for (const collectionName of COLLECTIONS_TO_DELETE) {
         const collectionRef = teamspaceDoc.ref.collection(collectionName);
-        await deleteCollection(collectionRef, 50); // Using a batch size of 50
+        await deleteCollection(collectionRef as CollectionReference, 50);
       }
     }
     
     // Also delete root products collection
     const productsRef = adminDb.collection('products');
-    await deleteCollection(productsRef, 50);
+    await deleteCollection(productsRef as CollectionReference, 50);
 
-
-    // Revalidate all paths to reflect the changes in the UI
     revalidatePath('/', 'layout');
 
     return { success: true };
