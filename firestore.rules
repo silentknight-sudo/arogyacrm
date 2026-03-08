@@ -2,41 +2,45 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- Helper Functions --
+    // -- RESILIENT HELPERS --
 
     function isSignedIn() {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // Resilient check for admin role
+    function getProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isAdmin() {
-      if (!isSignedIn()) return false;
-      // Fast check via token
-      if (request.auth.token.role == 'admin') return true;
-      // Fallback to document check
-      let path = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(path) && get(path).data.role == 'admin';
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             getProfile().role == 'admin';
     }
 
-    // Resilient check for teamspace membership
-    function isTeamspaceMember(teamspaceId) {
-      if (!isSignedIn()) return false;
-      if (isAdmin()) return true;
-      
-      let path = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(path) && 
-             teamspaceId in get(path).data.teamspaceIds;
+    function isRole(role) {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             getProfile().role == role;
     }
 
-    // -- Collection Rules --
+    function isMember(teamspaceId) {
+      return isSignedIn() && (
+        isAdmin() || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         teamspaceId in getProfile().teamspaceIds)
+      );
+    }
 
-    // User Profiles
+    // -- RULES --
+
+    // User Directory: Needed for assignment dropdowns
     match /users/{userId} {
-      allow read: if isSignedIn(); 
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    // Global Products catalog
+    // Global Catalog
     match /products/{productId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
@@ -44,26 +48,20 @@ service cloud.firestore {
 
     // Teamspace Scoped Data
     match /teamspaces/{teamspaceId} {
-      allow get, list: if isTeamspaceMember(teamspaceId);
+      allow get, list: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      // SPECIFIC RULES FOR LEADS (Assignment-based access)
+      // STRICT LEADS: Assignment-based access for Executives
       match /leads/{leadId} {
-        allow read, write: if isAdmin();
-        
-        // Executives only see/edit their assigned leads. 
-        // Team Leads and Marketers can see all leads in their teamspace.
-        allow read, write: if isTeamspaceMember(teamspaceId) && (
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['sales_team_lead', 'marketer']) ||
-          (resource != null && request.auth.uid in resource.data.assignedToIds) ||
-          (resource == null && request.auth.uid in request.resource.data.assignedToIds)
-        );
+        allow read, write: if isAdmin() || isRole('sales_team_lead') || isRole('marketer');
+        allow read, write: if isMember(teamspaceId) && 
+                             isRole('sales_executive') && 
+                             (resource == null || request.auth.uid in resource.data.assignedToIds);
       }
 
-      // PROTECT ALL OTHER NESTED DATA
+      // Catch-all for other teamspace collections
       match /{allPaths=**} {
-        allow read, write: if isTeamspaceMember(teamspaceId);
+        allow read, write: if isMember(teamspaceId);
       }
     }
   }

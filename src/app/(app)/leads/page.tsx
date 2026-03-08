@@ -16,25 +16,22 @@ export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
-  // Optimized query with role-based filtering to comply with security rules
+  // STRICTOR QUERIES: Aligned with new Security Rules
   const leadsQuery = useMemoFirebase(() => {
-    // CRITICAL: Prevent query from firing before auth and teamspace are ready
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // SECURITY: Sales Executives must explicitly filter by their assignment to satisfy security rules
+    // SECURITY ALIGNMENT: Executives must request their own leads or Firestore denies the request
     if (currentUser.role === 'sales_executive') {
       return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
     }
     
-    // Admins and Team Leads can query everything in the teamspace
     return query(leadsRef);
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // Guarded team member directory query
   const usersQuery = useMemoFirebase(() =>
     (!isUserLoading && currentUser && currentTeamspace?.memberIds?.length > 0)
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 

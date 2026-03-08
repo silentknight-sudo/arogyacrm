@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
@@ -71,7 +71,6 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
     },
   });
 
-  const { fields } = useFieldArray({ control: form.control, name: 'lineItems' });
   const watchedSalesOrderId = form.watch('salesOrderId');
   const watchedLineItems = form.watch('lineItems') || [];
 
@@ -84,14 +83,12 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
     }
   }, [watchedSalesOrderId, salesOrders, form]);
 
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Session expired. Please log in again.' });
       return;
     }
     setIsSubmitting(true);
-    
     const totalAmount = values.lineItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
     const result = await createInvoice({
@@ -105,18 +102,11 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
     });
 
     if (result.success) {
-      toast({
-        title: 'Invoice Created',
-        description: `Successfully created invoice.`,
-      });
+      toast({ title: 'Invoice Created', description: `Invoice generated successfully.` });
       setOpen(false);
       form.reset();
     } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error Creating Invoice',
-        description: result.error,
-      });
+      toast({ variant: 'destructive', title: 'Error', description: result.error });
     }
     setIsSubmitting(false);
   };
@@ -129,14 +119,15 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create New Invoice</DialogTitle>
-          <DialogDescription>
-            Generate an invoice from a sales order.
-          </DialogDescription>
+          <DialogDescription>Generate an invoice from a confirmed sales order.</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[80vh] px-1">
+        <ScrollArea className="max-h-[80vh] pr-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
-                <FormField control={form.control} name="salesOrderId" render={({ field }) => (
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4">
+                <FormField
+                  control={form.control}
+                  name="salesOrderId"
+                  render={({ field }) => (
                     <FormItem>
                       <FormLabel>From Sales Order</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -148,21 +139,25 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                         <SelectContent>
                           {salesOrders.length > 0 ? salesOrders.map(so => (
                             <SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>
-                          )) : <div className="p-2 text-sm text-muted-foreground text-center">No sales orders found.</div>}
+                          )) : <div className="p-2 text-sm text-muted-foreground text-center">No sales orders available.</div>}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                 )} />
-                 <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="invoiceDate" render={({ field }) => (
+
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="invoiceDate"
+                      render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Invoice Date</FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                               </FormControl>
@@ -174,14 +169,17 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                           <FormMessage />
                         </FormItem>
                     )} />
-                    <FormField control={form.control} name="dueDate" render={({ field }) => (
+                    <FormField
+                      control={form.control}
+                      name="dueDate"
+                      render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Due Date</FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                               </FormControl>
@@ -194,7 +192,11 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                         </FormItem>
                     )} />
                 </div>
-                 <FormField control={form.control} name="status" render={({ field }) => (
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -211,34 +213,31 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                     </FormItem>
                 )} />
 
-                <div className="space-y-2">
-                  <FormLabel>Line Items</FormLabel>
-                  <div className="space-y-2 mt-2 rounded-md border p-4">
-                      {fields.length > 0 ? fields.map((field) => (
-                      <div key={field.id} className="flex items-center justify-between">
-                          <div>
-                              <p className="font-medium">{field.productName}</p>
-                              <p className="text-sm text-muted-foreground">
-                                  {field.quantity} x ₹{field.unitPrice.toFixed(2)}
-                              </p>
-                          </div>
-                          <p className="font-medium">₹{field.subtotal.toFixed(2)}</p>
-                      </div>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">Line Items</h4>
+                  <div className="rounded-md border p-4 space-y-3 bg-muted/30">
+                      {watchedLineItems.length > 0 ? watchedLineItems.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between text-sm">
+                            <div className="space-y-0.5">
+                                <p className="font-semibold">{item.productName}</p>
+                                <p className="text-xs text-muted-foreground">{item.quantity} x ₹{item.unitPrice.toFixed(2)}</p>
+                            </div>
+                            <p className="font-bold">₹{item.subtotal.toFixed(2)}</p>
+                        </div>
                       )) : (
-                          <p className="text-sm text-muted-foreground text-center">Select a sales order to see line items.</p>
+                          <p className="text-sm text-muted-foreground text-center py-4">Select a sales order to preview items.</p>
                       )}
-                      {fields.length > 0 && (
-                          <div className="flex justify-end items-center pt-4 mt-4 border-t">
-                              <span className="text-muted-foreground mr-2">Total:</span>
-                              <span className="font-bold text-lg">₹{totalAmount.toFixed(2)}</span>
+                      {watchedLineItems.length > 0 && (
+                          <div className="flex justify-end items-center pt-4 border-t border-border/50">
+                              <span className="text-xs text-muted-foreground mr-3 uppercase tracking-wider">Grand Total:</span>
+                              <span className="font-extrabold text-xl text-primary">₹{totalAmount.toFixed(2)}</span>
                           </div>
                       )}
                   </div>
-                  <FormMessage>{form.formState.errors.lineItems?.message}</FormMessage>
                 </div>
 
-              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                {isSubmitting ? 'Creating Invoice...' : 'Create Invoice'}
+              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full h-12 text-lg shadow-elevated">
+                {isSubmitting ? 'Processing...' : 'Create Invoice'}
               </Button>
             </form>
           </Form>

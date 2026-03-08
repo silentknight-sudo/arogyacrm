@@ -4,67 +4,63 @@
 
 @layer base {
   :root {
-    --background: 120 14% 95%; /* Light Green */
-    --foreground: 224 71% 4%; /* Dark Blue */
+    --background: 120 14% 97%; /* Lighter Green Background */
+    --foreground: 224 71% 4%;
     --card: 0 0% 100%;
     --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
-    --primary: 120 39% 47%; /* Herbal Green */
+    --primary: 120 39% 40%; /* Deeper Herbal Green */
     --primary-foreground: 0 0% 100%;
-    --secondary: 215 28% 93%;
+    --secondary: 120 10% 90%;
     --secondary-foreground: 224 71% 4%;
-    --muted: 215 28% 93%;
+    --muted: 120 10% 90%;
     --muted-foreground: 224 71% 25%;
-    --accent: 51 100% 50%; /* Gold */
+    --accent: 45 100% 50%; /* Brighter Gold */
     --accent-foreground: 224 71% 4%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 120 39% 47%;
-    --radius: 0.5rem;
-    --chart-1: 120 39% 47%;
-    --chart-2: 51 100% 50%;
-    --chart-3: 215 28% 50%;
-    --chart-4: 0 0% 50%;
-    --chart-5: 180 39% 47%;
+    --border: 120 10% 85%;
+    --input: 120 10% 85%;
+    --ring: 120 39% 40%;
+    --radius: 0.75rem; /* Smoother Corners */
+    
+    --shadow-subtle: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+    --shadow-elevated: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
   }
 
   .dark {
-    --background: 224 71% 4%; /* Dark Blue */
+    --background: 224 71% 4%;
     --foreground: 0 0% 98%;
-    --card: 224 71% 8%;
+    --card: 224 71% 6%;
     --card-foreground: 0 0% 98%;
     --popover: 224 71% 4%;
     --popover-foreground: 0 0% 98%;
-    --primary: 120 39% 47%; /* Herbal Green */
+    --primary: 120 39% 47%;
     --primary-foreground: 0 0% 100%;
     --secondary: 224 71% 10%;
     --secondary-foreground: 0 0% 98%;
     --muted: 224 71% 10%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 51 100% 50%; /* Gold */
+    --accent: 45 100% 50%;
     --accent-foreground: 224 71% 4%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 224 71% 15%;
-    --input: 224 71% 15%;
+    --border: 224 71% 12%;
+    --input: 224 71% 12%;
     --ring: 120 39% 47%;
-    --chart-1: 120 39% 47%;
-    --chart-2: 51 100% 50%;
-    --chart-3: 215 28% 50%;
-    --chart-4: 0 0% 50%;
-    --chart-5: 180 39% 47%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border transition-colors duration-200;
   }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  .card {
+    @apply shadow-sm hover:shadow-md transition-shadow duration-300;
   }
 }

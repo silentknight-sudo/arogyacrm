@@ -45,9 +45,6 @@ function serializeData(data: any): any {
   return newObj;
 }
 
-/**
- * React hook to subscribe to a Firestore collection or query in real-time.
- */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
 ): UseCollectionResult<T> {
@@ -78,7 +75,7 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // Suppress permission errors during logout or initialization race conditions
+        // Suppress permission errors during logout or initialization transitions
         const auth = getAuth();
         if (!auth.currentUser || err.code === 'permission-denied') {
           setData(null);
