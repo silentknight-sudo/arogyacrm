@@ -11,14 +11,14 @@ This document provides the definitive blueprint for building the Arogya CRM, a h
 - **Server Components**: Default to RSCs for performance; use 'use client' only for interactive components.
 - **Server Actions**: All data mutations (CRUD) must use Server Actions with robust error handling and revalidation.
 
-### 1.2 Industrial Firebase Admin SDK
-The Admin SDK must be initialized using a **Lazy Proxy Pattern** to prevent build-time crashes and "Error 500" on Vercel.
-- **Initialization**: Wrap `firestore` and `auth` in a Proxy that initializes only upon function call.
-- **Promise Blocking**: Explicitly block `then`, `toJSON`, and `constructor` properties in the proxy to prevent Next.js from mistaking the SDK for a Promise during builds.
+### 1.2 Resilient Admin Singleton Pattern
+To prevent build-time crashes and "Error 500" on Vercel, the Admin SDK must be implemented using a strictly-guarded singleton architecture.
 - **Hyper-Resilient PEM Parser**: Implement a multi-pass sanitation function for `FIREBASE_PRIVATE_KEY` that:
-    - Detects and replaces literal `\n` strings.
-    - Removes accidental wrapping quotes.
-    - Validates and fixes `-----BEGIN/END PRIVATE KEY-----` headers.
+    - Automatically detects and converts literal `\n` character sequences into true newline characters.
+    - Trims accidental wrapping quotes or dashboard-injected whitespace.
+    - Forces the presence of `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` headers to prevent PEM truncation errors.
+- **On-Demand (Lazy) Initialization**: Encapsulate SDK setup within a "Lazy Proxy" or a protected getter. This ensures that Firebase services are only initialized at runtime upon the first function call, effectively bypassing credential checks during the Next.js build phase.
+- **Build-Phase Promise Blocking**: Explicitly block the `then`, `toJSON`, and `constructor` properties on exported SDK objects. This prevents Next.js from mistaking the SDK for a Promise during the build process, which is the root cause of the "Grant Access" loop and Vercel deployment failures.
 
 ---
 
