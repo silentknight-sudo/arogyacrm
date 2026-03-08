@@ -180,3 +180,132 @@ export type Invoice = {
     createdAt: any;
     updatedAt: any;
 };
+
+export type CallStatus = 'Completed' | 'No Answer' | 'Voicemail' | 'Busy';
+export type CallType = 'Outbound' | 'Inbound';
+export type Call = {
+  id: string;
+  teamspaceId: string;
+  subject: string;
+  notes?: string;
+  callDate: string;
+  callDurationMinutes: number;
+  callType: CallType;
+  status: CallStatus;
+  callerId: string;
+  relatedToEntityType?: string;
+  relatedToEntityId?: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type Meeting = {
+  id: string;
+  teamspaceId: string;
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  organizerId: string;
+  attendeeIds?: string[];
+  relatedToEntityType?: string;
+  relatedToEntityId?: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type CampaignStatus = 'Planned' | 'Active' | 'Completed' | 'Paused' | 'Cancelled';
+export type Campaign = {
+  id: string;
+  teamspaceId: string;
+  name: string;
+  type: string;
+  status: CampaignStatus;
+  startDate: string;
+  endDate: string;
+  budget: number;
+  ownerId: string;
+  description?: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type TicketStatus = 'Open' | 'In Progress' | 'Awaiting Customer' | 'Resolved' | 'Closed';
+export type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
+export type Ticket = {
+  id: string;
+  teamspaceId: string;
+  subject: string;
+  description: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  contactId: string;
+  assignedToId: string;
+  category: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type RefundStatus = 'Pending' | 'Approved' | 'Rejected' | 'Processed' | 'Cancelled';
+export type Refund = {
+  id: string;
+  teamspaceId: string;
+  salesOrderId: string;
+  reason: string;
+  amount: number;
+  status: RefundStatus;
+  requestedById: string;
+  processedById?: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type ComplaintStatus = 'Received' | 'Investigating' | 'Action Taken' | 'Resolved' | 'Closed';
+export type ComplaintSeverity = 'Minor' | 'Moderate' | 'Major' | 'Critical';
+export type Complaint = {
+  id: string;
+  teamspaceId: string;
+  subject: string;
+  description: string;
+  status: ComplaintStatus;
+  contactId: string;
+  assignedToId: string;
+  severity: ComplaintSeverity;
+  relatedToEntityType?: string;
+  relatedToEntityId?: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type InteractionLog = {
+  id: string;
+  type: string;
+  date: string;
+  notes: string;
+  agent?: string;
+};
+
+export type QuoteStatus = 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
+export type Quote = {
+  id: string;
+  teamspaceId: string;
+  name: string;
+  accountId: string;
+  contactId?: string;
+  validUntil: string;
+  status: QuoteStatus;
+  totalAmount: number;
+  lineItems: LineItem[];
+  ownerId: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type RawLead = {
+  'Name': string;
+  'Email address': string;
+  'Phone': string;
+  'Source': string;
+  [key: string]: any;
+};
