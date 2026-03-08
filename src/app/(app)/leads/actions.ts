@@ -42,9 +42,10 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
   try {
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = AssignLeadSchema.parse(values);
 
+    // Secure Admin/TeamLead verification
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
     if (!currentUserDoc.exists || !['admin', 'sales_team_lead'].includes(currentUserDoc.data()?.role)) {
-      throw new Error('Unauthorized: Only admins or team leads can reassign leads.');
+      throw new Error('Unauthorized: Only admins or team leads can reassign prospects.');
     }
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
@@ -78,7 +79,7 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
     if (!currentUserDoc.exists || !['admin', 'sales_team_lead'].includes(currentUserDoc.data()?.role)) {
-      throw new Error('Unauthorized: Only admins or team leads can reassign leads.');
+      throw new Error('Unauthorized: Only admins or team leads can perform bulk delegation.');
     }
 
     const batch = adminDb.batch();
@@ -111,12 +112,12 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
     const leadDoc = await leadRef.get();
     if (!leadDoc.exists) {
-      throw new Error("Lead not found.");
+      throw new Error("Prospect record not found.");
     }
     const leadData = leadDoc.data() as Lead;
 
     if (leadData.status === 'Converted') {
-        throw new Error("Lead already converted.");
+        throw new Error("This prospect has already been converted.");
     }
 
     const accountRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('accounts').doc();
