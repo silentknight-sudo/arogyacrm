@@ -32,7 +32,7 @@ function getAdminApp(): App | null {
     try {
       return initializeApp();
     } catch (e) {
-      // Fail silently to avoid build-time crashes.
+      // Fail silently to avoid build-time crashes or trust prompts.
     }
   }
 
@@ -41,19 +41,25 @@ function getAdminApp(): App | null {
 
 /**
  * Proxy-based lazy initialization to prevent build-time crashes and auth prompts.
+ * Blocks 'then' to avoid being treated as a Promise by Next.js.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
-  get(_, prop) {
+  get(target, prop) {
     if (prop === 'then') return undefined;
     const app = getAdminApp();
-    if (!app) return undefined;
+    if (!app) {
+      if (typeof prop === 'string' && !['constructor', 'toJSON', 'prototype'].includes(prop)) {
+        console.warn(`Admin SDK not initialized. Accessing: ${prop}`);
+      }
+      return undefined;
+    }
     const db = getFirestore(app);
     return (db as any)[prop];
   }
 });
 
 export const adminAuth: Auth = new Proxy({} as Auth, {
-  get(_, prop) {
+  get(target, prop) {
     if (prop === 'then') return undefined;
     const app = getAdminApp();
     if (!app) return undefined;
