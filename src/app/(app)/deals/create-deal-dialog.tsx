@@ -26,33 +26,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createDeal } from './actions';
 import { useApp } from '@/context/app-context';
-import type { DealStage, Account, Contact } from '@/types';
+import type { DealStage, Account, Contact, Product } from '@/types';
+import { LineItemSchema } from '../inventory/schemas';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { PlusCircle, Trash2 } from 'lucide-react';
 
 const dealStages = ['New', 'Contacted', 'Qualified', 'Demo', 'Negotiation', 'Won', 'Lost'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, 'Deal name must be at least 2 characters.'),
-  amount: z.coerce.number().min(0, 'Amount must be a positive number.'),
   stage: z.enum(dealStages),
   closeDate: z.string().min(1, 'Close date is required.'),
   accountId: z.string().min(1, 'Account is required.'),
   contactId: z.string().optional(),
+  lineItems: z.array(LineItemSchema).min(1, 'Add at least one product to the deal.'),
 });
 
 type CreateDealDialogProps = {
   children: React.ReactNode;
   accounts: Account[];
   contacts: Contact[];
+  products: Product[];
   isLoading: boolean;
 };
 
-export function CreateDealDialog({ children, accounts, contacts, isLoading }: CreateDealDialogProps) {
+export function CreateDealDialog({ children, accounts, contacts, products, isLoading }: CreateDealDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
@@ -62,11 +66,40 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      amount: 0,
       stage: 'New',
       closeDate: '',
+      lineItems: [],
     },
   });
+
+  const { fields, append, remove, update } = useFieldArray({
+    control: form.control,
+    name: 'lineItems',
+  });
+
+  const handleProductChange = (index: number, productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      update(index, {
+        productId: product.id,
+        productName: product.name,
+        unitPrice: product.price,
+        quantity: fields[index].quantity || 1,
+        subtotal: product.price * (fields[index].quantity || 1),
+      });
+    }
+  };
+
+  const handleQuantityChange = (index: number, quantity: number) => {
+    const currentItem = fields[index];
+    update(index, {
+      ...currentItem,
+      quantity,
+      subtotal: currentItem.unitPrice * quantity,
+    });
+  };
+
+  const totalAmount = fields.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
@@ -75,38 +108,27 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
     }
     startTransition(async () => {
       const date = new Date(values.closeDate);
-      // Add a day to counteract timezone issues where new Date() creates a date at UTC midnight
       date.setDate(date.getDate() + 1);
 
       if (isNaN(date.getTime())) {
-          toast({
-              variant: 'destructive',
-              title: 'Invalid Date',
-              description: 'Please enter a valid date format (e.g., YYYY-MM-DD).',
-          });
+          toast({ variant: 'destructive', title: 'Invalid Date', description: 'Please enter a valid date.' });
           return;
       }
 
       const result = await createDeal({
           ...values,
+          amount: totalAmount,
           closeDate: date.toISOString(),
           ownerId: currentUser.id,
           teamspaceId: currentTeamspace.id,
       });
 
       if (result.success) {
-        toast({
-          title: 'Deal Created',
-          description: `Successfully created deal "${values.name}".`,
-        });
+        toast({ title: 'Deal Created', description: `Successfully created product-based deal "${values.name}".` });
         setOpen(false);
         form.reset();
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Error Creating Deal',
-          description: result.error,
-        });
+        toast({ variant: 'destructive', title: 'Error Creating Deal', description: result.error });
       }
     });
   };
@@ -114,53 +136,87 @@ export function CreateDealDialog({ children, accounts, contacts, isLoading }: Cr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl rounded-[2rem]">
         <DialogHeader>
-          <DialogTitle>Create New Deal</DialogTitle>
-          <DialogDescription>
-            Fill out the form to add a new deal to your sales pipeline.
-          </DialogDescription>
+          <DialogTitle className="text-2xl font-bold text-primary">New Sales Deal</DialogTitle>
+          <DialogDescription>Configure products and terms for this opportunity.</DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[60vh] pr-4">
+        <ScrollArea className="max-h-[80vh] pr-4">
             <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4">
                 <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>Deal Name</FormLabel><FormControl><Input placeholder="Q3 Enterprise Contract" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Deal Heading</FormLabel><FormControl><Input placeholder="e.g. Corporate Wellness Bulk Order" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="amount" render={({ field }) => (
-                    <FormItem><FormLabel>Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="25000" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                 <FormField control={form.control} name="accountId" render={({ field }) => (
-                    <FormItem><FormLabel>Account</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select an account"} /></SelectTrigger></FormControl><SelectContent>{accounts.length > 0 ? accounts.map(account => (<SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No accounts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
-                )} />
-                 <FormField control={form.control} name="contactId" render={({ field }) => (
-                    <FormItem><FormLabel>Contact (Optional)</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(contact => (<SelectItem key={contact.id} value={contact.id}>{`${contact.firstName} ${contact.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
-                )} />
-                 <FormField control={form.control} name="stage" render={({ field }) => (
-                    <FormItem><FormLabel>Stage</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a stage" /></SelectTrigger></FormControl><SelectContent>{dealStages.map(stage => (<SelectItem key={stage} value={stage}>{stage}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
-                )} />
-                <FormField
-                  control={form.control}
-                  name="closeDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Expected Close Date</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" disabled={isPending || isLoading} className="w-full">
-                    {isPending ? 'Creating Deal...' : 'Create Deal'}
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="accountId" render={({ field }) => (
+                        <FormItem><FormLabel>Account</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder="Select account" /></SelectTrigger></FormControl><SelectContent>{accounts.map(a => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="contactId" render={({ field }) => (
+                        <FormItem><FormLabel>Contact (Optional)</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder="Select contact" /></SelectTrigger></FormControl><SelectContent>{contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="stage" render={({ field }) => (
+                        <FormItem><FormLabel>Stage</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{dealStages.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="closeDate" render={({ field }) => (
+                        <FormItem><FormLabel>Target Close Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </div>
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <FormLabel className="text-base font-semibold text-primary">Products & Items</FormLabel>
+                        <Button type="button" variant="ghost" size="sm" className="h-8 text-primary" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+                        </Button>
+                    </div>
+                    <div className="space-y-3">
+                        {fields.map((field, index) => (
+                            <div key={field.id} className="flex items-start gap-2 p-3 border rounded-xl bg-muted/20">
+                                <div className="grid grid-cols-4 gap-2 flex-grow">
+                                    <div className="col-span-4">
+                                        <Select onValueChange={(v) => handleProductChange(index, v)} defaultValue={field.productId}>
+                                            <SelectTrigger className="h-9"><SelectValue placeholder="Select Ayurvedic Product" /></SelectTrigger>
+                                            <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="col-span-1">
+                                        <Input className="h-9" type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
+                                    </div>
+                                    <div className="col-span-1">
+                                        <Input className="h-9" value={`₹${field.unitPrice}`} readOnly />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Input className="h-9 font-bold bg-muted/30" value={`Total: ₹${field.subtotal}`} readOnly />
+                                    </div>
+                                </div>
+                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => remove(index)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                        {fields.length === 0 && (
+                            <div className="text-center py-8 border border-dashed rounded-xl text-muted-foreground text-sm">
+                                No products added to this deal yet.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t">
+                    <span className="text-sm font-black uppercase tracking-widest text-muted-foreground">Est. Deal Value</span>
+                    <span className="text-3xl font-black text-primary">₹{totalAmount.toLocaleString()}</span>
+                </div>
+
+                <Button type="submit" disabled={isPending || isLoading} className="w-full h-14 rounded-2xl herbal-gradient shadow-xl text-lg font-bold">
+                    {isPending ? 'Processing...' : 'Secure Deal Pipeline'}
                 </Button>
             </form>
             </Form>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

@@ -75,6 +75,7 @@ export type Deal = {
   accountId: string;
   contactId?: string;
   ownerId: string;
+  lineItems: LineItem[];
   createdAt: any;
   updatedAt: any;
 };

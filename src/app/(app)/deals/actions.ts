@@ -3,6 +3,7 @@
 import { adminDb, serverTimestamp, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { LineItemSchema } from '../inventory/schemas';
 
 const CreateDealSchema = z.object({
     name: z.string().min(2, 'Deal name must be at least 2 characters.'),
@@ -13,6 +14,7 @@ const CreateDealSchema = z.object({
     contactId: z.string().optional(),
     ownerId: z.string().min(1, 'Owner ID is required.'),
     teamspaceId: z.string().min(1, 'Teamspace ID is required.'),
+    lineItems: z.array(LineItemSchema).min(1, 'At least one product is required for a deal.'),
 });
 
 export type CreateDealInput = z.infer<typeof CreateDealSchema>;
