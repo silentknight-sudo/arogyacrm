@@ -2,39 +2,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- RESILIENT HELPERS --
+    // -- ROBUST HELPERS --
 
     function isSignedIn() {
       return request.auth != null && request.auth.uid != null;
     }
 
-    function getProfile() {
+    function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function isAdmin() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             getProfile().role == 'admin';
+      return isSignedIn() && getUserData().role == 'admin';
     }
 
     function isRole(role) {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             getProfile().role == role;
+      return isSignedIn() && getUserData().role == role;
     }
 
     function isMember(teamspaceId) {
       return isSignedIn() && (
         isAdmin() || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         teamspaceId in getProfile().teamspaceIds)
+        teamspaceId in getUserData().teamspaceIds
       );
     }
 
     // -- RULES --
 
-    // User Directory: Needed for assignment dropdowns
+    // User Directory: Allow all staff to see names/roles for assignment dropdowns
     match /users/{userId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
@@ -43,7 +38,7 @@ service cloud.firestore {
     // Global Catalog
     match /products/{productId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isRole('support');
     }
 
     // Teamspace Scoped Data
@@ -54,12 +49,12 @@ service cloud.firestore {
       // STRICT LEADS: Assignment-based access for Executives
       match /leads/{leadId} {
         allow read, write: if isAdmin() || isRole('sales_team_lead') || isRole('marketer');
-        allow read, write: if isMember(teamspaceId) && 
-                             isRole('sales_executive') && 
+        allow read, write: if isRole('sales_executive') && 
+                             isMember(teamspaceId) && 
                              (resource == null || request.auth.uid in resource.data.assignedToIds);
       }
 
-      // Catch-all for other teamspace collections
+      // Catch-all for other subcollections
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }

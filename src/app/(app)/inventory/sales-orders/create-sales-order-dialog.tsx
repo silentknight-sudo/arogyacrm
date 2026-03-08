@@ -87,7 +87,7 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
         productId: product.id,
         productName: product.name,
         unitPrice: product.price,
-        subtotal: product.price * currentItem.quantity,
+        subtotal: product.price * (currentItem.quantity || 1),
       });
     }
   };
@@ -153,13 +153,11 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger disabled={isLoading}>
-                                <SelectValue placeholder={isLoading ? "Loading..." : "Select an account"} />
+                                <SelectValue placeholder={isLoading ? "Loading..." : "Select account"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {accounts.length > 0 ? accounts.map(a => (
-                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                              )) : <div className="p-2 text-sm text-muted-foreground text-center">No accounts found.</div>}
+                              {accounts.map(a => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -171,13 +169,11 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger disabled={isLoading}>
-                                <SelectValue placeholder={isLoading ? "Select a contact" : "Select a contact"} />
+                                <SelectValue placeholder="Select contact" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {contacts.length > 0 ? contacts.map(c => (
-                                <SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>
-                              )) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}
+                              {contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -210,7 +206,7 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a status" />
+                                <SelectValue placeholder="Select status" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -222,34 +218,40 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
                     )} />
                 </div>
                 
-                <div className="space-y-2">
-                  <FormLabel>Line Items</FormLabel>
-                  <div className="space-y-2 mt-2">
-                    {fields.map((field, index) => (
-                      <div key={field.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                        <div className="grid grid-cols-3 gap-2 flex-grow">
-                            <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
-                                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a product" /></SelectTrigger>
-                                <SelectContent>{products.length > 0 ? products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">No products found.</div>}</SelectContent>
-                            </Select>
-                            <Input type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
-                            <Input type="number" placeholder="Price" value={field.unitPrice} readOnly/>
-                            <Input type="number" placeholder="Subtotal" value={field.subtotal} readOnly/>
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                <FormField
+                  control={form.control}
+                  name="lineItems"
+                  render={() => (
+                    <FormItem className="space-y-4">
+                      <FormLabel>Line Items</FormLabel>
+                      <div className="space-y-2">
+                        {fields.map((field, index) => (
+                          <div key={field.id} className="flex items-center gap-2 p-2 border rounded-lg bg-muted/20">
+                            <div className="grid grid-cols-3 gap-2 flex-grow">
+                                <Select onValueChange={(value) => handleProductChange(index, value)} defaultValue={field.productId}>
+                                    <SelectTrigger className="col-span-3 h-8"><SelectValue placeholder="Select product" /></SelectTrigger>
+                                    <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                                <Input className="h-8" type="number" placeholder="Qty" value={field.quantity} onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)} />
+                                <Input className="h-8" type="number" placeholder="Price" value={field.unitPrice} readOnly/>
+                                <Input className="h-8 font-bold" type="number" placeholder="Subtotal" value={field.subtotal} readOnly/>
+                            </div>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(index)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
-                  </Button>
-                  <FormMessage>{form.formState.errors.lineItems?.message}</FormMessage>
-                </div>
+                      <Button type="button" variant="outline" size="sm" className="w-full border-dashed" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                      </Button>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
               <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                {isSubmitting ? 'Creating Order...' : 'Create Sales Order'}
+                {isSubmitting ? 'Processing...' : 'Create Sales Order'}
               </Button>
             </form>
           </Form>

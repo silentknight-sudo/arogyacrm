@@ -84,7 +84,7 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Session expired. Please log in again.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Session expired.' });
       return;
     }
     setIsSubmitting(true);
@@ -132,13 +132,11 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger disabled={isLoading}>
-                            <SelectValue placeholder={isLoading ? "Loading..." : "Select a sales order"} />
+                            <SelectValue placeholder="Select sales order" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {salesOrders.length > 0 ? salesOrders.map(so => (
-                            <SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>
-                          )) : <div className="p-2 text-sm text-muted-foreground text-center">No sales orders available.</div>}
+                          {salesOrders.map(so => (<SelectItem key={so.id} value={so.id}>{so.orderNumber}</SelectItem>))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -146,10 +144,7 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                 )} />
 
                 <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="invoiceDate"
-                      render={({ field }) => (
+                    <FormField control={form.control} name="invoiceDate" render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Invoice Date</FormLabel>
                           <Popover>
@@ -168,10 +163,7 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                           <FormMessage />
                         </FormItem>
                     )} />
-                    <FormField
-                      control={form.control}
-                      name="dueDate"
-                      render={({ field }) => (
+                    <FormField control={form.control} name="dueDate" render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Due Date</FormLabel>
                           <Popover>
@@ -200,42 +192,45 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
                       <FormLabel>Status</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {invoiceStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
-                        </SelectContent>
+                        <SelectContent>{invoiceStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                 )} />
 
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Line Items Preview</h4>
-                  <div className="rounded-md border p-4 space-y-3 bg-muted/30">
-                      {watchedLineItems.length > 0 ? watchedLineItems.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between text-sm">
-                            <div className="space-y-0.5">
-                                <p className="font-semibold">{item.productName}</p>
-                                <p className="text-xs text-muted-foreground">{item.quantity} x ₹{item.unitPrice.toFixed(2)}</p>
+                <FormField
+                  control={form.control}
+                  name="lineItems"
+                  render={() => (
+                    <FormItem className="space-y-4">
+                      <FormLabel>Items Preview</FormLabel>
+                      <div className="rounded-md border p-4 space-y-3 bg-muted/30">
+                          {watchedLineItems.length > 0 ? watchedLineItems.map((item, index) => (
+                            <div key={index} className="flex items-center justify-between text-sm">
+                                <div className="space-y-0.5">
+                                    <p className="font-semibold">{item.productName}</p>
+                                    <p className="text-xs text-muted-foreground">{item.quantity} x ₹{item.unitPrice.toFixed(2)}</p>
+                                </div>
+                                <p className="font-bold">₹{item.subtotal.toFixed(2)}</p>
                             </div>
-                            <p className="font-bold">₹{item.subtotal.toFixed(2)}</p>
-                        </div>
-                      )) : (
-                          <p className="text-sm text-muted-foreground text-center py-4">Select a sales order to preview items.</p>
-                      )}
-                      {watchedLineItems.length > 0 && (
-                          <div className="flex justify-end items-center pt-4 border-t border-border/50">
-                              <span className="text-xs text-muted-foreground mr-3 uppercase tracking-wider">Grand Total:</span>
-                              <span className="font-extrabold text-xl text-primary">₹{totalAmount.toFixed(2)}</span>
-                          </div>
-                      )}
-                  </div>
-                </div>
+                          )) : (
+                              <p className="text-sm text-muted-foreground text-center py-4">Select an order to preview.</p>
+                          )}
+                          {watchedLineItems.length > 0 && (
+                              <div className="flex justify-end items-center pt-4 border-t border-border/50">
+                                  <span className="text-xs text-muted-foreground mr-3 uppercase tracking-wider">Grand Total:</span>
+                                  <span className="font-extrabold text-xl text-primary">₹{totalAmount.toFixed(2)}</span>
+                              </div>
+                          )}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full h-12 text-lg">
+              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
                 {isSubmitting ? 'Processing...' : 'Create Invoice'}
               </Button>
             </form>
