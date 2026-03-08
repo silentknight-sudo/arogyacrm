@@ -3,6 +3,24 @@ import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
+ * Industrial-grade private key formatter for Vercel.
+ * Handles escaped newlines, quotes, and whitespace.
+ */
+function formatPrivateKey(key: string | undefined): string {
+  if (!key) return '';
+  
+  // Replace literal \n strings with real newline characters
+  let formatted = key.replace(/\\n/g, '\n');
+  
+  // Remove any wrapping double quotes added by environment editors
+  if (formatted.startsWith('"') && formatted.endsWith('"')) {
+    formatted = formatted.substring(1, formatted.length - 1);
+  }
+  
+  return formatted.trim();
+}
+
+/**
  * Robust Admin SDK Initializer for Serverless/Vercel.
  */
 function initializeAdmin(): App {
@@ -10,23 +28,15 @@ function initializeAdmin(): App {
 
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  if (!projectId || !clientEmail || !privateKey) {
+  if (!projectId || !clientEmail || !rawPrivateKey) {
     throw new Error(
-      `Firebase Admin SDK: Missing configuration. Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set in Vercel.`
+      `Firebase Admin SDK: Configuration missing. Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set in Vercel.`
     );
   }
 
-  // Handle both escaped \n and actual newlines from Vercel
-  if (privateKey.includes('\\n')) {
-    privateKey = privateKey.replace(/\\n/g, '\n');
-  }
-  
-  // Clean potential quotes added by environment managers
-  if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-    privateKey = privateKey.substring(1, privateKey.length - 1);
-  }
+  const privateKey = formatPrivateKey(rawPrivateKey);
 
   try {
     return initializeApp({
@@ -45,7 +55,10 @@ function initializeAdmin(): App {
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(_, prop) {
-    if (prop === 'then' || prop === 'constructor' || prop === 'toJSON') return undefined;
+    // Explicitly block properties that Next.js/React might check during build/hydration
+    if (prop === 'then' || prop === 'constructor' || prop === 'toJSON' || prop === '$$typeof') {
+      return undefined;
+    }
     const app = initializeAdmin();
     const db = getFirestore(app);
     const value = (db as any)[prop];
@@ -58,7 +71,9 @@ export const adminDb: Firestore = new Proxy({} as Firestore, {
  */
 export const adminAuth: Auth = new Proxy({} as Auth, {
   get(_, prop) {
-    if (prop === 'then' || prop === 'constructor' || prop === 'toJSON') return undefined;
+    if (prop === 'then' || prop === 'constructor' || prop === 'toJSON' || prop === '$$typeof') {
+      return undefined;
+    }
     const app = initializeAdmin();
     const auth = getAuth(app);
     const value = (auth as any)[prop];

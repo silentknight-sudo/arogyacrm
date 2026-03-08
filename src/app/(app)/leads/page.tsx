@@ -27,9 +27,10 @@ export default function LeadsPage() {
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // Advanced User Discovery: Fetching by ID list from currentTeamspace.memberIds
+  // Advanced User Discovery: Fetching by teamspace membership
   const usersQuery = useMemoFirebase(() => {
-    return (!isUserLoading && currentUser && currentTeamspace?.memberIds?.length > 0)
+    const hasMembers = currentTeamspace?.memberIds && currentTeamspace.memberIds.length > 0;
+    return (!isUserLoading && currentUser && hasMembers)
         ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
         : null;
   }, [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]);
