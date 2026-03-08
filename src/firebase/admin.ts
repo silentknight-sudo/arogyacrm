@@ -4,7 +4,7 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
  * Robust, lazy initialization for the Firebase Admin SDK.
- * Optimized for Vercel and CI/CD environments.
+ * Optimized for Vercel, GCP, and local development.
  */
 function getAdminApp(): App | null {
   if (getApps().length > 0) return getApps()[0];
@@ -21,18 +21,18 @@ function getAdminApp(): App | null {
         projectId,
       });
     } catch (e) {
-      console.error('Lazy Admin Init Failed:', e);
+      console.error('Explicit Admin SDK Init Failed:', e);
     }
   }
 
-  // STRATEGY 2: Auto-discovery (GCP / App Hosting)
-  // We only do this in true serverless environments to avoid IDE trust prompts
+  // STRATEGY 2: Environment Discovery (GCP / App Hosting)
+  // We only attempt this in specific environments to avoid trust prompts in local dev
   const isServerless = !!(process.env.K_SERVICE || process.env.VERCEL || process.env.FUNCTIONS_EMULATOR);
   if (isServerless) {
     try {
       return initializeApp();
     } catch (e) {
-      // Quiet fail if ADC is missing
+      // Fail silently during build/discovery phases
     }
   }
 
@@ -41,15 +41,16 @@ function getAdminApp(): App | null {
 
 /**
  * Proxy-based lazy initialization. 
- * Prevents 500 errors during build time and avoids unnecessary IDE "Trust" prompts.
+ * Prevents build-time crashes and unnecessary trust prompts.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(_, prop) {
-    if (prop === 'then') return undefined; // Next.js internal check skip
+    if (prop === 'then') return undefined;
     const app = getAdminApp();
     if (!app) {
-        // Return a dummy object if initialization fails during build/SSR to prevent hard crashes
-        console.warn('Admin SDK Firestore requested but app not initialized.');
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn('Admin SDK Firestore requested but app not initialized. Verify environment variables.');
+        }
         return undefined;
     }
     const db = getFirestore(app);
@@ -62,7 +63,9 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
     if (prop === 'then') return undefined;
     const app = getAdminApp();
     if (!app) {
-        console.warn('Admin SDK Auth requested but app not initialized.');
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn('Admin SDK Auth requested but app not initialized. Verify environment variables.');
+        }
         return undefined;
     }
     const auth = getAuth(app);
@@ -77,12 +80,13 @@ export const serverTimestamp = () => {
   try {
     return FieldValue.serverTimestamp();
   } catch (e) {
-    return new Date(); // Fallback to standard Date for offline/mock scenarios
+    return new Date().toISOString(); 
   }
 };
 
 export function handleAdminSDKError(error: any): string {
   console.error('Admin SDK Error:', error);
   if (error.code === 'auth/email-already-exists') return 'This email address is already in use.';
+  if (error.code === 'permission-denied') return 'Insufficient permissions to perform this action.';
   return error.message || 'A server-side error occurred.';
 }
