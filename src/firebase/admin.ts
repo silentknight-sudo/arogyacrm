@@ -4,35 +4,39 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
  * HYPER-RESILIENT PEM PARSER
- * Handles literal \n characters, accidental quotes, and multi-line strings 
- * commonly found in Vercel/CI environment variables.
+ * Specifically engineered to handle Vercel's environment variable formats.
+ * Detects literal \n strings, removes wrapping quotes, and aligns PEM headers.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
   
-  // 1. Remove wrapping quotes often injected by dashboard copy-pasting
   let cleaned = key.trim();
+
+  // 1. Remove wrapping quotes if present (common dashboard artifact)
   if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
     cleaned = cleaned.substring(1, cleaned.length - 1);
   }
 
-  // 2. Convert literal "\n" strings into true newline characters
+  // 2. Convert literal "\n" character sequences into actual newlines
   cleaned = cleaned.replace(/\\n/g, '\n');
 
-  // 3. Force presence of BEGIN/END headers to prevent PEM truncation errors
-  if (!cleaned.includes('-----BEGIN PRIVATE KEY-----')) {
-    cleaned = `-----BEGIN PRIVATE KEY-----\n${cleaned}`;
-  }
-  if (!cleaned.includes('-----END PRIVATE KEY-----')) {
-    cleaned = `${cleaned}\n-----END PRIVATE KEY-----`;
-  }
+  // 3. Force proper PEM framing to prevent parser rejection
+  const header = '-----BEGIN PRIVATE KEY-----';
+  const footer = '-----END PRIVATE KEY-----';
+
+  if (!cleaned.includes(header)) cleaned = `${header}\n${cleaned}`;
+  if (!cleaned.includes(footer)) cleaned = `${cleaned}\n${footer}`;
+
+  // 4. Ensure no double-headers/footers were created
+  cleaned = cleaned.replace(new RegExp(`(${header}\\s*)+`, 'g'), `${header}\n`);
+  cleaned = cleaned.replace(new RegExp(`(\\s*${footer})+`, 'g'), `\n${footer}`);
 
   return cleaned;
 }
 
 /**
  * INDUSTRIAL ON-DEMAND INITIALIZER
- * Prevents build-time crashes by deferring initialization until the first method call.
+ * Prevents build-time crashes by deferring SDK setup until the first runtime call.
  */
 function initializeAdmin(): App {
   if (getApps().length > 0) return getApps()[0];
@@ -42,27 +46,28 @@ function initializeAdmin(): App {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    throw new Error('MISSING_FIREBASE_CREDENTIALS: Check Vercel Environment Variables.');
+    const missing = [];
+    if (!projectId) missing.push('FIREBASE_PROJECT_ID');
+    if (!clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
+    if (!rawPrivateKey) missing.push('FIREBASE_PRIVATE_KEY');
+    throw new Error(`MISSING_ENVIRONMENT_VARIABLES: ${missing.join(', ')}. Check Vercel project settings.`);
   }
 
   try {
+    const privateKey = formatPrivateKey(rawPrivateKey);
     return initializeApp({
-      credential: cert({ 
-        projectId, 
-        clientEmail, 
-        privateKey: formatPrivateKey(rawPrivateKey) 
-      }),
+      credential: cert({ projectId, clientEmail, privateKey }),
       projectId,
     });
   } catch (error: any) {
-    console.error('Firebase Admin SDK Initialization Failed:', error);
+    console.error('CRITICAL_ADMIN_INIT_FAILURE:', error.message);
     throw error;
   }
 }
 
 /**
  * LAZY PROXY SYSTEM
- * Explicitly blocks 'then' to prevent Next.js from mistaking the SDK for a Promise during builds.
+ * Explicitly blocks Promise-like lookups to prevent Next.js from stalling during build.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
@@ -84,17 +89,9 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
 
 export { FieldValue };
 
-export const serverTimestamp = () => {
-  try {
-    return FieldValue.serverTimestamp();
-  } catch (e) {
-    return new Date().toISOString(); 
-  }
-};
-
 export function handleAdminSDKError(error: any): string {
-  console.error('Industrial Admin Error:', error);
-  if (error.code === 'auth/email-already-exists') return 'Email address already registered.';
-  if (error.code === 'permission-denied') return 'Security: Insufficient permissions.';
-  return error.message || 'A secure server-side error occurred.';
+  console.error('Admin SDK Operation Failed:', error);
+  if (error.message?.includes('private key')) return 'Secure Key Error: Ensure FIREBASE_PRIVATE_KEY is correct in Vercel.';
+  if (error.code === 'permission-denied') return 'Security Error: Insufficient service account permissions.';
+  return error.message || 'A server-side error occurred.';
 }

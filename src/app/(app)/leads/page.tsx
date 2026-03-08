@@ -3,7 +3,7 @@
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, documentId } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,7 +16,7 @@ export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
-  // 1. Prospect Query
+  // 1. Prospect Query with Robust Guard
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
@@ -28,10 +28,9 @@ export default function LeadsPage() {
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // 2. Scalable User Discovery Query
+  // 2. Scalable User Discovery Query (Bypasses 30-ID limit)
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-    // Use array-contains to bypass the 30-ID 'in' clause limit
     return query(
       collection(firestore, 'users'), 
       where('teamspaceIds', 'array-contains', currentTeamspace.id)
@@ -43,17 +42,17 @@ export default function LeadsPage() {
   const loading = isUserLoading || isLoadingLeads || isLoadingUsers;
 
   return (
-    <div className="space-y-12 pb-16">
+    <div className="space-y-12 pb-16 pt-4">
         <div className="flex items-end justify-between flex-wrap gap-8">
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 text-accent mb-1">
-                    <Target className="h-5 w-5" />
+                    <Target className="h-5 w-5 fill-accent" />
                     <span className="text-xs font-black uppercase tracking-[0.3em]">Growth Engine</span>
                 </div>
                 <h1 className="text-6xl font-black tracking-tighter text-primary">Prospect Pipeline</h1>
-                <p className="text-xl text-muted-foreground font-semibold flex items-center gap-3">
+                <p className="text-2xl text-muted-foreground font-semibold flex items-center gap-3">
                     <Sparkles className="h-6 w-6 text-accent animate-pulse" />
-                    {currentUser?.role === 'sales_executive' ? 'Your personalized high-intent focus area.' : 'Global overview of team opportunities.'}
+                    {currentUser?.role === 'sales_executive' ? 'High-intent individuals assigned to you.' : 'Team-wide opportunity visualization.'}
                 </p>
             </div>
              <div className="flex items-center gap-4">
@@ -80,7 +79,7 @@ export default function LeadsPage() {
                 <Skeleton className="h-[600px] w-full rounded-[2.5rem]" />
             </div>
         ) : (
-            <div className="premium-card p-4 bg-card/40 backdrop-blur-2xl border-primary/5 overflow-hidden">
+            <div className="premium-card p-6 bg-card/40 backdrop-blur-2xl border-primary/5 overflow-hidden shadow-2xl">
               <DataTable columns={columns} data={leads || []} users={users || []} />
             </div>
         )}
