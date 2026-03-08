@@ -6,11 +6,32 @@ import { formatISO } from 'date-fns';
 import { adminDb } from '@/firebase/admin';
 
 async function getInteractionLogsForLead(teamspaceId: string, leadId: string): Promise<InteractionLog[]> {
-    // This is a placeholder. In a real app, you would query Firestore.
-    // For example:
-    // const snapshot = await adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId).collection('interactions').orderBy('date', 'desc').get();
-    // return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InteractionLog));
-    return [];
+    try {
+        const snapshot = await adminDb
+            .collection('teamspaces')
+            .doc(teamspaceId)
+            .collection('activityLogs')
+            .where('entityType', '==', 'Lead')
+            .where('entityId', '==', leadId)
+            .orderBy('timestamp', 'desc')
+            .limit(10)
+            .get();
+
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                type: data.action || 'Note',
+                date: data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : new Date().toISOString(),
+                notes: data.newValue || data.action || 'No details recorded.',
+                agent: 'Team Member'
+            } as InteractionLog;
+        });
+    } catch (error) {
+        console.error('Error fetching interaction logs:', error);
+        // Fallback: return empty list if index isn't ready or query fails
+        return [];
+    }
 }
 
 
@@ -22,15 +43,15 @@ export async function generateLeadSummary(lead: Lead) {
       leadDetails: {
         id: lead.id,
         name: lead.fullName,
-        email: lead.email || '',
+        email: lead.email || 'N/A',
         status: lead.status,
-        source: lead.source || 'N/A',
-        lastContactDate: lead.lastContacted ? formatISO(new Date(lead.lastContacted)) : undefined,
+        source: lead.source || 'Unknown',
+        lastContactDate: lead.updatedAt ? formatISO(new Date(lead.updatedAt)) : undefined,
         notes: lead.notes,
       },
       interactionLogs: interactionLogs.map(log => ({
           type: log.type,
-          date: formatISO(new Date(log.date)),
+          date: log.date,
           notes: log.notes,
           agent: log.agent
       }))
@@ -38,8 +59,8 @@ export async function generateLeadSummary(lead: Lead) {
 
     const result = await getLeadInteractionSummary(input);
     return { success: true, data: result };
-  } catch (error) {
-    console.error('Error generating lead summary:', error);
-    return { success: false, error: 'Failed to generate summary.' };
+  } catch (error: any) {
+    console.error('AI_SUMMARY_ERROR:', error);
+    return { success: false, error: error.message || 'Failed to generate summary.' };
   }
 }

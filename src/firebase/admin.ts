@@ -5,27 +5,27 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 /**
  * HYPER-RESILIENT PEM PARSER
  * Specifically engineered to handle service account keys from various environment formats.
- * Detects literal \n strings, handles double-escaped backslashes, and aligns PEM headers.
+ * Corrects literal \n strings, double-escaped backslashes, and malformed boundaries.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
   
-  // 1. Remove wrapping quotes and trim
+  // 1. Remove wrapping quotes and excessive whitespace
   let cleaned = key.trim().replace(/^['"]+|['"]+$/g, '');
 
-  // 2. Convert literal "\n" sequences into true newline characters
-  // We handle both \n and \\n formats
+  // 2. Resolve literal "\n" character sequences (from dashboards or JSON pasting)
+  // We use a global regex to catch all instances.
   cleaned = cleaned.replace(/\\n/g, '\n');
 
-  // 3. Force proper PEM framing to prevent "Invalid PEM" errors
+  // 3. Ensure the PEM headers/footers are present and correctly separated
   const header = '-----BEGIN PRIVATE KEY-----';
   const footer = '-----END PRIVATE KEY-----';
 
-  // Ensure headers are present and properly formatted
+  // If the key was pasted without headers, wrap it.
   if (!cleaned.includes(header)) cleaned = `${header}\n${cleaned}`;
   if (!cleaned.includes(footer)) cleaned = `${cleaned}\n${footer}`;
 
-  // Final cleanup of any accidental double-newlines introduced by the parser
+  // 4. Final normalization of newlines
   cleaned = cleaned.replace(/\n\n+/g, '\n');
 
   return cleaned;
@@ -33,17 +33,23 @@ function formatPrivateKey(key: string | undefined): string {
 
 /**
  * INDUSTRIAL ON-DEMAND INITIALIZER
- * Prevents build-time crashes by deferring SDK setup until the first runtime call.
+ * Prevents build-time crashes and "Error 500" loops by deferring setup.
  */
 function initializeAdmin(): App {
   if (getApps().length > 0) return getApps()[0];
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || 'studio-3238704164-621f1';
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || 'firebase-adminsdk-fbsvc@studio-3238704164-621f1.iam.gserviceaccount.com';
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  if (!rawPrivateKey) {
-    throw new Error('CRITICAL_ENVIRONMENT_ERROR: FIREBASE_PRIVATE_KEY is missing. Ensure it is set in your environment or .env file.');
+  // Diagnostics for troubleshooting
+  if (!projectId || !clientEmail || !rawPrivateKey) {
+    const missing = [];
+    if (!projectId) missing.push('FIREBASE_PROJECT_ID');
+    if (!clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
+    if (!rawPrivateKey) missing.push('FIREBASE_PRIVATE_KEY');
+    
+    throw new Error(`CRITICAL_ENVIRONMENT_ERROR: Missing variables [${missing.join(', ')}].`);
   }
 
   try {
@@ -91,7 +97,7 @@ export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);
   const msg = error.message || '';
   if (msg.includes('private key') || msg.includes('PEM')) {
-    return 'Secure Key Error: The Firebase Private Key formatting is invalid. Ensure headers and newlines are correct.';
+    return 'Secure Key Error: The Firebase Private Key formatting is invalid. Check your environment variables.';
   }
   return msg || 'A secure server-side operation failed.';
 }
