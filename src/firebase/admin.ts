@@ -10,14 +10,13 @@ function getAdminApp(): App | null {
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (privateKey) {
+    // Handle Vercel's potentially escaped newlines or literal quotes
     privateKey = privateKey.replace(/\\n/g, '\n');
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
       privateKey = privateKey.substring(1, privateKey.length - 1);
     }
   }
 
-  // ONLY attempt initialization if we have credentials. 
-  // This prevents the "Trust" prompts in development.
   if (projectId && clientEmail && privateKey) {
     try {
       return initializeApp({
@@ -25,31 +24,25 @@ function getAdminApp(): App | null {
         projectId,
       });
     } catch (e) {
-      console.error('Firebase Admin SDK: Explicit Init Failed:', e);
+      console.error('Firebase Admin SDK: Initialization Failed:', e);
     }
-  }
-
-  // Fallback for local emulator environments if explicitly requested
-  if (process.env.FIRESTORE_EMULATOR_HOST) {
-    try {
-      return initializeApp({ projectId: projectId || 'demo-project' });
-    } catch (e) {}
   }
 
   return null;
 }
 
 /**
- * A Proxy that delays initialization until a property is accessed.
- * Crucially, it blocks 'then' to prevent Next.js from awaiting it as a Promise.
+ * Industrial-grade Lazy Proxy.
+ * Prevents Next.js from mistaking this for a Promise during builds.
+ * Ensures initialization only happens upon first method call.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
-    if (prop === 'then') return undefined;
+    if (prop === 'then' || prop === 'constructor') return undefined;
     const app = getAdminApp();
     if (!app) {
       return (...args: any[]) => {
-        console.error(`Firebase Admin SDK: Firestore accessed before configuration. Missing Environment Variables.`);
+        console.error('Firebase Admin accessed without credentials.');
         return undefined;
       };
     }
@@ -61,11 +54,11 @@ export const adminDb: Firestore = new Proxy({} as Firestore, {
 
 export const adminAuth: Auth = new Proxy({} as Auth, {
   get(target, prop) {
-    if (prop === 'then') return undefined;
+    if (prop === 'then' || prop === 'constructor') return undefined;
     const app = getAdminApp();
     if (!app) {
       return (...args: any[]) => {
-        console.error(`Firebase Admin SDK: Auth accessed before configuration. Missing Environment Variables.`);
+        console.error('Firebase Admin Auth accessed without credentials.');
         return undefined;
       };
     }
@@ -88,6 +81,6 @@ export const serverTimestamp = () => {
 export function handleAdminSDKError(error: any): string {
   console.error('Admin SDK Error:', error);
   if (error.code === 'auth/email-already-exists') return 'This email address is already in use.';
-  if (error.code === 'permission-denied') return 'Insufficient permissions to perform this action.';
-  return error.message || 'A server-side error occurred.';
+  if (error.code === 'permission-denied') return 'Insufficient permissions.';
+  return error.message || 'A secure server-side error occurred.';
 }

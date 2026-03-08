@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- ROBUST HELPERS --
+    // -- ATOMIC HELPERS --
 
     function isSignedIn() {
       return request.auth != null && request.auth.uid != null;
@@ -17,11 +17,6 @@ service cloud.firestore {
       return isSignedIn() && data != null && data.role == 'admin';
     }
 
-    function isRole(role) {
-      let data = getUserData();
-      return isSignedIn() && data != null && data.role == role;
-    }
-
     function isMember(teamspaceId) {
       let data = getUserData();
       return isSignedIn() && data != null && (
@@ -30,7 +25,7 @@ service cloud.firestore {
       );
     }
 
-    // -- RULES --
+    // -- CORE RULES --
 
     match /users/{userId} {
       allow read: if isSignedIn();
@@ -39,7 +34,7 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin() || isRole('support');
+      allow write: if isAdmin();
     }
 
     match /teamspaces/{teamspaceId} {
@@ -47,13 +42,13 @@ service cloud.firestore {
       allow write: if isAdmin();
 
       match /leads/{leadId} {
-        // Higher roles get full access
-        allow read, write: if isAdmin() || isRole('sales_team_lead') || isRole('marketer');
+        // High-level access
+        allow read, write: if isAdmin() || (isMember(teamspaceId) && getUserData().role in ['sales_team_lead', 'marketer']);
         
-        // Executives only see leads assigned to them
-        allow read, write: if isRole('sales_executive') && 
-                             isMember(teamspaceId) && 
-                             (resource == null || (resource.data.assignedToIds != null && request.auth.uid in resource.data.assignedToIds));
+        // Strict Executive isolation
+        allow read, write: if isMember(teamspaceId) && 
+                             getUserData().role == 'sales_executive' && 
+                             (resource == null || request.auth.uid in resource.data.assignedToIds);
       }
 
       match /{allPaths=**} {

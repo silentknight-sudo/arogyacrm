@@ -1,34 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  DollarSign,
-  Users,
-  TrendingUp,
-  Target,
-} from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend
-} from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DollarSign, Users, TrendingUp, Target, Leaf, Sparkles } from 'lucide-react';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { useApp } from '@/context/app-context';
 import type { Lead, Deal } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { subMonths, format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-
 
 export default function Dashboard() {
     const { currentUser, currentTeamspace, isUserLoading } = useApp();
@@ -55,174 +35,114 @@ export default function Dashboard() {
     , [firestore, currentTeamspace, currentUser, isUserLoading]);
     const { data: allDeals, isLoading: isLoadingAllDeals } = useCollection<Deal>(allDealsQuery);
 
-    const [totalRevenue, setTotalRevenue] = useState<number | null>(null);
-    const [conversionRate, setConversionRate] = useState<number | null>(null);
-    const [dealsWonCount, setDealsWonCount] = useState<number | null>(null);
-    const [recentLeads, setRecentLeads] = useState<Lead[]>([]);
-    const [monthlyRevenue, setMonthlyRevenue] = useState<Array<{ month: string, revenue: number }>>([]);
+    const [metrics, setMetrics] = useState({
+        totalRevenue: 0,
+        conversionRate: 0,
+        wonCount: 0,
+        chartData: [] as any[],
+    });
 
     useEffect(() => {
-        if (wonDeals) {
-            const calculatedTotalRevenue = wonDeals.reduce((acc, deal) => acc + deal.amount, 0);
-            setTotalRevenue(calculatedTotalRevenue);
-            setDealsWonCount(wonDeals.length);
-
-            const today = new Date();
-            const twelveMonthsAgo = startOfMonth(subMonths(today, 11));
-            const interval = { start: twelveMonthsAgo, end: endOfMonth(today) };
+        if (wonDeals && allDeals) {
+            const rev = wonDeals.reduce((acc, d) => acc + d.amount, 0);
+            const rate = allDeals.length > 0 ? (wonDeals.length / allDeals.length) * 100 : 0;
             
-            const monthIntervals = eachMonthOfInterval(interval);
-            const revenueByMonth = monthIntervals.map(monthStart => ({
-                month: format(monthStart, 'MMM'),
-                revenue: 0,
-            }));
+            // Generate last 6 months for chart
+            const months = eachMonthOfInterval({
+                start: subMonths(new Date(), 5),
+                end: new Date()
+            }).map(m => ({ month: format(m, 'MMM'), revenue: 0 }));
 
-            wonDeals.forEach(deal => {
-                const closeDate = new Date(deal.closeDate);
-                if (closeDate && closeDate >= interval.start && closeDate <= interval.end) {
-                    const monthStr = format(closeDate, 'MMM');
-                    const monthEntry = revenueByMonth.find(m => m.month === monthStr);
-                    if (monthEntry) {
-                      monthEntry.revenue += deal.amount;
-                    }
-                }
+            wonDeals.forEach(d => {
+                const m = format(new Date(d.closeDate), 'MMM');
+                const entry = months.find(x => x.month === m);
+                if (entry) entry.revenue += d.amount;
             });
 
-            setMonthlyRevenue(revenueByMonth);
-        }
-
-        if (allDeals && wonDeals) {
-             const calculatedConversionRate = allDeals.length > 0 ? (wonDeals.length / allDeals.length) * 100 : 0;
-             setConversionRate(calculatedConversionRate);
-        }
-        
-        if (newLeads) {
-            const sortedLeads = [...newLeads].sort((a, b) => {
-                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return dateB - dateA;
+            setMetrics({
+                totalRevenue: rev,
+                conversionRate: rate,
+                wonCount: wonDeals.length,
+                chartData: months
             });
-            setRecentLeads(sortedLeads.slice(0, 5));
         }
+    }, [wonDeals, allDeals]);
 
-    }, [newLeads, wonDeals, allDeals]);
-    
-    const isLoadingMetrics = isLoadingLeads || isLoadingWonDeals || isLoadingAllDeals;
-    const isLoading = isUserLoading || isLoadingMetrics;
+    const isLoading = isUserLoading || isLoadingLeads || isLoadingWonDeals || isLoadingAllDeals;
 
     return (
-        <div className="flex flex-1 flex-col gap-4">
-            <header>
-                <h1 className="text-3xl font-bold tracking-tight">Welcome, {currentUser?.displayName?.split(' ')[0]}!</h1>
-                <p className="text-muted-foreground">Here's a snapshot of your business performance.</p>
-            </header>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{`₹${(totalRevenue || 0).toLocaleString('en-IN')}`}</div>}
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">New Leads</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                {isLoading ? <Skeleton className="h-8 w-12" /> : <div className="text-2xl font-bold">{`+${newLeads?.length || 0}`}</div>}
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-                <Target className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                {isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{`${(conversionRate || 0).toFixed(1)}%`}</div>}
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Deals Won</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                 {isLoading ? <Skeleton className="h-8 w-12" /> : <div className="text-2xl font-bold">{`+${dealsWonCount || 0}`}</div>}
-                </CardContent>
-            </Card>
+        <div className="flex flex-col gap-8 pb-10">
+            <div className="flex flex-col gap-2">
+                <h1 className="text-4xl font-black tracking-tight text-primary flex items-center gap-3">
+                    <Leaf className="h-8 w-8 text-accent animate-pulse" />
+                    Namaste, {currentUser?.displayName?.split(' ')[0]}
+                </h1>
+                <p className="text-muted-foreground font-medium">Empowering wellness through smart insights.</p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="col-span-4">
-                <CardHeader>
-                <CardTitle>Monthly Revenue</CardTitle>
-                </CardHeader>
-                <CardContent className="pl-2">
-                {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
-                  <ResponsiveContainer width="100%" height={350}>
-                      <BarChart data={monthlyRevenue}>
-                      <XAxis
-                          dataKey="month"
-                          stroke="#888888"
-                          fontSize={12}
-                          tickLine={false}
-                          axisLine={false}
-                      />
-                      <YAxis
-                          stroke="#888888"
-                          fontSize={12}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(value) => `₹${value / 1000}K`}
-                      />
-                      <Tooltip
-                          cursor={{ fill: 'hsl(var(--muted))' }}
-                          contentStyle={{ 
-                              background: 'hsl(var(--background))', 
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: 'var(--radius)'
-                          }}
-                      />
-                      <Legend />
-                      <Bar
-                          dataKey="revenue"
-                          fill="hsl(var(--primary))"
-                          radius={[4, 4, 0, 0]}
-                      />
-                      </BarChart>
-                  </ResponsiveContainer>
-                )}
-                </CardContent>
-            </Card>
-            <Card className="col-span-4 lg:col-span-3">
-                <CardHeader>
-                <CardTitle>Recent Leads</CardTitle>
-                <CardDescription>
-                    You have {newLeads?.length || 0} new leads in total.
-                </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {isLoadingLeads ? (
-                           <div className="space-y-4">
-                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-                           </div>
-                        ) : recentLeads.length > 0 ? recentLeads.map(lead => (
-                            <div key={lead.id} className="flex items-center">
-                                <div className="ml-4 space-y-1">
-                                    <p className="text-sm font-medium leading-none">{lead.fullName}</p>
-                                    <p className="text-sm text-muted-foreground">{lead.email}</p>
-                                </div>
-                                <div className="ml-auto font-medium">{lead.source}</div>
-                            </div>
-                        )) : (
-                           <p className="text-sm text-muted-foreground">No new leads. Great job!</p>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {[
+                    { label: 'Total Revenue', value: `₹${metrics.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-primary' },
+                    { label: 'New Leads', value: `+${newLeads?.length || 0}`, icon: Users, color: 'text-blue-600' },
+                    { label: 'Conversion', value: `${metrics.conversionRate.toFixed(1)}%`, icon: Target, color: 'text-accent' },
+                    { label: 'Deals Won', value: metrics.wonCount, icon: TrendingUp, color: 'text-green-600' },
+                ].map((stat, i) => (
+                    <Card key={i} className="premium-card overflow-hidden">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</CardTitle>
+                            <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-3xl font-black">{stat.value}</div>}
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-7">
+                <Card className="lg:col-span-4 premium-card p-6">
+                    <CardHeader className="px-0 pt-0">
+                        <CardTitle className="text-xl flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-accent" />
+                            Revenue Analytics
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[350px] px-0">
+                        {isLoading ? <Skeleton className="h-full w-full" /> : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={metrics.chartData}>
+                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} tickFormatter={v => `₹${v/1000}k`} />
+                                    <Tooltip cursor={{fill: 'rgba(45,90,39,0.05)'}} contentStyle={{borderRadius: '1rem', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)'}} />
+                                    <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} barSize={40} />
+                                </BarChart>
+                            </ResponsiveContainer>
                         )}
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+
+                <Card className="lg:col-span-3 premium-card p-6">
+                    <CardHeader className="px-0 pt-0">
+                        <CardTitle className="text-xl">Growth Focus</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {isLoading ? <Skeleton className="h-64 w-full" /> : (
+                            <div className="flex flex-col gap-4">
+                                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                                    <p className="text-xs font-bold uppercase text-primary/60 mb-1">Top Performer</p>
+                                    <p className="font-bold text-lg">Immunity Boosters</p>
+                                    <div className="w-full bg-primary/10 h-2 rounded-full mt-2 overflow-hidden">
+                                        <div className="bg-primary h-full w-[75%]" />
+                                    </div>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-accent/5 border border-accent/10">
+                                    <p className="text-xs font-bold uppercase text-accent/60 mb-1">High Intent Leads</p>
+                                    <p className="font-bold text-lg">{newLeads?.filter(l => (l.score || 0) > 80).length || 0} Ready to Convert</p>
+                                </div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );
