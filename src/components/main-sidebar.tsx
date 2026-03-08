@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
     Users, Contact, Building2, Handshake, Megaphone, Package,
     ShoppingCart, Receipt, Ticket, Undo2, ShieldAlert, LayoutDashboard,
-    Leaf, Shield, LayoutGrid
+    Leaf, Shield, LayoutGrid, Calendar, Phone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/app-context';
@@ -21,6 +21,11 @@ export function MainSidebar({ className }: { className?: string }) {
         { href: '/contacts', label: 'Contacts', icon: Contact },
         { href: '/accounts', label: 'Accounts', icon: Building2 },
         { href: '/deals', label: 'Deals', icon: Handshake },
+    ]},
+    { title: 'ACTIVITIES', items: [
+        { href: '/tasks', label: 'Tasks', icon: Calendar },
+        { href: '/meetings', label: 'Meetings', icon: Calendar },
+        { href: '/calls', label: 'Calls', icon: Phone },
     ]},
     { title: 'GROWTH', items: [{ href: '/campaigns', label: 'Campaigns', icon: Megaphone }] },
     { title: 'ECOMMERCE', items: [

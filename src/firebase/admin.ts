@@ -4,7 +4,7 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
  * Hyper-resilient private key formatter.
- * Handles literal \n, multi-line strings, and Vercel-specific formatting artifacts.
+ * Definitively handles literal \n, multi-line strings, and Vercel dashboard artifacts.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
@@ -40,7 +40,7 @@ function initializeAdmin(): App {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    throw new Error('MISSING_FIREBASE_ENV_VARS: Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set.');
+    throw new Error('MISSING_FIREBASE_ENV_VARS: Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set in Vercel.');
   }
 
   const privateKey = formatPrivateKey(rawPrivateKey);
@@ -59,10 +59,10 @@ function initializeAdmin(): App {
 /**
  * Lazy Proxy for Firestore.
  * Prevents crashes during build/SSR by initializing ONLY when a method is called.
+ * Explicitly blocks 'then' to prevent Next.js from mistaking it for a Promise.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
-    // CRITICAL: Block these properties so Next.js doesn't mistake the proxy for a Promise or a serializable object
     if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') {
       return undefined;
     }

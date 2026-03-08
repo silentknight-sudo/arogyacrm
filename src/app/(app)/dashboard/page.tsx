@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, Users, TrendingUp, Target, Leaf, Sparkles, Zap } from 'lucide-react';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useApp } from '@/context/app-context';
 import type { Lead, Deal } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';

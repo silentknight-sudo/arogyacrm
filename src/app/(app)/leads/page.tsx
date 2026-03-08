@@ -27,7 +27,6 @@ export default function LeadsPage() {
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // Advanced User Discovery: Fetching by teamspace membership
   const usersQuery = useMemoFirebase(() => {
     const memberIds = currentTeamspace?.memberIds || [];
     return (!isUserLoading && currentUser && memberIds.length > 0)
