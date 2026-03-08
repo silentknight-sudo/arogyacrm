@@ -50,7 +50,7 @@ function initializeAdmin(): App {
     if (!projectId) missing.push('FIREBASE_PROJECT_ID');
     if (!clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
     if (!rawPrivateKey) missing.push('FIREBASE_PRIVATE_KEY');
-    throw new Error(`MISSING_ENVIRONMENT_VARIABLES: ${missing.join(', ')}. Check Vercel project settings.`);
+    throw new Error(`MISSING_ENVIRONMENT_VARIABLES: ${missing.join(', ')}. Ensure these are set in Vercel.`);
   }
 
   try {
@@ -61,7 +61,7 @@ function initializeAdmin(): App {
     });
   } catch (error: any) {
     console.error('CRITICAL_ADMIN_INIT_FAILURE:', error.message);
-    throw error;
+    throw new Error(`FIREBASE_ADMIN_INIT_ERROR: ${error.message}`);
   }
 }
 

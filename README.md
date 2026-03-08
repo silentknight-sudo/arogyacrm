@@ -13,15 +13,15 @@ To prevent **Error 500** and ensure stable Admin SDK initialization, you MUST co
 | `FIREBASE_CLIENT_EMAIL` | `client_email` from your service account JSON |
 | `FIREBASE_PRIVATE_KEY` | `private_key` (Paste the entire block including BEGIN/END lines) |
 
-### 2. Getting Your Credentials
-1. Go to the [Firebase Console](https://console.firebase.google.com/).
-2. Select your project.
-3. Click the **Gear Icon** > **Project Settings** > **Service accounts**.
-4. Click **Generate new private key**.
-5. Copy the values from the downloaded JSON file into Vercel.
+### 2. Private Key Instruction (Vercel)
+When adding `FIREBASE_PRIVATE_KEY` to Vercel:
+1. Copy the value of `private_key` from your JSON file.
+2. It should start with `-----BEGIN PRIVATE KEY-----` and end with `-----END PRIVATE KEY-----`.
+3. Paste the **entire block** into the Vercel "Value" field.
+4. Our resilient parser will automatically handle any newline escaping or formatting issues.
 
 ## Advanced Features
-- **Industrial Admin Proxy**: Zero-crash initialization for serverless environments.
+- **Industrial Admin Singleton**: Zero-crash initialization for serverless environments.
 - **Glassmorphic UI**: Premium "Forest & Gold" aesthetic with advanced micro-interactions.
 - **AI-Powered Insights**: Automated lead scoring and interaction summarization.
 - **Scalable Discovery**: Robust member-based filtering for all assignments.
