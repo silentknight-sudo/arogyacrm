@@ -53,9 +53,11 @@ export default function Dashboard() {
             }).map(m => ({ month: format(m, 'MMM'), revenue: 0 }));
 
             wonDeals.forEach(d => {
-                const m = format(new Date(d.closeDate), 'MMM');
-                const entry = months.find(x => x.month === m);
-                if (entry) entry.revenue += d.amount;
+                try {
+                    const m = format(new Date(d.closeDate), 'MMM');
+                    const entry = months.find(x => x.month === m);
+                    if (entry) entry.revenue += d.amount;
+                } catch(e) {}
             });
 
             setMetrics({

@@ -16,7 +16,6 @@ function formatPrivateKey(key: string | undefined): string {
   }
 
   // 2. Convert literal "\n" strings into actual newline characters
-  // This is the #1 cause of "Invalid PEM" errors on Vercel
   cleaned = cleaned.replace(/\\n/g, '\n');
 
   // 3. Ensure the key has proper headers and structure
@@ -41,9 +40,7 @@ function initializeAdmin(): App {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    // During Next.js build, env vars might be missing. 
-    // We throw a silent-ish error that the Proxy will catch to prevent build crashes.
-    throw new Error('MISSING_FIREBASE_ENV_VARS');
+    throw new Error('MISSING_FIREBASE_ENV_VARS: Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set.');
   }
 
   const privateKey = formatPrivateKey(rawPrivateKey);
@@ -69,15 +66,10 @@ export const adminDb: Firestore = new Proxy({} as Firestore, {
     if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') {
       return undefined;
     }
-    try {
-      const app = initializeAdmin();
-      const db = getFirestore(app);
-      const value = (db as any)[prop];
-      return typeof value === 'function' ? value.bind(db) : value;
-    } catch (e: any) {
-      if (e.message === 'MISSING_FIREBASE_ENV_VARS') return undefined;
-      throw e;
-    }
+    const app = initializeAdmin();
+    const db = getFirestore(app);
+    const value = (db as any)[prop];
+    return typeof value === 'function' ? value.bind(db) : value;
   }
 });
 
@@ -89,15 +81,10 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
     if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') {
       return undefined;
     }
-    try {
-      const app = initializeAdmin();
-      const auth = getAuth(app);
-      const value = (auth as any)[prop];
-      return typeof value === 'function' ? value.bind(auth) : value;
-    } catch (e: any) {
-      if (e.message === 'MISSING_FIREBASE_ENV_VARS') return undefined;
-      throw e;
-    }
+    const app = initializeAdmin();
+    const auth = getAuth(app);
+    const value = (auth as any)[prop];
+    return typeof value === 'function' ? value.bind(auth) : value;
   }
 });
 
