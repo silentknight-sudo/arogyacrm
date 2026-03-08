@@ -3,25 +3,35 @@ import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
- * Industrial-grade private key formatter for Vercel.
- * Handles escaped newlines, quotes, and whitespace.
+ * Hyper-resilient private key formatter.
+ * Handles literal \n, multi-line strings, and Vercel-specific formatting artifacts.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
   
-  // Replace literal \n strings with real newline characters
-  let formatted = key.replace(/\\n/g, '\n');
-  
-  // Remove any wrapping double quotes added by environment editors
-  if (formatted.startsWith('"') && formatted.endsWith('"')) {
-    formatted = formatted.substring(1, formatted.length - 1);
+  // 1. Remove any wrapping double quotes
+  let cleaned = key.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.substring(1, cleaned.length - 1);
   }
-  
-  return formatted.trim();
+
+  // 2. Convert literal "\n" strings into actual newline characters
+  // This is the #1 cause of "Invalid PEM" errors on Vercel
+  cleaned = cleaned.replace(/\\n/g, '\n');
+
+  // 3. Ensure the key has proper headers and structure
+  if (!cleaned.includes('-----BEGIN PRIVATE KEY-----')) {
+    cleaned = `-----BEGIN PRIVATE KEY-----\n${cleaned}`;
+  }
+  if (!cleaned.includes('-----END PRIVATE KEY-----')) {
+    cleaned = `${cleaned}\n-----END PRIVATE KEY-----`;
+  }
+
+  return cleaned;
 }
 
 /**
- * Robust Admin SDK Initializer for Serverless/Vercel.
+ * Robust Admin SDK Initializer.
  */
 function initializeAdmin(): App {
   if (getApps().length > 0) return getApps()[0];
@@ -31,9 +41,9 @@ function initializeAdmin(): App {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    throw new Error(
-      `Firebase Admin SDK: Configuration missing. Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set in Vercel.`
-    );
+    // During Next.js build, env vars might be missing. 
+    // We throw a silent-ish error that the Proxy will catch to prevent build crashes.
+    throw new Error('MISSING_FIREBASE_ENV_VARS');
   }
 
   const privateKey = formatPrivateKey(rawPrivateKey);
@@ -51,18 +61,23 @@ function initializeAdmin(): App {
 
 /**
  * Lazy Proxy for Firestore.
- * Prevents crashes during build/SSR by initializing only when called.
+ * Prevents crashes during build/SSR by initializing ONLY when a method is called.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
-  get(_, prop) {
-    // Explicitly block properties that Next.js/React might check during build/hydration
-    if (prop === 'then' || prop === 'constructor' || prop === 'toJSON' || prop === '$$typeof') {
+  get(target, prop) {
+    // CRITICAL: Block these properties so Next.js doesn't mistake the proxy for a Promise or a serializable object
+    if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') {
       return undefined;
     }
-    const app = initializeAdmin();
-    const db = getFirestore(app);
-    const value = (db as any)[prop];
-    return typeof value === 'function' ? value.bind(db) : value;
+    try {
+      const app = initializeAdmin();
+      const db = getFirestore(app);
+      const value = (db as any)[prop];
+      return typeof value === 'function' ? value.bind(db) : value;
+    } catch (e: any) {
+      if (e.message === 'MISSING_FIREBASE_ENV_VARS') return undefined;
+      throw e;
+    }
   }
 });
 
@@ -70,14 +85,19 @@ export const adminDb: Firestore = new Proxy({} as Firestore, {
  * Lazy Proxy for Auth.
  */
 export const adminAuth: Auth = new Proxy({} as Auth, {
-  get(_, prop) {
-    if (prop === 'then' || prop === 'constructor' || prop === 'toJSON' || prop === '$$typeof') {
+  get(target, prop) {
+    if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') {
       return undefined;
     }
-    const app = initializeAdmin();
-    const auth = getAuth(app);
-    const value = (auth as any)[prop];
-    return typeof value === 'function' ? value.bind(auth) : value;
+    try {
+      const app = initializeAdmin();
+      const auth = getAuth(app);
+      const value = (auth as any)[prop];
+      return typeof value === 'function' ? value.bind(auth) : value;
+    } catch (e: any) {
+      if (e.message === 'MISSING_FIREBASE_ENV_VARS') return undefined;
+      throw e;
+    }
   }
 });
 

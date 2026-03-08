@@ -9,7 +9,7 @@ import type { Lead, UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Sparkles, Filter } from 'lucide-react';
+import { PlusCircle, Upload, Sparkles } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 
 export default function LeadsPage() {
@@ -29,9 +29,9 @@ export default function LeadsPage() {
 
   // Advanced User Discovery: Fetching by teamspace membership
   const usersQuery = useMemoFirebase(() => {
-    const hasMembers = currentTeamspace?.memberIds && currentTeamspace.memberIds.length > 0;
-    return (!isUserLoading && currentUser && hasMembers)
-        ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
+    const memberIds = currentTeamspace?.memberIds || [];
+    return (!isUserLoading && currentUser && memberIds.length > 0)
+        ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
         : null;
   }, [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]);
   

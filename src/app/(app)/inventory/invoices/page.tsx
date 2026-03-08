@@ -16,18 +16,18 @@ export default function InvoicesPage() {
   const firestore = useFirestore();
 
   const invoicesQuery = useMemoFirebase(() =>
-    currentTeamspace
+    currentTeamspace?.id
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'invoices'))
       : null
-  , [firestore, currentTeamspace]);
+  , [firestore, currentTeamspace?.id]);
   
   const { data: invoices, isLoading: isLoadingInvoices } = useCollection<Invoice>(invoicesQuery);
 
   const salesOrdersQuery = useMemoFirebase(() =>
-    currentTeamspace
+    currentTeamspace?.id
         ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'salesOrders'))
         : null
-    , [firestore, currentTeamspace]);
+    , [firestore, currentTeamspace?.id]);
   const { data: salesOrders, isLoading: isLoadingSalesOrders } = useCollection<SalesOrder>(salesOrdersQuery);
 
   const isLoading = isUserLoading || isLoadingInvoices || isLoadingSalesOrders;
@@ -46,7 +46,7 @@ export default function InvoicesPage() {
                   salesOrders={salesOrders || []}
                   isLoading={isLoading}
                 >
-                    <Button className="shadow-lg shadow-primary/20">
+                    <Button className="shadow-lg shadow-primary/20 herbal-gradient rounded-xl px-6 py-6 font-bold">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         New Invoice
                     </Button>
@@ -59,7 +59,7 @@ export default function InvoicesPage() {
                 <Skeleton className="h-[400px] w-full rounded-xl" />
             </div>
         ) : (
-            <div className="premium-card rounded-2xl p-1">
+            <div className="premium-card p-1">
               <DataTable columns={columns} data={invoices || []} />
             </div>
         )}
