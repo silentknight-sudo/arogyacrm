@@ -22,21 +22,20 @@ function formatPrivateKey(key: string | undefined): string {
   const footer = '-----END PRIVATE KEY-----';
 
   // Ensure headers are present and properly formatted
-  if (!cleaned.includes(header)) cleaned = `${header}\n${cleaned}`;
-  if (!cleaned.includes(footer)) cleaned = `${cleaned}\n${footer}`;
+  if (!cleaned.includes(header)) {
+    cleaned = `${header}\n${cleaned}`;
+  }
+  if (!cleaned.includes(footer)) {
+    cleaned = `${cleaned}\n${footer}`;
+  }
 
   return cleaned;
 }
 
-let cachedApp: App | null = null;
-
 function getAdminApp(): App {
-  if (cachedApp) return cachedApp;
-  
   const existingApps = getApps();
   if (existingApps.length > 0) {
-    cachedApp = existingApps[0];
-    return cachedApp;
+    return existingApps[0];
   }
 
   const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -49,11 +48,10 @@ function getAdminApp(): App {
 
   try {
     const privateKey = formatPrivateKey(rawPrivateKey);
-    cachedApp = initializeApp({
+    return initializeApp({
       credential: cert({ projectId, clientEmail, privateKey }),
       projectId,
     });
-    return cachedApp;
   } catch (error: any) {
     console.error('FIREBASE_ADMIN_INIT_FAILURE:', error.message);
     throw new Error(`FIREBASE_ADMIN_INIT_ERROR: ${error.message}`);
@@ -62,6 +60,7 @@ function getAdminApp(): App {
 
 /**
  * SINGLETON ACCESSORS
+ * Initialized on first import to ensure stability.
  */
 const app = getAdminApp();
 export const adminDb: Firestore = getFirestore(app);
@@ -69,7 +68,7 @@ export const adminAuth: Auth = getAuth(app);
 
 // Consistent exports for server-side mutations
 export { FieldValue };
-export const serverTimestamp = FieldValue.serverTimestamp;
+export const serverTimestamp = () => FieldValue.serverTimestamp();
 
 export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);

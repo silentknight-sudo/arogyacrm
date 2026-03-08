@@ -27,7 +27,7 @@ export default function LeadsPage() {
     }
     
     // TEAM LEADS & EXECUTIVES: Strict isolation
-    // They only see leads explicitly assigned to them.
+    // Both roles now only see leads explicitly assigned to them.
     return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 

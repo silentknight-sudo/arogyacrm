@@ -3,7 +3,12 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {
-    serverComponentsExternalPackages: ['firebase-admin', '@google-cloud/firestore'],
+    serverComponentsExternalPackages: [
+      'firebase-admin', 
+      '@google-cloud/firestore',
+      'google-auth-library',
+      'protobufjs'
+    ],
   },
   typescript: {
     ignoreBuildErrors: true,
