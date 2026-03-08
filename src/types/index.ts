@@ -131,7 +131,7 @@ export type Task = {
   dueDate: string;
   status: TaskStatus;
   priority: 'Low' | 'Medium' | 'High';
-  assignedToId: string;
+  assignedToIds: string[];
   relatedToEntityType?: string;
   relatedToEntityId?: string;
   createdAt: any;

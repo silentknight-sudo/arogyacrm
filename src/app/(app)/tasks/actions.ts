@@ -10,7 +10,7 @@ const CreateTaskSchema = z.object({
     status: z.enum(['Todo', 'In Progress', 'Done']),
     priority: z.enum(['Low', 'Medium', 'High']),
     dueDate: z.string().min(1, 'Due date is required.'),
-    assignedToId: z.string().min(1, 'Must be assigned to a user.'),
+    assignedToIds: z.array(z.string()).min(1, 'Must be assigned to at least one user.'),
     teamspaceId: z.string().min(1, 'Must belong to a teamspace.'),
 });
 
