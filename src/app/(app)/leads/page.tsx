@@ -16,14 +16,19 @@ export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
-  // 1. Prospect Query with Robust Guard
+  // 1. Prospect Query with Strict Hierarchical Isolation
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
-    if (currentUser.role === 'sales_executive') {
-      return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
+    
+    // Only Admins can see the entire global pipeline
+    if (currentUser.role === 'admin') {
+      return query(leadsRef);
     }
-    return query(leadsRef);
+    
+    // Team Leads and Sales Executives ONLY see leads assigned to them
+    // This enforces the "Admin -> Team Lead -> Executive" visibility chain
+    return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
@@ -52,7 +57,7 @@ export default function LeadsPage() {
                 <h1 className="text-6xl font-black tracking-tighter text-primary">Prospect Pipeline</h1>
                 <p className="text-2xl text-muted-foreground font-semibold flex items-center gap-3">
                     <Sparkles className="h-6 w-6 text-accent animate-pulse" />
-                    {currentUser?.role === 'sales_executive' ? 'High-intent individuals assigned to you.' : 'Team-wide opportunity visualization.'}
+                    {currentUser?.role === 'admin' ? 'Team-wide opportunity visualization.' : 'High-intent individuals assigned to you.'}
                 </p>
             </div>
              <div className="flex items-center gap-4">
