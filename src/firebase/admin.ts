@@ -38,16 +38,12 @@ function formatPrivateKey(key: string | undefined): string {
 function initializeAdmin(): App {
   if (getApps().length > 0) return getApps()[0];
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = process.env.FIREBASE_PROJECT_ID || 'studio-3238704164-621f1';
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || 'firebase-adminsdk-fbsvc@studio-3238704164-621f1.iam.gserviceaccount.com';
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  if (!projectId || !clientEmail || !rawPrivateKey) {
-    const missing = [];
-    if (!projectId) missing.push('FIREBASE_PROJECT_ID');
-    if (!clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
-    if (!rawPrivateKey) missing.push('FIREBASE_PRIVATE_KEY');
-    throw new Error(`CRITICAL_ENVIRONMENT_ERROR: Missing variables (${missing.join(', ')}). Check your .env file or hosting provider settings.`);
+  if (!rawPrivateKey) {
+    throw new Error('CRITICAL_ENVIRONMENT_ERROR: FIREBASE_PRIVATE_KEY is missing. Ensure it is set in your environment or .env file.');
   }
 
   try {

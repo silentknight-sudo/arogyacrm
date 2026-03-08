@@ -42,13 +42,18 @@ service cloud.firestore {
       allow write: if isAdmin();
 
       match /leads/{leadId} {
-        // High-level access
-        allow read, write: if isAdmin() || (isMember(teamspaceId) && getUserData().role in ['sales_team_lead', 'marketer']);
+        // HIERARCHICAL ACCESS:
+        // 1. Admins see everything.
+        // 2. Team Leads & Executives see only leads assigned to them.
+        allow read: if isMember(teamspaceId) && (isAdmin() || request.auth.uid in resource.data.assignedToIds);
         
-        // Strict Executive isolation
-        allow read, write: if isMember(teamspaceId) && 
-                             getUserData().role == 'sales_executive' && 
-                             (resource == null || request.auth.uid in resource.data.assignedToIds);
+        // WRITE PERMISSIONS:
+        // 1. Admins can do anything.
+        // 2. Team Leads can edit and delegate leads they are assigned to.
+        allow write: if isMember(teamspaceId) && (
+          isAdmin() || 
+          (getUserData().role == 'sales_team_lead' && (resource == null || request.auth.uid in resource.data.assignedToIds))
+        );
       }
 
       match /{allPaths=**} {

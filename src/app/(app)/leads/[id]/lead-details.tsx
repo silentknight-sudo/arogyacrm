@@ -9,6 +9,7 @@ const statusVariantMap: { [key: string]: 'default' | 'secondary' | 'destructive'
   Contacted: 'secondary',
   Lost: 'destructive',
   Unqualified: 'destructive',
+  Converted: 'default',
 };
 
 export function LeadDetails({ lead }: { lead: Lead }) {

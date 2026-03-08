@@ -42,9 +42,11 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
   try {
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = AssignLeadSchema.parse(values);
 
-    // Secure Admin/TeamLead verification
+    // Secure Verification: Only Admins or Team Leads can reassign
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    if (!currentUserDoc.exists || !['admin', 'sales_team_lead'].includes(currentUserDoc.data()?.role)) {
+    const role = currentUserDoc.data()?.role;
+    
+    if (!currentUserDoc.exists || !['admin', 'sales_team_lead'].includes(role)) {
       throw new Error('Unauthorized: Only admins or team leads can reassign prospects.');
     }
 
