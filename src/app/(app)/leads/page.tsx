@@ -3,7 +3,7 @@
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, documentId } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,12 +27,12 @@ export default function LeadsPage() {
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
+  // Scalable user discovery: Fetch all users who belong to this teamspace
   const usersQuery = useMemoFirebase(() => {
-    const ids = currentTeamspace?.memberIds;
-    return (!isUserLoading && currentUser && ids && ids.length > 0)
-        ? query(collection(firestore, 'users'), where(documentId(), 'in', ids)) 
+    return (!isUserLoading && currentUser && currentTeamspace?.id)
+        ? query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id)) 
         : null;
-  }, [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]);
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
@@ -51,14 +51,14 @@ export default function LeadsPage() {
              <div className="flex items-center gap-3">
               {(currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead') && (
                 <UploadLeadsDialog users={users || []} isLoading={loading}>
-                  <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-6">
+                  <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-6 py-6 font-bold">
                     <Upload className="mr-2 h-4 w-4" />
                     Bulk Import
                   </Button>
                 </UploadLeadsDialog>
               )}
               <CreateLeadDialog>
-                  <Button className="rounded-2xl herbal-gradient shadow-xl shadow-primary/20 px-8 py-6 text-base font-bold">
+                  <Button className="rounded-2xl herbal-gradient shadow-2xl shadow-primary/20 px-8 py-6 text-base font-bold gold-glow">
                       <PlusCircle className="mr-2 h-5 w-5" />
                       Add Lead
                   </Button>
@@ -72,7 +72,7 @@ export default function LeadsPage() {
                 <Skeleton className="h-[500px] w-full rounded-3xl" />
             </div>
         ) : (
-            <div className="premium-card rounded-[2rem] p-2 bg-card/50 backdrop-blur-sm overflow-hidden">
+            <div className="premium-card p-2 bg-card/50 backdrop-blur-sm overflow-hidden">
               <DataTable columns={columns} data={leads || []} users={users || []} />
             </div>
         )}

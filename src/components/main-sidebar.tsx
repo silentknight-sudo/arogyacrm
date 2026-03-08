@@ -3,11 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    Users, Contact, Building2, Handshake, Megaphone, ListTodo, Calendar, Phone, Package,
-    ShoppingCart, FilePlus2, Receipt, Ticket, Undo2, ShieldAlert, LayoutDashboard,
-    ChevronDown, Settings, LayoutGrid, Leaf, Shield
+    Users, Contact, Building2, Handshake, Megaphone, Package,
+    ShoppingCart, Receipt, Ticket, Undo2, ShieldAlert, LayoutDashboard,
+    Leaf, Shield, LayoutGrid
 } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/app-context';
 
@@ -41,7 +40,7 @@ export function MainSidebar({ className }: { className?: string }) {
     <aside className={cn("flex flex-col glass-sidebar h-screen sticky top-0", className)}>
       <div className="h-24 flex items-center px-8">
         <Link href="/" className="flex items-center gap-3 group">
-           <div className="p-3 bg-primary rounded-2xl shadow-xl shadow-primary/30 group-hover:scale-110 group-hover:rotate-6 transition-all">
+           <div className="p-3 herbal-gradient rounded-2xl shadow-2xl shadow-primary/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
              <Leaf className="h-6 w-6 text-white" />
            </div>
            <div className="flex flex-col">
@@ -51,10 +50,10 @@ export function MainSidebar({ className }: { className?: string }) {
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-10 space-y-8 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto px-4 pb-10 space-y-8 scrollbar-hide pt-4">
         {currentUser?.role === 'admin' && (
             <div className="space-y-2">
-                <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Administration</p>
+                <p className="px-4 text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em]">Administration</p>
                 <div className="space-y-1">
                     <Link href="/admin" className={cn('sidebar-link', pathname === '/admin' && 'sidebar-link-active')}>
                         <Shield className="h-4 w-4" /> <span>Console</span>
@@ -68,7 +67,7 @@ export function MainSidebar({ className }: { className?: string }) {
 
         {menu.map((section) => (
             <div key={section.title} className="space-y-2">
-                <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{section.title}</p>
+                <p className="px-4 text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em]">{section.title}</p>
                 <div className="space-y-1">
                     {section.items.map((item) => {
                         const Icon = item.icon;
