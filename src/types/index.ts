@@ -63,9 +63,7 @@ export type DealStage =
   | 'Contacted'
   | 'Qualified'
   | 'Demo'
-  | 'Negotiation'
-  | 'Won'
-  | 'Lost';
+  | 'Negotiation' | 'Won' | 'Lost';
 
 export type Deal = {
   id: string;
@@ -159,6 +157,22 @@ export type SalesOrder = {
   totalAmount: number;
   lineItems: LineItem[];
   quoteId?: string;
+  ownerId: string;
+  createdAt: any;
+  updatedAt: any;
+};
+
+export type PurchaseOrderStatus = 'Pending' | 'Ordered' | 'Received' | 'Cancelled';
+export type PurchaseOrder = {
+  id: string;
+  teamspaceId: string;
+  orderNumber: string;
+  supplierName: string;
+  orderDate: string;
+  expectedDeliveryDate: string;
+  status: PurchaseOrderStatus;
+  totalAmount: number;
+  lineItems: LineItem[];
   ownerId: string;
   createdAt: any;
   updatedAt: any;

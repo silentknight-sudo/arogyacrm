@@ -4,17 +4,18 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
  * HYPER-RESILIENT PEM PARSER
- * Specifically engineered to handle service account keys from various environment formats.
+ * Optimized for Next.js build-phase reliability and runtime credential parsing.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
   
   let cleaned = key.trim();
   
-  // Handle literal "\n" character sequences
+  // Recursive multi-pass for character sequences and double-escaping
   cleaned = cleaned.replace(/\\n/g, '\n');
+  cleaned = cleaned.replace(/\\\\n/g, '\n');
   
-  // Remove wrapping quotes if present
+  // Remove wrapping quotes (single or double) from dashboard injection
   cleaned = cleaned.replace(/^['"]+|['"]+$/g, '');
 
   const header = '-----BEGIN PRIVATE KEY-----';
@@ -34,7 +35,7 @@ function initializeAdmin(): App {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    throw new Error('CRITICAL_ENVIRONMENT_ERROR: Missing Firebase Admin credentials.');
+    throw new Error('CRITICAL_ENVIRONMENT_ERROR: Admin credentials missing. Verify .env configuration.');
   }
 
   try {
@@ -50,8 +51,8 @@ function initializeAdmin(): App {
 }
 
 /**
- * LAZY PROXY SYSTEM
- * Blocks build-time Promise resolution to prevent Next.js from crashing during 'npm run build'.
+ * LAZY PROXY SINGLETON
+ * Prevents SDK execution during Next.js 'npm run build' to avoid Error 500.
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
@@ -82,7 +83,7 @@ export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);
   const msg = error.message || '';
   if (msg.includes('private key') || msg.includes('PEM')) {
-    return 'Secure Key Error: Private Key formatting is invalid. Check environment variables.';
+    return 'Secure Key Parsing Error: Private Key formatting is invalid. Re-check dashboard variables.';
   }
   return msg || 'A secure server-side operation failed.';
 }
