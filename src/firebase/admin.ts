@@ -4,14 +4,14 @@ import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
 /**
  * HYPER-RESILIENT PEM PARSER
- * Specifically handles multi-line keys, escaped characters, and literal \n sequences.
+ * Handles multi-line keys, escaped characters, and literal \n sequences.
  */
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
   
   let cleaned = key.trim();
   
-  // Convert literal \n strings to real newline characters
+  // Handle literal \n strings and double-escaped sequences
   cleaned = cleaned.replace(/\\n/g, '\n');
   cleaned = cleaned.replace(/\\\\n/g, '\n');
   
@@ -62,14 +62,14 @@ function getAdminApp(): App {
 
 /**
  * SINGLETON ACCESSORS
- * Provides direct access to services with on-demand initialization.
  */
-export const adminDb: Firestore = getFirestore(getAdminApp());
-export const adminAuth: Auth = getAuth(getAdminApp());
+const app = getAdminApp();
+export const adminDb: Firestore = getFirestore(app);
+export const adminAuth: Auth = getAuth(app);
 
-// Unified exports for data consistency
+// Consistent exports for server-side mutations
 export { FieldValue };
-export const serverTimestamp = () => FieldValue.serverTimestamp();
+export const serverTimestamp = FieldValue.serverTimestamp;
 
 export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);

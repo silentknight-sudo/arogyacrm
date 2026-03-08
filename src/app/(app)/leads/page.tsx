@@ -21,19 +21,19 @@ export default function LeadsPage() {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // Admins see EVERYTHING in the pipeline
+    // ADMINS: Total visibility across the workspace
     if (currentUser.role === 'admin') {
       return query(leadsRef);
     }
     
-    // Team Leads & Sales Executives see ONLY leads assigned to them.
-    // This ensures Team Leads don't see unassigned leads or leads assigned to other teams.
+    // TEAM LEADS & EXECUTIVES: Strict isolation
+    // They only see leads explicitly assigned to them.
     return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  // 2. Scalable User Discovery Query
+  // 2. Scalable User Discovery Query for Assignment
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     return query(
@@ -57,7 +57,7 @@ export default function LeadsPage() {
                 <h1 className="text-6xl font-black tracking-tighter text-primary">Prospect Pipeline</h1>
                 <p className="text-2xl text-muted-foreground font-semibold flex items-center gap-3">
                     <Sparkles className="h-6 w-6 text-accent animate-pulse" />
-                    {currentUser?.role === 'admin' ? 'Team-wide opportunity visualization.' : 'Prospects specifically assigned to you.'}
+                    {currentUser?.role === 'admin' ? 'Strategic pipeline overview.' : 'Personalized wellness prospects.'}
                 </p>
             </div>
              <div className="flex items-center gap-4">
