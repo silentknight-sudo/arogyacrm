@@ -16,13 +16,11 @@ export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
 
-  // STRICTOR QUERIES: Aligned with assignment-based security rules
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // SECURITY ALIGNMENT: Executives must request their own leads specifically, or Firestore denies the request
     if (currentUser.role === 'sales_executive') {
       return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
     }
@@ -32,12 +30,13 @@ export default function LeadsPage() {
 
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  const usersQuery = useMemoFirebase(() =>
-    (!isUserLoading && currentUser && currentTeamspace?.memberIds?.length > 0)
-        ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
-        : null,
-    [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]
-  );
+  const usersQuery = useMemoFirebase(() => {
+    const memberIds = currentTeamspace?.memberIds;
+    return (!isUserLoading && currentUser && memberIds && memberIds.length > 0)
+        ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
+        : null;
+  }, [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]);
+  
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const isActuallyLoading = isUserLoading || isLoadingLeads || isLoadingUsers;

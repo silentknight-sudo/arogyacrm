@@ -29,13 +29,13 @@ export default function RefundsPage() {
   , [firestore, currentTeamspace, currentUser, isUserLoading]);
   const { data: salesOrders, isLoading: isLoadingSalesOrders } = useCollection<SalesOrder>(salesOrdersQuery);
 
-  // Fetch team members directly on the client. Guarded by profile existence.
-  const usersQuery = useMemoFirebase(() =>
-    !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
-        ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
-        : null,
-    [firestore, currentTeamspace, currentUser, isUserLoading]
-  );
+  const usersQuery = useMemoFirebase(() => {
+    const memberIds = currentTeamspace?.memberIds;
+    return (!isUserLoading && currentUser && memberIds && memberIds.length > 0)
+        ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
+        : null;
+  }, [firestore, currentTeamspace, currentUser, isUserLoading]);
+  
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const isLoading = isUserLoading || isLoadingRefunds || isLoadingSalesOrders || isLoadingUsers;

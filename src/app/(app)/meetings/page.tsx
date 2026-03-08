@@ -14,7 +14,6 @@ export default function MeetingsPage() {
   const { currentTeamspace, currentUser, isUserLoading } = useApp();
   const firestore = useFirestore();
 
-  // Guarded meetings query
   const meetingsQuery = useMemoFirebase(() =>
     !isUserLoading && currentUser && currentTeamspace?.id
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'meetings'))
@@ -23,16 +22,15 @@ export default function MeetingsPage() {
   
   const { data: meetings, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
 
-  // Guarded team member query
-  const usersQuery = useMemoFirebase(() =>
-    !isUserLoading && currentUser && currentTeamspace?.memberIds?.length > 0
-        ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
-        : null,
-    [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]
-  );
+  const usersQuery = useMemoFirebase(() => {
+    const memberIds = currentTeamspace?.memberIds;
+    return (!isUserLoading && currentUser && memberIds && memberIds.length > 0)
+        ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
+        : null;
+  }, [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]);
+  
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-  // Guarded contacts query
   const contactsQuery = useMemoFirebase(() =>
     !isUserLoading && currentUser && currentTeamspace?.id
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'contacts'))

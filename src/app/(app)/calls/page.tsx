@@ -30,12 +30,13 @@ export default function CallsPage() {
   , [firestore, currentTeamspace, currentUser, isUserLoading]);
   const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
 
-  const usersQuery = useMemoFirebase(() =>
-    !isUserLoading && currentUser && currentTeamspace && currentTeamspace.memberIds?.length > 0
-        ? query(collection(firestore, 'users'), where(documentId(), 'in', currentTeamspace.memberIds)) 
-        : null,
-    [firestore, currentTeamspace, currentUser, isUserLoading]
-  )
+  const usersQuery = useMemoFirebase(() => {
+    const memberIds = currentTeamspace?.memberIds;
+    return (!isUserLoading && currentUser && memberIds && memberIds.length > 0)
+        ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
+        : null;
+  }, [firestore, currentTeamspace, currentUser, isUserLoading]);
+  
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const isLoading = isUserLoading || isLoadingCalls || isLoadingContacts || isLoadingUsers;

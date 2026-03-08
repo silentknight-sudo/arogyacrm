@@ -40,8 +40,6 @@ function getAdminApp(): App | null {
     } catch (e) {}
   }
 
-  // PREVENT BUILD HANGS: If no credentials exist during build, return null
-  // instead of triggering automatic GCP metadata discovery (which prompts IDX/Cloud Code).
   return null;
 }
 
@@ -51,14 +49,14 @@ function getAdminApp(): App | null {
  */
 export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(target, prop) {
-    if (prop === 'then') return undefined;
+    if (prop === 'then') return undefined; // Prevent it from being treated as a Promise
     const app = getAdminApp();
     if (!app) {
-      // Return a safe "null-safe" thrower for methods, prevents 500 errors on import
       return (...args: any[]) => {
-        const error = new Error(`Firebase Admin SDK is not configured. Missing environment variables for method: ${String(prop)}`);
-        console.error(error.message);
-        throw error;
+        if (typeof prop === 'string' && ['collection', 'doc'].includes(prop)) {
+            console.error(`Firebase Admin SDK: Firestore accessed before configuration. Key: ${prop}`);
+        }
+        return undefined;
       };
     }
     const db = getFirestore(app);
@@ -73,7 +71,8 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
     const app = getAdminApp();
     if (!app) {
       return (...args: any[]) => {
-        throw new Error(`Firebase Admin SDK is not configured. Missing environment variables for method: ${String(prop)}`);
+        console.error(`Firebase Admin SDK: Auth accessed before configuration. Key: ${prop}`);
+        return undefined;
       };
     }
     const auth = getAuth(app);
@@ -84,7 +83,6 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
 
 export { FieldValue };
 
-/** Safe helper for server timestamps that works even during hydration. */
 export const serverTimestamp = () => {
   try {
     return FieldValue.serverTimestamp();
