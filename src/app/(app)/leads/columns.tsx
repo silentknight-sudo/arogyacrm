@@ -76,7 +76,7 @@ function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { ope
           <AlertDialogAction onClick={() => onOpenChange(false)}>Close</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
-    </AlertDialog>
+    </定期AlertDialog>
   );
 }
 
@@ -167,6 +167,40 @@ const CreatedAtCell = ({ dateString }: { dateString: string }) => {
     return <span>{formatted || '...'}</span>;
 };
 
+const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], users: UserProfile[] }) => {
+    const assignedUsers = assignedToIds.map(id => users.find(u => u.id === id)).filter(Boolean) as UserProfile[];
+    
+    if (assignedUsers.length === 0) {
+        return <span className="text-muted-foreground text-xs italic">Unassigned</span>;
+    }
+
+    const visibleUsers = assignedUsers.slice(0, 3);
+    const remainingCount = assignedUsers.length - visibleUsers.length;
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <div className="flex items-center -space-x-2">
+                    {visibleUsers.map(user => (
+                        <Avatar key={user.id} className="h-7 w-7 border-2 border-background">
+                            <AvatarImage src={user.avatar} alt={user.displayName} />
+                            <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                    ))}
+                    {remainingCount > 0 && (
+                        <Avatar className="h-7 w-7 border-2 border-background">
+                            <AvatarFallback>+{remainingCount}</AvatarFallback>
+                        </Avatar>
+                    )}
+                </div>
+            </TooltipTrigger>
+            <TooltipContent>
+                {assignedUsers.map(u => u.displayName).join(', ')}
+            </TooltipContent>
+        </Tooltip>
+    );
+};
+
 export const columns: ColumnDef<Lead>[] = [
   {
     id: 'select',
@@ -217,37 +251,7 @@ export const columns: ColumnDef<Lead>[] = [
     cell: ({ row, table }) => {
         const assignedToIds = row.getValue('assignedToIds') as string[] || [];
         const users = (table.options.meta as any)?.users || [];
-        const assignedUsers = assignedToIds.map(id => users.find((u: any) => u.id === id)).filter(Boolean) as UserProfile[];
-        
-        if (assignedUsers.length === 0) {
-            return <span className="text-muted-foreground text-xs italic">Unassigned</span>;
-        }
-
-        const visibleUsers = assignedUsers.slice(0, 3);
-        const remainingCount = assignedUsers.length - visibleUsers.length;
-
-        return (
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <div className="flex items-center -space-x-2">
-                        {visibleUsers.map(user => (
-                            <Avatar key={user.id} className="h-7 w-7 border-2 border-background">
-                                <AvatarImage src={user.avatar} alt={user.displayName} />
-                                <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                        ))}
-                        {remainingCount > 0 && (
-                            <Avatar className="h-7 w-7 border-2 border-background">
-                                <AvatarFallback>+{remainingCount}</AvatarFallback>
-                            </Avatar>
-                        ))}
-                    </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                    {assignedUsers.map(u => u.displayName).join(', ')}
-                </TooltipContent>
-            </Tooltip>
-        );
+        return <AssignedToCell assignedToIds={assignedToIds} users={users} />;
     }
   },
   {
