@@ -10,12 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Deal, DealStage } from '@/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import type { Deal, DealStage, Account, Contact } from '@/types';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useApp } from '@/context/app-context';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, Calendar, ArrowRight, Building2, User, Wallet, PackageCheck } from 'lucide-react';
+import { ShoppingBag, Calendar, ArrowRight, Building2, User, Wallet, PackageCheck, Globe } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -30,38 +30,100 @@ const stageColors: Record<DealStage, string> = {
 };
 
 const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open: boolean; onOpenChange: (open: boolean) => void }) => {
+  const firestore = useFirestore();
+  const { currentTeamspace } = useApp();
+
+  const accountRef = useMemoFirebase(() => 
+    deal && currentTeamspace ? doc(firestore, 'teamspaces', currentTeamspace.id, 'accounts', deal.accountId) : null
+  , [firestore, currentTeamspace, deal?.accountId]);
+  const { data: account, isLoading: isLoadingAccount } = useDoc<Account>(accountRef);
+
+  const contactRef = useMemoFirebase(() => 
+    deal?.contactId && currentTeamspace ? doc(firestore, 'teamspaces', currentTeamspace.id, 'contacts', deal.contactId) : null
+  , [firestore, currentTeamspace, deal?.contactId]);
+  const { data: contact, isLoading: isLoadingContact } = useDoc<Contact>(contactRef);
+
   if (!deal) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-white/10 bg-card/95 backdrop-blur-3xl shadow-2xl p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-3xl rounded-[2.5rem] border-white/10 bg-card/95 backdrop-blur-3xl shadow-2xl p-0 overflow-hidden">
         <div className="herbal-gradient p-8 text-white">
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`w-3 h-3 rounded-full ${stageColors[deal.stage]} shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-pulse`} />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80">{deal.stage}</span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${stageColors[deal.stage]} shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-pulse`} />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80">{deal.stage}</span>
+            </div>
+            <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Strategic Deal Insight</div>
           </div>
           <DialogTitle className="text-4xl font-black tracking-tighter mb-2 leading-tight">{deal.name}</DialogTitle>
           <p className="text-white/60 font-medium flex items-center gap-2">
             <Wallet className="h-4 w-4 text-accent" />
-            Total Value: <span className="text-white font-bold">₹{deal.amount.toLocaleString('en-IN')}</span>
+            Projected Value: <span className="text-white font-bold">₹{deal.amount.toLocaleString('en-IN')}</span>
           </p>
         </div>
 
         <ScrollArea className="max-h-[60vh] p-8">
-          <div className="grid grid-cols-2 gap-8 mb-10">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Account Context</p>
-              <div className="flex items-center gap-2 font-bold text-primary">
-                <Building2 className="h-4 w-4" />
-                {deal.accountId}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Account Intelligence</p>
+                {isLoadingAccount ? (
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                ) : (
+                    <div className="p-4 rounded-2xl bg-muted/20 border border-primary/5 shadow-inner">
+                        <div className="flex items-center gap-3 mb-1">
+                            <Building2 className="h-5 w-5 text-primary" />
+                            <span className="text-lg font-black text-primary tracking-tight">{account?.name || 'Unknown Account'}</span>
+                        </div>
+                        {account?.industry && (
+                            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground ml-8">
+                                <Globe className="h-3 w-3" />
+                                {account.industry}
+                            </div>
+                        )}
+                    </div>
+                )}
               </div>
+
+              {deal.contactId && (
+                <div className="space-y-1">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Primary Decision Maker</p>
+                    {isLoadingContact ? (
+                        <Skeleton className="h-10 w-full rounded-xl" />
+                    ) : (
+                        <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/10 border border-border/50">
+                            <div className="h-10 w-10 rounded-full herbal-gradient flex items-center justify-center text-xs font-black">
+                                {contact?.firstName?.[0]}{contact?.lastName?.[0]}
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-primary text-sm">{contact?.firstName} {contact?.lastName}</span>
+                                <span className="text-[10px] font-medium text-muted-foreground">{contact?.email}</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+              )}
             </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Target Timeline</p>
-              <div className="flex items-center gap-2 font-bold text-primary">
-                <Calendar className="h-4 w-4" />
-                {new Date(deal.closeDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
-              </div>
+
+            <div className="space-y-4">
+                <div className="space-y-1">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Timeline Alignment</p>
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-muted/20 border border-primary/5">
+                        <Calendar className="h-5 w-5 text-primary" />
+                        <span className="font-black text-primary tracking-tight">
+                            {new Date(deal.closeDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                        </span>
+                    </div>
+                </div>
+                
+                <div className="p-4 rounded-2xl bg-accent/5 border border-accent/10">
+                    <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-2">Deal Velocity</p>
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-primary">₹{(deal.amount / 1000).toFixed(1)}k</span>
+                        <span className="text-xs font-bold text-muted-foreground italic">Wellness Cap.</span>
+                    </div>
+                </div>
             </div>
           </div>
 
@@ -69,10 +131,10 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
             <div className="flex items-center justify-between">
               <h4 className="text-lg font-black text-primary flex items-center gap-2">
                 <PackageCheck className="h-5 w-5" />
-                Product Configuration
+                Strategic Configuration
               </h4>
               <Badge variant="secondary" className="rounded-full font-black text-[10px] uppercase px-3 py-1">
-                {deal.lineItems?.length || 0} Items
+                {deal.lineItems?.length || 0} Ayurvedic Items
               </Badge>
             </div>
 
@@ -93,7 +155,7 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
               )}
               <Separator className="bg-primary/5" />
               <div className="flex justify-end items-center gap-4 pt-2">
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Est. Revenue</span>
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Aggregate Revenue</span>
                 <span className="text-2xl font-black text-primary tracking-tighter">₹{deal.amount.toLocaleString('en-IN')}</span>
               </div>
             </div>
@@ -103,9 +165,9 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
         <div className="p-8 pt-0 flex justify-end">
           <button 
             onClick={() => onOpenChange(false)}
-            className="px-8 py-4 rounded-2xl bg-muted font-black text-xs uppercase tracking-widest hover:bg-muted/80 transition-colors"
+            className="px-8 py-4 rounded-2xl bg-muted font-black text-xs uppercase tracking-widest hover:bg-muted/80 transition-colors shadow-sm"
           >
-            Close Dashboard
+            Exit Intelligence View
           </button>
         </div>
       </DialogContent>
