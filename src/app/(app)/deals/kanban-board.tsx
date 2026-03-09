@@ -6,16 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { Deal, DealStage, Contact } from '@/types';
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { useApp } from '@/context/app-context';
 import { collection, query, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, Calendar, ArrowRight, User, Wallet, PackageCheck, Phone } from 'lucide-react';
+import { ShoppingBag, Calendar, ArrowRight, Wallet, PackageCheck, Phone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -62,7 +61,7 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
             <div className="space-y-4">
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Primary Decision Maker</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Primary Contact</p>
                 {isLoadingContact ? (
                     <Skeleton className="h-10 w-full rounded-xl" />
                 ) : (

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ColumnDef, type Table as TanstackTable } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Star, Bot, Users, ChevronsRight } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Star, Bot, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,12 +20,11 @@ import { AiLeadScoringAndPrioritizationOutput } from '@/ai/flows/ai-lead-scoring
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogContent,
+  AlertDialogDescription,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
