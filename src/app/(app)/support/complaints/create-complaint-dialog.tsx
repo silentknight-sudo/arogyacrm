@@ -32,7 +32,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createComplaint } from './actions';
 import { useApp } from '@/context/app-context';
-import type { Contact, UserProfile, ComplaintStatus, ComplaintSeverity } from '@/types';
+import type { Contact, UserProfile } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 
 const complaintStatuses = ['Received', 'Investigating', 'Action Taken', 'Resolved', 'Closed'] as const;
@@ -73,7 +73,7 @@ export function CreateComplaintDialog({ children, contacts, users, isLoading }: 
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Active workspace context required.' });
       return;
     }
     startTransition(async () => {
@@ -84,15 +84,15 @@ export function CreateComplaintDialog({ children, contacts, users, isLoading }: 
 
       if (result.success) {
         toast({
-          title: 'Complaint Logged',
-          description: `Successfully logged complaint "${values.subject}".`,
+          title: 'Strategic Escalation Logged',
+          description: `Successfully registered escalation for "${values.subject}".`,
         });
         setOpen(false);
         form.reset();
       } else {
         toast({
           variant: 'destructive',
-          title: 'Error Logging Complaint',
+          title: 'Secure Logging Failed',
           description: result.error,
         });
       }
@@ -102,38 +102,38 @@ export function CreateComplaintDialog({ children, contacts, users, isLoading }: 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg rounded-3xl">
         <DialogHeader>
-          <DialogTitle>Log a Complaint</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-primary">New Stakeholder Escalation</DialogTitle>
           <DialogDescription>
-            Document a customer complaint for tracking and resolution.
+            Document high-priority individual complaints for rapid resolution.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[70vh] pr-4">
+        <div className="overflow-y-auto max-h-[70vh] pr-4 pt-2">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField control={form.control} name="subject" render={({ field }) => (
-                <FormItem><FormLabel>Subject</FormLabel><FormControl><Input placeholder="Late delivery" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Subject</FormLabel><FormControl><Input placeholder="e.g. Shipping delay" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="contactId" render={({ field }) => (
-                <FormItem><FormLabel>Contact</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
+                <FormItem><FormLabel>Affected Stakeholder</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder="Select contact" /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Detailed description of the complaint..." {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Detailed Insight</FormLabel><FormControl><Textarea className="min-h-[100px] rounded-xl" placeholder="Full context of the stakeholder's concern..." {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="status" render={({ field }) => (
-                    <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{complaintStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Process Stage</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{complaintStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="severity" render={({ field }) => (
-                    <FormItem><FormLabel>Severity</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{complaintSeverities.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Severity Tier</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{complaintSeverities.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
               </div>
                 <FormField control={form.control} name="assignedToId" render={({ field }) => (
-                    <FormItem><FormLabel>Assign To</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a user"} /></SelectTrigger></FormControl><SelectContent>{users.length > 0 ? users.map(u => (<SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No team members found.</div>}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Assign Resolution Lead</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder="Select specialist" /></SelectTrigger></FormControl><SelectContent>{users.length > 0 ? users.map(u => (<SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No specialists found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
-              <Button type="submit" disabled={isPending || isLoading} className="w-full">
-                {isPending ? 'Logging...' : 'Log Complaint'}
+              <Button type="submit" disabled={isPending || isLoading} className="w-full h-12 rounded-xl herbal-gradient font-bold shadow-lg mt-2">
+                {isPending ? 'Processing Escalation...' : 'Log Stakeholder Escalation'}
               </Button>
             </form>
           </Form>

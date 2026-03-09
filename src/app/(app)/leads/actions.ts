@@ -64,7 +64,7 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     return { success: true };
 
   } catch (error: any) {
-    return { success: false, error: handleAdminSDKError(error) };
+    return { success: boolean; error: handleAdminSDKError(error) };
   }
 }
 
@@ -98,7 +98,7 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     revalidatePath('/leads');
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: handleAdminSDKError(error) };
+    return { success: boolean; error: handleAdminSDKError(error) };
   }
 }
 
@@ -126,7 +126,7 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
 
     const batch = adminDb.batch();
     
-    // 1. Create Contact
+    // 1. Create Contact directly (No Account step)
     const contactRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('contacts').doc();
     batch.set(contactRef, {
       id: contactRef.id,
@@ -141,7 +141,7 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // 2. Create Deal
+    // 2. Create Product-Based Deal
     const dealRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals').doc();
     batch.set(dealRef, {
       id: dealRef.id,
@@ -157,7 +157,7 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // 3. Update Lead Status
+    // 3. Finalize Lead Lifecycle
     batch.update(leadRef, { 
       status: 'Converted', 
       updatedAt: FieldValue.serverTimestamp() 
@@ -172,6 +172,6 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
 
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: handleAdminSDKError(error) };
+    return { success: boolean; error: handleAdminSDKError(error) };
   }
 }

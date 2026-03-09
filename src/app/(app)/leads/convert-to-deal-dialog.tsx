@@ -57,7 +57,7 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      dealName: `Direct Order: ${lead.fullName}`,
+      dealName: `Order for ${lead.fullName}`,
       lineItems: [],
     },
   });
@@ -110,7 +110,7 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
       if (result.success) {
         toast({ 
           title: 'Direct Conversion Successful', 
-          description: `Contact and Deal created for ${lead.fullName}.` 
+          description: `Contact and Product Deal created for ${lead.fullName}.` 
         });
         onOpenChange(false);
       } else {
@@ -127,9 +127,9 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none shadow-2xl bg-card text-foreground">
         <DialogHeader className="mb-6">
-          <DialogTitle className="text-3xl font-black tracking-tight text-primary">Pipeline Conversion</DialogTitle>
+          <DialogTitle className="text-3xl font-black tracking-tight text-primary">Strategic Conversion</DialogTitle>
           <DialogDescription className="text-lg font-medium text-muted-foreground">
-            Instantly create a Contact and Deal from this prospect.
+            Instantly initiate a Product-Based Deal from this prospect.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
@@ -140,9 +140,9 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
                 name="dealName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Deal Heading</FormLabel>
+                    <FormLabel>Opportunity Heading</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Bulk Ayurvedic Package" {...field} />
+                      <Input placeholder="e.g. Bulk Ashwagandha Order" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -151,9 +151,9 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <FormLabel className="text-base font-semibold text-primary">Products & Items</FormLabel>
+                  <FormLabel className="text-base font-semibold text-primary">Ayurvedic Item Catalog</FormLabel>
                   <Button type="button" variant="ghost" size="sm" className="h-8 text-primary" onClick={() => append({productId: '', productName: '', quantity: 1, unitPrice: 0, subtotal: 0})}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Product
                   </Button>
                 </div>
                 <div className="space-y-3">
@@ -162,7 +162,7 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
                       <div className="grid grid-cols-4 gap-2 flex-grow">
                         <div className="col-span-4">
                           <Select onValueChange={(v) => handleProductChange(index, v)} defaultValue={field.productId}>
-                            <SelectTrigger className="h-9"><SelectValue placeholder="Select Product" /></SelectTrigger>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="Configure Product" /></SelectTrigger>
                             <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                           </Select>
                         </div>
@@ -185,12 +185,12 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t">
-                <span className="text-sm font-black uppercase tracking-widest text-muted-foreground">Est. Deal Value</span>
+                <span className="text-sm font-black uppercase tracking-widest text-muted-foreground">Aggregate Revenue</span>
                 <span className="text-3xl font-black text-primary">₹{totalAmount.toLocaleString()}</span>
               </div>
 
               <Button type="submit" disabled={isPending || isLoading} className="w-full h-16 text-lg font-black rounded-2xl herbal-gradient shadow-2xl shadow-primary/30 gold-glow hover:scale-[1.02] transition-transform mt-4">
-                {isPending ? 'Processing Direct Conversion...' : 'Finalize Conversion'}
+                {isPending ? 'Processing High-Value Conversion...' : 'Finalize Pipeline Move'}
               </Button>
             </form>
           </Form>

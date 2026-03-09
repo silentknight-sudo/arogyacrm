@@ -55,7 +55,7 @@ function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { ope
             AI Lead Score for {leadName}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Here is the AI-generated score and priority for this lead based on the available data.
+            AI-generated score and priority based on discovery data.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="my-4 space-y-4">
@@ -73,7 +73,7 @@ function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { ope
           </div>
         </div>
         <AlertDialogFooter>
-          <AlertDialogAction onClick={() => onOpenChange(false)}>Close</AlertDialogAction>
+          <AlertDialogAction onClick={() => onOpenChange(false)}>Close Intelligence</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -154,7 +154,6 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
 
 const CreatedAtCell = ({ dateString }: { dateString: string }) => {
     const [formatted, setFormatted] = useState<string>('');
-    
     useEffect(() => {
         if (!dateString) return;
         try {
@@ -163,17 +162,12 @@ const CreatedAtCell = ({ dateString }: { dateString: string }) => {
             setFormatted('N/A');
         }
     }, [dateString]);
-
     return <span>{formatted || '...'}</span>;
 };
 
 const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], users: UserProfile[] }) => {
     const assignedUsers = assignedToIds.map(id => users.find(u => u.id === id)).filter(Boolean) as UserProfile[];
-    
-    if (assignedUsers.length === 0) {
-        return <span className="text-muted-foreground text-xs italic">Unassigned</span>;
-    }
-
+    if (assignedUsers.length === 0) return <span className="text-muted-foreground text-xs italic">Unassigned</span>;
     const visibleUsers = assignedUsers.slice(0, 3);
     const remainingCount = assignedUsers.length - visibleUsers.length;
 
@@ -225,10 +219,7 @@ export const columns: ColumnDef<Lead>[] = [
     accessorKey: 'fullName',
     header: ({ column }) => {
       return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
           Full Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>

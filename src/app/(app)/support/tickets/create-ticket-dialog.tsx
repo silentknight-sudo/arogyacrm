@@ -33,7 +33,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createTicket } from './actions';
 import { useApp } from '@/context/app-context';
-import type { TicketStatus, TicketPriority, Contact, UserProfile } from '@/types';
+import type { Contact } from '@/types';
 
 const ticketStatuses = ['Open', 'In Progress', 'Awaiting Customer', 'Resolved', 'Closed'] as const;
 const ticketPriorities = ['Low', 'Medium', 'High', 'Urgent'] as const;
@@ -51,11 +51,10 @@ const formSchema = z.object({
 type CreateTicketDialogProps = {
   children: React.ReactNode;
   contacts: Contact[];
-  users: UserProfile[];
   isLoading: boolean;
 };
 
-export function CreateTicketDialog({ children, contacts, users, isLoading }: CreateTicketDialogProps) {
+export function CreateTicketDialog({ children, contacts, isLoading }: CreateTicketDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
@@ -73,27 +72,27 @@ export function CreateTicketDialog({ children, contacts, users, isLoading }: Cre
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
-        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in and in a teamspace.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Active workspace context required.' });
         return;
     }
     startTransition(async () => {
       const result = await createTicket({
           ...values,
-          assignedToId: currentUser.id, // Assign to current user by default
+          assignedToId: currentUser.id,
           teamspaceId: currentTeamspace.id,
       });
 
       if (result.success) {
         toast({
-          title: 'Ticket Created',
-          description: `Successfully created ticket "${values.subject}".`,
+          title: 'Support Ticket Registered',
+          description: `Successfully opened ticket for "${values.subject}".`,
         });
         setOpen(false);
         form.reset();
       } else {
         toast({
           variant: 'destructive',
-          title: 'Error Creating Ticket',
+          title: 'Secure Creation Failed',
           description: result.error,
         });
       }
@@ -103,38 +102,38 @@ export function CreateTicketDialog({ children, contacts, users, isLoading }: Cre
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg rounded-3xl">
         <DialogHeader>
-          <DialogTitle>Create New Support Ticket</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-primary">New Stakeholder Ticket</DialogTitle>
           <DialogDescription>
-            Log a new customer issue or inquiry.
+            Log a new individual inquiry or service request.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[60vh] pr-4">
+        <div className="overflow-y-auto max-h-[60vh] pr-4 pt-2">
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField control={form.control} name="subject" render={({ field }) => (
-                    <FormItem><FormLabel>Subject</FormLabel><FormControl><Input placeholder="Issue with order #12345" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Subject</FormLabel><FormControl><Input placeholder="e.g. Guidance on dosage" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="contactId" render={({ field }) => (
-                    <FormItem><FormLabel>Contact</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder={isLoading ? "Loading..." : "Select a contact"} /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Stakeholder Contact</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder="Select contact" /></SelectTrigger></FormControl><SelectContent>{contacts.length > 0 ? contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No contacts found.</div>}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="description" render={({ field }) => (
-                    <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Detailed description of the issue..." {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Issue Context</FormLabel><FormControl><Textarea className="min-h-[100px] rounded-xl" placeholder="Detailed description of the stakeholder's request..." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="category" render={({ field }) => (
-                    <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl><SelectContent>{ticketCategories.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Inquiry Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl><SelectContent>{ticketCategories.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="status" render={({ field }) => (
-                        <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{ticketStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Process Stage</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{ticketStatuses.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="priority" render={({ field }) => (
-                        <FormItem><FormLabel>Priority</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a priority" /></SelectTrigger></FormControl><SelectContent>{ticketPriorities.map(p => (<SelectItem key={p} value={p}>{p}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Urgency Level</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{ticketPriorities.map(p => (<SelectItem key={p} value={p}>{p}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                 </div>
-                <Button type="submit" disabled={isPending || isLoading} className="w-full">
-                    {isPending ? 'Creating Ticket...' : 'Create Ticket'}
+                <Button type="submit" disabled={isPending || isLoading} className="w-full h-12 rounded-xl herbal-gradient font-bold shadow-lg mt-2">
+                    {isPending ? 'Initiating Ticket...' : 'Register Support Ticket'}
                 </Button>
             </form>
             </Form>

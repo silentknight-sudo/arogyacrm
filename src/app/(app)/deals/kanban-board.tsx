@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { Deal, DealStage, Contact } from '@/types';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { useApp } from '@/context/app-context';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -61,7 +61,7 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
             <div className="space-y-4">
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Primary Contact</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Stakeholder Intelligence</p>
                 {isLoadingContact ? (
                     <Skeleton className="h-10 w-full rounded-xl" />
                 ) : (
@@ -101,7 +101,7 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
                     <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-2">Deal Velocity</p>
                     <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-black text-primary">₹{(deal.amount / 1000).toFixed(1)}k</span>
-                        <span className="text-xs font-bold text-muted-foreground italic">Wellness Cap.</span>
+                        <span className="text-xs font-bold text-muted-foreground italic">Target.</span>
                     </div>
                 </div>
             </div>
@@ -111,7 +111,7 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
             <div className="flex items-center justify-between">
               <h4 className="text-lg font-black text-primary flex items-center gap-2">
                 <PackageCheck className="h-5 w-5" />
-                Strategic Configuration
+                Product Configuration
               </h4>
               <Badge variant="secondary" className="rounded-full font-black text-[10px] uppercase px-3 py-1">
                 {deal.lineItems?.length || 0} Ayurvedic Items
@@ -131,11 +131,11 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
                 </div>
               ))}
               {(!deal.lineItems || deal.lineItems.length === 0) && (
-                <p className="text-center py-10 text-muted-foreground text-xs italic font-medium">No products associated with this strategic deal.</p>
+                <p className="text-center py-10 text-muted-foreground text-xs italic font-medium">No products associated with this opportunity.</p>
               )}
               <Separator className="bg-primary/5" />
               <div className="flex justify-end items-center gap-4 pt-2">
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Aggregate Revenue</span>
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Aggregate Total</span>
                 <span className="text-2xl font-black text-primary tracking-tighter">₹{deal.amount.toLocaleString('en-IN')}</span>
               </div>
             </div>
@@ -147,7 +147,7 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
             onClick={() => onOpenChange(false)}
             className="px-8 py-4 rounded-2xl bg-muted font-black text-xs uppercase tracking-widest hover:bg-muted/80 transition-colors shadow-sm"
           >
-            Exit Intelligence View
+            Exit Strategy View
           </button>
         </div>
       </DialogContent>
@@ -236,7 +236,7 @@ export default function KanbanBoard() {
   const { data: deals, isLoading: isLoadingDeals } = useCollection<Deal>(
     useMemoFirebase(() => 
       !isUserLoading && !areTeamspacesLoading && currentTeamspace
-        ? doc(firestore, 'teamspaces', currentTeamspace.id, 'deals')
+        ? collection(firestore, 'teamspaces', currentTeamspace.id, 'deals')
         : null
     , [firestore, currentTeamspace, isUserLoading, areTeamspacesLoading])
   );

@@ -25,7 +25,6 @@ const COLLECTIONS_TO_DELETE = [
 
 async function deleteCollection(collectionRef: CollectionReference, batchSize: number) {
   const query = collectionRef.limit(batchSize);
-
   let snapshot = await query.get();
 
   while (snapshot.size > 0) {
@@ -34,18 +33,15 @@ async function deleteCollection(collectionRef: CollectionReference, batchSize: n
       batch.delete(doc.ref);
     });
     await batch.commit();
-
-    // After deleting, get the next batch
     snapshot = await query.get();
   }
 }
 
 export async function resetAllData(adminUserId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    // First, verify the user is an admin
     const userDoc = await adminDb.collection('users').doc(adminUserId).get();
     if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
-      throw new Error('You do not have permission to perform this action.');
+      throw new Error('Unauthorized: Executive governance required.');
     }
 
     const teamspacesSnapshot = await adminDb.collection('teamspaces').get();
@@ -57,12 +53,10 @@ export async function resetAllData(adminUserId: string): Promise<{ success: bool
       }
     }
     
-    // Also delete root products collection
     const productsRef = adminDb.collection('products');
     await deleteCollection(productsRef as CollectionReference, 50);
 
     revalidatePath('/', 'layout');
-
     return { success: true };
   } catch (error: any) {
     const errorMessage = handleAdminSDKError(error);

@@ -55,7 +55,7 @@ export function CreateContactDialog({ children }: CreateContactDialogProps) {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
-        toast({ variant: 'destructive', title: 'Error', description: 'You must be in a teamspace to create a contact.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Active workspace context required.' });
         return;
     }
     startTransition(async () => {
@@ -67,15 +67,15 @@ export function CreateContactDialog({ children }: CreateContactDialogProps) {
 
       if (result.success) {
         toast({
-          title: 'Contact Created',
-          description: `Successfully created contact "${values.firstName} ${values.lastName}".`,
+          title: 'Contact Secured',
+          description: `Successfully created contact profile for "${values.firstName} ${values.lastName}".`,
         });
         setOpen(false);
         form.reset();
       } else {
         toast({
           variant: 'destructive',
-          title: 'Error Creating Contact',
+          title: 'Secure Creation Failed',
           description: result.error,
         });
       }
@@ -85,14 +85,14 @@ export function CreateContactDialog({ children }: CreateContactDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md rounded-3xl">
         <DialogHeader>
-          <DialogTitle>Create New Contact</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-primary">New Stakeholder</DialogTitle>
           <DialogDescription>
-            Fill out the form to add a new contact.
+            Register an individual wellness prospect or existing partner.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[60vh] pr-4">
+        <div className="overflow-y-auto max-h-[60vh] pr-4 pt-2">
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -104,13 +104,13 @@ export function CreateContactDialog({ children }: CreateContactDialogProps) {
                     )} />
                 </div>
                 <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="jane.doe@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Primary Email</FormLabel><FormControl><Input type="email" placeholder="jane.doe@example.com" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                  <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem><FormLabel>Phone (Optional)</FormLabel><FormControl><Input placeholder="+1-202-555-0149" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input placeholder="+91 98765 43210" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" disabled={isPending} className="w-full">
-                    {isPending ? 'Creating Contact...' : 'Create Contact'}
+                <Button type="submit" disabled={isPending} className="w-full h-12 rounded-xl herbal-gradient font-bold shadow-lg">
+                    {isPending ? 'Processing...' : 'Register Contact'}
                 </Button>
             </form>
             </Form>

@@ -42,11 +42,13 @@ export default function LeadDetailPage() {
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
   if (!mounted || isLoading) {
-    return <div className="space-y-4">
+    return (
+      <div className="space-y-4">
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-64 w-full" />
-    </div>;
+      </div>
+    );
   }
 
   if (!lead) {
@@ -70,7 +72,7 @@ export default function LeadDetailPage() {
           <Button variant="outline" size="icon" asChild>
             <Link href="/leads">
               <ArrowLeft />
-              <span className="sr-only">Back to leads</span>
+              <span className="sr-only">Back to prospects</span>
             </Link>
           </Button>
           <div>
@@ -85,9 +87,9 @@ export default function LeadDetailPage() {
               Convert to Deal
             </Button>
           )}
-          <Button variant="outline"><Mail /> Email</Button>
-          <Button variant="outline"><Phone /> Call</Button>
-          <Button variant="secondary"><Edit /> Edit Lead</Button>
+          <Button variant="outline"><Mail className="mr-2 h-4 w-4"/> Email</Button>
+          <Button variant="outline"><Phone className="mr-2 h-4 w-4"/> Call</Button>
+          <Button variant="secondary"><Edit className="mr-2 h-4 w-4"/> Edit</Button>
         </div>
       </div>
       
@@ -99,18 +101,18 @@ export default function LeadDetailPage() {
         <div className="md:col-span-2">
           <Tabs defaultValue="activity">
             <TabsList className="mb-4">
-              <TabsTrigger value="activity">Activity</TabsTrigger>
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="related">Related</TabsTrigger>
+              <TabsTrigger value="activity">Interaction Log</TabsTrigger>
+              <TabsTrigger value="details">Demographics</TabsTrigger>
+              <TabsTrigger value="related">Pipeline Context</TabsTrigger>
             </TabsList>
             <TabsContent value="activity">
               <ActivityTimeline logs={interactionLogs} />
             </TabsContent>
             <TabsContent value="details">
-              <div className="text-muted-foreground p-8 text-center border rounded-lg">More detailed information will be shown here.</div>
+              <div className="text-muted-foreground p-8 text-center border rounded-lg">Target industry and company data will be displayed here.</div>
             </TabsContent>
             <TabsContent value="related">
-              <div className="text-muted-foreground p-8 text-center border rounded-lg">Related contacts and deals will be shown here.</div>
+              <div className="text-muted-foreground p-8 text-center border rounded-lg">Linked deals and historical orders will be displayed here.</div>
             </TabsContent>
           </Tabs>
         </div>
