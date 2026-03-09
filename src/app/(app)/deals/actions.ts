@@ -4,6 +4,7 @@ import { adminDb, serverTimestamp, handleAdminSDKError } from '@/firebase/admin'
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { LineItemSchema } from '../inventory/schemas';
+import type { DealStage } from '@/types';
 
 const CreateDealSchema = z.object({
     name: z.string().min(2, 'Deal name must be at least 2 characters.'),
@@ -62,5 +63,23 @@ export async function updateDealType(values: { dealId: string, teamspaceId: stri
     } catch (error: any) {
         const errorMessage = handleAdminSDKError(error);
         return { success: false, error: `Failed to update deal type: ${errorMessage}` };
+    }
+}
+
+export async function updateDealStage(values: { dealId: string, teamspaceId: string, stage: DealStage }) {
+    try {
+        const { dealId, teamspaceId, stage } = values;
+        const dealRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals').doc(dealId);
+        
+        await dealRef.update({
+            stage,
+            updatedAt: serverTimestamp(),
+        });
+
+        revalidatePath('/deals');
+        return { success: true };
+    } catch (error: any) {
+        const errorMessage = handleAdminSDKError(error);
+        return { success: false, error: `Failed to update deal stage: ${errorMessage}` };
     }
 }

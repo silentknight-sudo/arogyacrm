@@ -127,7 +127,7 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
 
     const batch = adminDb.batch();
     
-    // 1. Create Contact directly
+    // 1. Create Contact directly (Contact-Centric Model)
     const contactRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('contacts').doc();
     batch.set(contactRef, {
       id: contactRef.id,

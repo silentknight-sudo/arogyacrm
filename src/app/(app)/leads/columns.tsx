@@ -169,19 +169,6 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   );
 };
 
-const CreatedAtCell = ({ dateString }: { dateString: string }) => {
-    const [formatted, setFormatted] = useState<string>('');
-    useEffect(() => {
-        if (!dateString) return;
-        try {
-            setFormatted(formatDistanceToNow(new Date(dateString), { addSuffix: true }));
-        } catch (e) {
-            setFormatted('N/A');
-        }
-    }, [dateString]);
-    return <span className="text-xs font-medium text-muted-foreground">{formatted || '...'}</span>;
-};
-
 const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], users: UserProfile[] }) => {
     const assignedUsers = (assignedToIds || []).map(id => users.find(u => u.id === id)).filter(Boolean) as UserProfile[];
     if (assignedUsers.length === 0) return <span className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">Unassigned</span>;
@@ -318,7 +305,11 @@ export const columns: ColumnDef<Lead>[] = [
   {
     accessorKey: 'createdAt',
     header: () => <div className="font-black uppercase tracking-widest text-[10px]">Discovery Date</div>,
-    cell: ({ row }) => <CreatedAtCell dateString={row.getValue('createdAt')} />,
+    cell: ({ row }) => {
+        const date = row.getValue('createdAt');
+        const formatted = date ? formatDistanceToNow(new Date(date), { addSuffix: true }) : 'N/A';
+        return <span className="text-xs font-medium text-muted-foreground">{formatted}</span>;
+    },
   },
   {
     id: 'actions',

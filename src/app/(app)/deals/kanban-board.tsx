@@ -21,10 +21,10 @@ import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase
 import { useApp } from '@/context/app-context';
 import { doc, collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, Calendar, ArrowRight, Wallet, PackageCheck, Phone, Tag, Loader2 } from 'lucide-react';
+import { ShoppingBag, Calendar, ArrowRight, Wallet, PackageCheck, Phone, Tag, Loader2, Layers } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { updateDealType } from './actions';
+import { updateDealType, updateDealStage } from './actions';
 import { useToast } from '@/hooks/use-toast';
 
 const stages: DealStage[] = ['pending', 'not connect', 'busy', 'done', 'cancel'];
@@ -58,7 +58,23 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
             type: newType
         });
         if (result.success) {
-            toast({ title: 'Deal Updated', description: `Category changed to ${newType}.` });
+            toast({ title: 'Deal Category Updated', description: `Category changed to ${newType}.` });
+        } else {
+            toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
+        }
+    });
+  };
+
+  const handleStageUpdate = (newStage: string) => {
+    if (!deal || !currentTeamspace) return;
+    startTransition(async () => {
+        const result = await updateDealStage({
+            dealId: deal.id,
+            teamspaceId: currentTeamspace.id,
+            stage: newStage as DealStage
+        });
+        if (result.success) {
+            toast({ title: 'Deal Stage Updated', description: `Status changed to ${newStage}.` });
         } else {
             toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
         }
@@ -72,9 +88,20 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
       <DialogContent className="sm:max-w-3xl rounded-[2.5rem] border-white/10 bg-card/95 backdrop-blur-3xl shadow-2xl p-0 overflow-hidden">
         <div className="herbal-gradient p-8 text-white">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${stageColors[deal.stage]} shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-pulse`} />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80">{deal.stage}</span>
+            <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 text-white/60 font-medium">
+                    <Layers className="h-4 w-4 text-accent" />
+                    Status: 
+                    <Select disabled={isUpdating} defaultValue={deal.stage} onValueChange={handleStageUpdate}>
+                        <SelectTrigger className="h-8 bg-white/10 border-white/20 rounded-lg text-xs font-bold text-white w-40">
+                            {isUpdating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {stages.map(s => <SelectItem key={s} value={s} className="text-xs uppercase font-bold">{s}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
             <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Strategic Deal Insight</div>
           </div>
