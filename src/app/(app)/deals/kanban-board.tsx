@@ -1,13 +1,23 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { Deal, DealStage } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useApp } from '@/context/app-context';
 import { collection, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, Calendar, ArrowRight } from 'lucide-react';
+import { ShoppingBag, Calendar, ArrowRight, Building2, User, Wallet, PackageCheck } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 const stages: DealStage[] = ['pending', 'not connect', 'busy', 'done', 'cancel'];
 
@@ -19,12 +29,98 @@ const stageColors: Record<DealStage, string> = {
   cancel: 'bg-red-500',
 };
 
+const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open: boolean; onOpenChange: (open: boolean) => void }) => {
+  if (!deal) return null;
 
-const DealCard = ({ deal }: { deal: Deal }) => {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-white/10 bg-card/95 backdrop-blur-3xl shadow-2xl p-0 overflow-hidden">
+        <div className="herbal-gradient p-8 text-white">
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-3 h-3 rounded-full ${stageColors[deal.stage]} shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-pulse`} />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80">{deal.stage}</span>
+          </div>
+          <DialogTitle className="text-4xl font-black tracking-tighter mb-2 leading-tight">{deal.name}</DialogTitle>
+          <p className="text-white/60 font-medium flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-accent" />
+            Total Value: <span className="text-white font-bold">₹{deal.amount.toLocaleString('en-IN')}</span>
+          </p>
+        </div>
+
+        <ScrollArea className="max-h-[60vh] p-8">
+          <div className="grid grid-cols-2 gap-8 mb-10">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Account Context</p>
+              <div className="flex items-center gap-2 font-bold text-primary">
+                <Building2 className="h-4 w-4" />
+                {deal.accountId}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Target Timeline</p>
+              <div className="flex items-center gap-2 font-bold text-primary">
+                <Calendar className="h-4 w-4" />
+                {new Date(deal.closeDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="text-lg font-black text-primary flex items-center gap-2">
+                <PackageCheck className="h-5 w-5" />
+                Product Configuration
+              </h4>
+              <Badge variant="secondary" className="rounded-full font-black text-[10px] uppercase px-3 py-1">
+                {deal.lineItems?.length || 0} Items
+              </Badge>
+            </div>
+
+            <div className="rounded-[2rem] border border-primary/5 bg-muted/20 p-6 space-y-4 shadow-inner">
+              {deal.lineItems?.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between group">
+                  <div className="space-y-0.5">
+                    <p className="font-black text-primary text-sm group-hover:translate-x-1 transition-transform">{item.productName}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                      {item.quantity} units @ ₹{item.unitPrice.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                  <p className="font-black text-primary/80">₹{item.subtotal.toLocaleString('en-IN')}</p>
+                </div>
+              ))}
+              {(!deal.lineItems || deal.lineItems.length === 0) && (
+                <p className="text-center py-10 text-muted-foreground text-xs italic font-medium">No products associated with this strategic deal.</p>
+              )}
+              <Separator className="bg-primary/5" />
+              <div className="flex justify-end items-center gap-4 pt-2">
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Est. Revenue</span>
+                <span className="text-2xl font-black text-primary tracking-tighter">₹{deal.amount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          </div>
+        </ScrollArea>
+
+        <div className="p-8 pt-0 flex justify-end">
+          <button 
+            onClick={() => onOpenChange(false)}
+            className="px-8 py-4 rounded-2xl bg-muted font-black text-xs uppercase tracking-widest hover:bg-muted/80 transition-colors"
+          >
+            Close Dashboard
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const DealCard = ({ deal, onClick }: { deal: Deal; onClick: () => void }) => {
     const itemCount = Array.isArray(deal.lineItems) ? deal.lineItems.length : 0;
     
     return (
-        <Card className="mb-4 bg-card/80 backdrop-blur-sm hover:bg-card transition-all hover:shadow-2xl rounded-2xl border-primary/5 group cursor-pointer active:scale-95">
+        <Card 
+          onClick={onClick}
+          className="mb-4 bg-card/80 backdrop-blur-sm hover:bg-card transition-all hover:shadow-2xl rounded-2xl border-primary/5 group cursor-pointer active:scale-95 border-2 hover:border-primary/10"
+        >
             <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-2">
                     <h3 className="font-black text-foreground group-hover:text-primary transition-colors leading-tight">{deal.name}</h3>
@@ -40,7 +136,7 @@ const DealCard = ({ deal }: { deal: Deal }) => {
                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 rounded-lg border border-primary/10 shadow-inner">
                             <ShoppingBag className="h-3 w-3 text-primary/60" />
                             <span className="text-[10px] text-primary/70 font-black uppercase tracking-tight">
-                                {itemCount} {itemCount === 1 ? 'Product' : 'Products'}
+                                {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
                             </span>
                         </div>
                     )}
@@ -56,7 +152,7 @@ const DealCard = ({ deal }: { deal: Deal }) => {
     )
 }
 
-const KanbanColumn = ({ stage, deals, isLoading }: { stage: DealStage; deals: Deal[], isLoading: boolean }) => {
+const KanbanColumn = ({ stage, deals, isLoading, onDealClick }: { stage: DealStage; deals: Deal[], isLoading: boolean, onDealClick: (deal: Deal) => void }) => {
   const stageTotalValue = deals.reduce((sum, deal) => sum + (deal.amount || 0), 0);
 
   return (
@@ -78,7 +174,7 @@ const KanbanColumn = ({ stage, deals, isLoading }: { stage: DealStage; deals: De
                 </div>
             )}
             {!isLoading && deals.map(deal => (
-                <DealCard key={deal.id} deal={deal} />
+                <DealCard key={deal.id} deal={deal} onClick={() => onDealClick(deal)} />
             ))}
              {!isLoading && deals.length === 0 && (
                 <div className="text-center text-muted-foreground text-xs font-black pt-16 opacity-30 uppercase tracking-[0.2em]">Empty Stage</div>
@@ -92,6 +188,8 @@ const KanbanColumn = ({ stage, deals, isLoading }: { stage: DealStage; deals: De
 export default function KanbanBoard() {
   const { currentTeamspace, isUserLoading, areTeamspacesLoading } = useApp();
   const firestore = useFirestore();
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const dealsQuery = useMemoFirebase(() =>
     !isUserLoading && !areTeamspacesLoading && currentTeamspace
@@ -101,15 +199,35 @@ export default function KanbanBoard() {
   
   const { data: deals, isLoading: isLoadingDeals } = useCollection<Deal>(dealsQuery);
 
+  const handleDealClick = (deal: Deal) => {
+    setSelectedDeal(deal);
+    setIsDetailOpen(true);
+  };
+
   const displayLoading = isLoadingDeals || isUserLoading || areTeamspacesLoading;
 
   return (
-    <div className="flex-1 flex overflow-x-auto h-[calc(100vh-240px)] scrollbar-hide">
-      <div className="flex space-x-8 p-8">
-        {stages.map(stage => {
-          const dealsInStage = displayLoading || !deals ? [] : deals.filter(deal => deal.stage === stage);
-          return <KanbanColumn key={stage} stage={stage} deals={dealsInStage} isLoading={displayLoading} />;
-        })}
+    <div className="flex-1 flex flex-col h-[calc(100vh-240px)]">
+      <ViewDealDialog 
+        deal={selectedDeal} 
+        open={isDetailOpen} 
+        onOpenChange={setIsDetailOpen} 
+      />
+      <div className="flex-1 flex overflow-x-auto scrollbar-hide">
+        <div className="flex space-x-8 p-8">
+          {stages.map(stage => {
+            const dealsInStage = displayLoading || !deals ? [] : deals.filter(deal => deal.stage === stage);
+            return (
+              <KanbanColumn 
+                key={stage} 
+                stage={stage} 
+                deals={dealsInStage} 
+                isLoading={displayLoading} 
+                onDealClick={handleDealClick}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );
