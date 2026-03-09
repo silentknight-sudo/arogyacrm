@@ -261,7 +261,7 @@ const DealCard = ({ deal, onClick }: { deal: Deal; onClick: () => void }) => {
     )
 }
 
-const KanbanColumn = ({ stage, deals, isLoading, onDealClick }: { stage: DealStage; deals: Deal[], isLoading: boolean, onDealClick: (deal: Deal) => void }) => {
+const KanbanColumn = ({ status, deals, isLoading, onDealClick }: { status: DealStage; deals: Deal[], isLoading: boolean, onDealClick: (deal: Deal) => void }) => {
   const stageTotalValue = deals.reduce((sum, deal) => sum + (deal.amount || 0), 0);
 
   return (
@@ -269,8 +269,8 @@ const KanbanColumn = ({ stage, deals, isLoading, onDealClick }: { stage: DealSta
       <div className="flex flex-col h-full rounded-[2.5rem] bg-muted/20 p-2 shadow-inner border border-primary/5">
         <div className="p-5 flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className={`w-3 h-3 rounded-full ${stageColors[stage]} shadow-lg animate-pulse`} />
-            <h2 className="font-black text-primary tracking-tighter uppercase text-sm">{stage}</h2>
+            <div className={`w-3 h-3 rounded-full ${stageColors[status]} shadow-lg animate-pulse`} />
+            <h2 className="font-black text-primary tracking-tighter uppercase text-sm">{status}</h2>
             <Badge variant="secondary" className="rounded-full bg-white/80 text-[10px] font-black border-none shadow-sm">{isLoading ? '...' : deals.length}</Badge>
           </div>
           <span className="text-[11px] font-black text-primary/40 uppercase tracking-tighter">₹{stageTotalValue.toLocaleString('en-IN')}</span>
@@ -329,7 +329,7 @@ export default function KanbanBoard() {
             return (
               <KanbanColumn 
                 key={stage} 
-                stage={stage} 
+                status={stage} 
                 deals={dealsInStage} 
                 isLoading={displayLoading} 
                 onDealClick={handleDealClick}
