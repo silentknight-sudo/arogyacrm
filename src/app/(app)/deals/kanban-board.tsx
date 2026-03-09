@@ -85,7 +85,7 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl rounded-[2.5rem] border-white/10 bg-card/95 backdrop-blur-3xl shadow-2xl p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-3xl rounded-[2.5rem] border-none bg-card/95 backdrop-blur-3xl shadow-2xl p-0 overflow-hidden">
         <div className="herbal-gradient p-8 text-white">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-6">

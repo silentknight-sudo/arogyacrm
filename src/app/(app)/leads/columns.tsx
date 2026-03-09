@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ColumnDef, type Table as TanstackTable } from '@tanstack/react-table';
 import { MoreHorizontal, ArrowUpDown, Star, Bot, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
 
-function LeadScoringResultDialog({ 
+const LeadScoringResultDialog = ({ 
   open, 
   onOpenChange, 
   result, 
@@ -44,7 +44,7 @@ function LeadScoringResultDialog({
   onOpenChange: (open: boolean) => void; 
   result: AiLeadScoringAndPrioritizationOutput | null;
   leadName: string;
-}) {
+}) => {
   if (!result) return null;
 
   const getPriorityBadgeColor = (priority: 'High' | 'Medium' | 'Low') => {

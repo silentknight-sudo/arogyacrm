@@ -37,10 +37,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, Trash2 } from 'lucide-react';
 
 const dealTypes = ['Wellness Package', 'Single Order', 'Subscription', 'Bulk Order', 'Retail'] as const;
+const dealStages = ['pending', 'not connect', 'busy', 'done', 'cancel'] as const;
 
 const formSchema = z.object({
   dealName: z.string().min(2, 'Deal name must be at least 2 characters.'),
   dealType: z.string().min(1, 'Please select a deal type.'),
+  dealStage: z.enum(dealStages),
   lineItems: z.array(LineItemSchema).min(1, 'Add at least one product to the deal.'),
 });
 
@@ -62,6 +64,7 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
     defaultValues: {
       dealName: `Order for ${lead.fullName}`,
       dealType: 'Wellness Package',
+      dealStage: 'pending',
       lineItems: [],
     },
   });
@@ -108,6 +111,7 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
         currentUserId: currentUser.id,
         dealName: values.dealName,
         dealType: values.dealType,
+        dealStage: values.dealStage,
         dealAmount: totalAmount,
         lineItems: values.lineItems,
       });
@@ -140,7 +144,7 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
         <ScrollArea className="max-h-[70vh] pr-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <FormField
                   control={form.control}
                   name="dealName"
@@ -154,26 +158,48 @@ export function ConvertToDealDialog({ open, onOpenChange, lead, products, isLoad
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="dealType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Strategic Deal Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {dealTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                    control={form.control}
+                    name="dealType"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Strategic Deal Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {dealTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="dealStage"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Pipeline Stage</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select stage" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {dealStages.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
               </div>
 
               <div className="space-y-4">

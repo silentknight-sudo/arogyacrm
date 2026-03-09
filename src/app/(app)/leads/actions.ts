@@ -108,13 +108,14 @@ const ConvertAndCreateDealSchema = z.object({
   currentUserId: z.string().min(1),
   dealName: z.string().min(2),
   dealType: z.string().min(1),
+  dealStage: z.string().min(1),
   dealAmount: z.coerce.number().min(0),
   lineItems: z.array(LineItemSchema),
 });
 
 export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCreateDealSchema>) {
   try {
-    const { leadId, teamspaceId, currentUserId, dealName, dealType, dealAmount, lineItems } = ConvertAndCreateDealSchema.parse(values);
+    const { leadId, teamspaceId, currentUserId, dealName, dealType, dealStage, dealAmount, lineItems } = ConvertAndCreateDealSchema.parse(values);
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
     const leadDoc = await leadRef.get();
@@ -127,7 +128,6 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
 
     const batch = adminDb.batch();
     
-    // 1. Create Contact directly (Contact-Centric Model)
     const contactRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('contacts').doc();
     batch.set(contactRef, {
       id: contactRef.id,
@@ -142,14 +142,13 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // 2. Create Product-Based Deal
     const dealRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals').doc();
     batch.set(dealRef, {
       id: dealRef.id,
       name: dealName,
       type: dealType,
       amount: Number(dealAmount),
-      stage: 'pending',
+      stage: dealStage,
       closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       contactId: contactRef.id,
       ownerId: currentUserId,
@@ -159,7 +158,6 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // 3. Finalize Lead Lifecycle
     batch.update(leadRef, { 
       status: 'Converted', 
       updatedAt: FieldValue.serverTimestamp() 
