@@ -1,6 +1,6 @@
 'use server';
 
-import { adminDb, FieldValue, handleAdminSDKError, serverTimestamp } from '@/firebase/admin';
+import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
@@ -42,7 +42,6 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
   try {
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = AssignLeadSchema.parse(values);
 
-    // Verify privileges: Only Admins or Team Leads can reassign
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
     if (!currentUserDoc.exists) throw new Error('User context not found.');
     
@@ -102,40 +101,44 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
   }
 }
 
-const ConvertLeadSchema = z.object({
+const ConvertAndCreateDealSchema = z.object({
   leadId: z.string().min(1),
   teamspaceId: z.string().min(1),
   currentUserId: z.string().min(1),
+  dealName: z.string().min(2),
+  dealAmount: z.coerce.number().min(0),
 });
 
-export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Promise<{ success: boolean; error?: string; contactId?: string; accountId?: string }> {
+export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCreateDealSchema>) {
   try {
-    const { leadId, teamspaceId, currentUserId } = ConvertLeadSchema.parse(values);
+    const { leadId, teamspaceId, currentUserId, dealName, dealAmount } = ConvertAndCreateDealSchema.parse(values);
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
     const leadDoc = await leadRef.get();
-    if (!leadDoc.exists) {
-      throw new Error("Prospect record not found.");
-    }
+    if (!leadDoc.exists) throw new Error("Prospect record not found.");
     const leadData = leadDoc.data() as Lead;
 
     if (leadData.status === 'Converted') {
         throw new Error("This prospect has already been converted.");
     }
 
+    const batch = adminDb.batch();
+
+    // 1. Create Account
     const accountRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('accounts').doc();
-    const newAccountData = {
+    batch.set(accountRef, {
       id: accountRef.id,
       name: `${leadData.fullName}'s Company`,
       ownerId: currentUserId,
       teamspaceId: teamspaceId,
+      phone: leadData.phone,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-      phone: leadData.phone,
-    };
+    });
     
+    // 2. Create Contact
     const contactRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('contacts').doc();
-    const newContactData = {
+    batch.set(contactRef, {
       id: contactRef.id,
       firstName: leadData.fullName.split(' ')[0],
       lastName: leadData.fullName.split(' ').slice(1).join(' ') || leadData.fullName.split(' ')[0],
@@ -147,20 +150,39 @@ export async function convertLead(values: z.infer<typeof ConvertLeadSchema>): Pr
       avatar: `https://picsum.photos/seed/${contactRef.id}/100/100`,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-    };
+    });
 
-    const batch = adminDb.batch();
-    batch.set(accountRef, newAccountData);
-    batch.set(contactRef, newContactData);
-    batch.update(leadRef, { status: 'Converted', updatedAt: FieldValue.serverTimestamp() });
+    // 3. Create Deal
+    const dealRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals').doc();
+    batch.set(dealRef, {
+      id: dealRef.id,
+      name: dealName,
+      amount: Number(dealAmount),
+      stage: 'pending',
+      closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      accountId: accountRef.id,
+      contactId: contactRef.id,
+      ownerId: currentUserId,
+      teamspaceId: teamspaceId,
+      lineItems: [],
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    // 4. Update Lead Status
+    batch.update(leadRef, { 
+      status: 'Converted', 
+      updatedAt: FieldValue.serverTimestamp() 
+    });
     
     await batch.commit();
 
     revalidatePath('/leads');
     revalidatePath('/contacts');
     revalidatePath('/accounts');
+    revalidatePath('/deals');
 
-    return { success: true, accountId: accountRef.id, contactId: contactRef.id };
+    return { success: true };
   } catch (error: any) {
     return { success: false, error: handleAdminSDKError(error) };
   }

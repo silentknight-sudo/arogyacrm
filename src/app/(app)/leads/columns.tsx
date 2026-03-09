@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Lead, UserProfile } from '@/types';
-import { scoreLeadWithAI, convertLead } from './actions';
+import { scoreLeadWithAI } from './actions';
 import { AiLeadScoringAndPrioritizationOutput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
 import {
   AlertDialog,
@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useApp } from '@/context/app-context';
 import { AssignLeadDialog } from './assign-lead-dialog';
+import { ConvertToDealDialog } from './convert-to-deal-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
@@ -87,9 +88,8 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AiLeadScoringAndPrioritizationOutput | null>(null);
   const [isScoringDialogOpen, setScoringDialogOpen] = useState(false);
-  const [isConverting, startConvertTransition] = useTransition();
-  const [isConvertAlertOpen, setConvertAlertOpen] = useState(false);
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [isConvertDialogOpen, setConvertDialogOpen] = useState(false);
 
   const users = (table.options.meta as any)?.users || [];
   const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
@@ -118,39 +118,11 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
     });
   };
 
-  const handleConvertLead = () => {
-    if (!currentUser) return;
-    startConvertTransition(async () => {
-      const result = await convertLead({ leadId: lead.id, teamspaceId: lead.teamspaceId, currentUserId: currentUser.id });
-      if (result.success) {
-        toast({ title: 'Lead Converted', description: `Successfully converted ${lead.fullName}.` });
-        setConvertAlertOpen(false);
-      } else {
-        toast({ variant: 'destructive', title: 'Conversion Failed', description: result.error });
-      }
-    });
-  };
-
   return (
     <>
       <LeadScoringResultDialog open={isScoringDialogOpen} onOpenChange={setScoringDialogOpen} result={result} leadName={lead.fullName} />
       <AssignLeadDialog open={isAssignDialogOpen} onOpenChange={setAssignDialogOpen} lead={lead} users={users} />
-      <AlertDialog open={isConvertAlertOpen} onOpenChange={setConvertAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Convert this Lead?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will create a new Account and Contact from '{lead.fullName}'. The lead's status will be set to 'Converted'.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isConverting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConvertLead} disabled={isConverting}>
-              {isConverting ? 'Converting...' : 'Yes, Convert Lead'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConvertToDealDialog open={isConvertDialogOpen} onOpenChange={setConvertDialogOpen} lead={lead} />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -175,9 +147,9 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-           <DropdownMenuItem onSelect={() => setConvertAlertOpen(true)} disabled={lead.status === 'Converted'}>
+           <DropdownMenuItem onSelect={() => setConvertDialogOpen(true)} disabled={lead.status === 'Converted'} className="text-primary font-bold">
                 <ChevronsRight className="mr-2 h-4 w-4" />
-                Convert Lead
+                Convert to Deal
             </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleCopyId}>

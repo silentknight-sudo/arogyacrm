@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -111,6 +111,15 @@ export const columns: ColumnDef<Contact>[] = [
   {
     accessorKey: 'phone',
     header: 'Phone',
+    cell: ({ row }) => {
+        const phone = row.getValue('phone') as string;
+        return phone ? (
+            <div className="flex items-center gap-2 font-medium">
+                <Phone className="h-3 w-3 text-muted-foreground" />
+                {phone}
+            </div>
+        ) : <span className="text-muted-foreground italic">-</span>;
+    }
   },
   {
     accessorKey: 'accountId',
