@@ -12,7 +12,7 @@ import {
 import type { Deal, DealStage, Contact } from '@/types';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { useApp } from '@/context/app-context';
-import { doc } from 'firebase/firestore';
+import { doc, collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingBag, Calendar, ArrowRight, Wallet, PackageCheck, Phone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
