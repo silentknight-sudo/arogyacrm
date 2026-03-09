@@ -4,7 +4,7 @@ import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
-import type { Lead } from '@/types';
+import type { Lead, DealStage } from '@/types';
 import { LineItemSchema } from '../inventory/schemas';
 
 export async function scoreLeadWithAI(lead: Lead) {
@@ -148,7 +148,7 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       name: dealName,
       type: dealType,
       amount: Number(dealAmount),
-      stage: dealStage,
+      stage: dealStage as DealStage,
       closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       contactId: contactRef.id,
       ownerId: currentUserId,
