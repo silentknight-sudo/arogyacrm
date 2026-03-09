@@ -211,14 +211,13 @@ export const columns: ColumnDef<Lead>[] = [
     header: 'Email',
     cell: ({ row }) => <span className="truncate max-w-[150px] inline-block">{row.getValue('email') || '-'}</span>
   },
-    {
+  {
     accessorKey: 'assignedToIds',
     header: 'Assigned To',
     cell: ({ row, table }) => {
-        const assignedToIds = row.getValue('assignedToIds');
-        const ids = Array.isArray(assignedToIds) ? assignedToIds : [];
+        const assignedToIds = row.getValue('assignedToIds') as string[] || [];
         const users = (table.options.meta as any)?.users || [];
-        const assignedUsers = ids.map(id => users.find((u: any) => u.id === id)).filter(Boolean) as UserProfile[];
+        const assignedUsers = assignedToIds.map(id => users.find((u: any) => u.id === id)).filter(Boolean) as UserProfile[];
         
         if (assignedUsers.length === 0) {
             return <span className="text-muted-foreground text-xs italic">Unassigned</span>;
