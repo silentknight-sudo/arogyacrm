@@ -67,7 +67,7 @@ export function ConvertToDealDialog({ open, onOpenChange, lead }: ConvertToDealD
       if (result.success) {
         toast({ 
           title: 'Direct Conversion Successful', 
-          description: `Account, Contact, and Deal created for ${lead.fullName}.` 
+          description: `Contact and Deal created for ${lead.fullName}.` 
         });
         onOpenChange(false);
       } else {
@@ -86,7 +86,7 @@ export function ConvertToDealDialog({ open, onOpenChange, lead }: ConvertToDealD
         <DialogHeader className="mb-6">
           <DialogTitle className="text-3xl font-black tracking-tight text-primary">Pipeline Conversion</DialogTitle>
           <DialogDescription className="text-lg font-medium text-muted-foreground">
-            Instantly create an Account, Contact, and Deal from this prospect.
+            Instantly create a Contact and Deal from this prospect.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

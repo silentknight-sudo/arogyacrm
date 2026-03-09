@@ -10,12 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Deal, DealStage, Account, Contact } from '@/types';
+import type { Deal, DealStage, Contact } from '@/types';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useApp } from '@/context/app-context';
 import { collection, query, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, Calendar, ArrowRight, Building2, User, Wallet, PackageCheck, Globe } from 'lucide-react';
+import { ShoppingBag, Calendar, ArrowRight, User, Wallet, PackageCheck } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -32,11 +32,6 @@ const stageColors: Record<DealStage, string> = {
 const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open: boolean; onOpenChange: (open: boolean) => void }) => {
   const firestore = useFirestore();
   const { currentTeamspace } = useApp();
-
-  const accountRef = useMemoFirebase(() => 
-    deal && currentTeamspace ? doc(firestore, 'teamspaces', currentTeamspace.id, 'accounts', deal.accountId) : null
-  , [firestore, currentTeamspace, deal?.accountId]);
-  const { data: account, isLoading: isLoadingAccount } = useDoc<Account>(accountRef);
 
   const contactRef = useMemoFirebase(() => 
     deal?.contactId && currentTeamspace ? doc(firestore, 'teamspaces', currentTeamspace.id, 'contacts', deal.contactId) : null
@@ -67,43 +62,21 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
             <div className="space-y-4">
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Account Intelligence</p>
-                {isLoadingAccount ? (
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Primary Decision Maker</p>
+                {isLoadingContact ? (
                     <Skeleton className="h-10 w-full rounded-xl" />
                 ) : (
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-primary/5 shadow-inner">
-                        <div className="flex items-center gap-3 mb-1">
-                            <Building2 className="h-5 w-5 text-primary" />
-                            <span className="text-lg font-black text-primary tracking-tight">{account?.name || 'Unknown Account'}</span>
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-muted/20 border border-primary/5 shadow-inner">
+                        <div className="h-12 w-12 rounded-full herbal-gradient flex items-center justify-center text-sm font-black shadow-lg">
+                            {contact?.firstName?.[0]}{contact?.lastName?.[0]}
                         </div>
-                        {account?.industry && (
-                            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground ml-8">
-                                <Globe className="h-3 w-3" />
-                                {account.industry}
-                            </div>
-                        )}
+                        <div className="flex flex-col">
+                            <span className="text-lg font-black text-primary tracking-tight">{contact?.firstName} {contact?.lastName}</span>
+                            <span className="text-xs font-medium text-muted-foreground">{contact?.email}</span>
+                        </div>
                     </div>
                 )}
               </div>
-
-              {deal.contactId && (
-                <div className="space-y-1">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Primary Decision Maker</p>
-                    {isLoadingContact ? (
-                        <Skeleton className="h-10 w-full rounded-xl" />
-                    ) : (
-                        <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/10 border border-border/50">
-                            <div className="h-10 w-10 rounded-full herbal-gradient flex items-center justify-center text-xs font-black">
-                                {contact?.firstName?.[0]}{contact?.lastName?.[0]}
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-bold text-primary text-sm">{contact?.firstName} {contact?.lastName}</span>
-                                <span className="text-[10px] font-medium text-muted-foreground">{contact?.email}</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-              )}
             </div>
 
             <div className="space-y-4">

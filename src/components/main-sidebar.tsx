@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    Users, Contact, Building2, Handshake, Megaphone, Package,
+    Users, Contact, Handshake, Megaphone, Package,
     ShoppingCart, Receipt, Ticket, Undo2, ShieldAlert, LayoutDashboard,
     Leaf, Shield, LayoutGrid, Calendar, Phone
 } from 'lucide-react';
@@ -19,7 +19,6 @@ export function MainSidebar({ className }: { className?: string }) {
     { title: 'PIPELINE', items: [
         { href: '/leads', label: 'Prospects', icon: Users },
         { href: '/contacts', label: 'Contacts', icon: Contact },
-        { href: '/accounts', label: 'Accounts', icon: Building2 },
         { href: '/deals', label: 'Deals', icon: Handshake },
     ]},
     { title: 'ACTIVITIES', items: [

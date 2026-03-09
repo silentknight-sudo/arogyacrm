@@ -122,11 +122,6 @@ export const columns: ColumnDef<Contact>[] = [
     }
   },
   {
-    accessorKey: 'accountId',
-    header: 'Account ID',
-    cell: ({ row }) => <div className="text-xs text-muted-foreground truncate">{row.getValue('accountId')}</div>
-  },
-  {
     id: 'actions',
     cell: ({ row }) => <ContactActions contact={row.original} />,
   },

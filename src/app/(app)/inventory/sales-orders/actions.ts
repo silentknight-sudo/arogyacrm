@@ -7,8 +7,7 @@ import { LineItemSchema } from '../schemas';
 
 
 const CreateSalesOrderSchema = z.object({
-    accountId: z.string().min(1, 'Account is required.'),
-    contactId: z.string().optional(),
+    contactId: z.string().min(1, 'Contact is required.'),
     orderDate: z.string().min(1, 'Order date is required.'),
     status: z.enum(['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled']),
     lineItems: z.array(LineItemSchema).min(1, 'Sales Order must have at least one line item.'),
@@ -49,4 +48,3 @@ export async function createSalesOrder(values: CreateSalesOrderInput): Promise<C
         return { success: false, error: `Failed to create sales order: ${errorMessage}` };
     }
 }
-    

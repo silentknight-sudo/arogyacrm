@@ -89,7 +89,7 @@ export default function LeadDetailPage() {
               <div className="text-muted-foreground p-8 text-center border rounded-lg">More detailed information will be shown here.</div>
             </TabsContent>
             <TabsContent value="related">
-              <div className="text-muted-foreground p-8 text-center border rounded-lg">Related contacts, deals, and accounts will be shown here.</div>
+              <div className="text-muted-foreground p-8 text-center border rounded-lg">Related contacts and deals will be shown here.</div>
             </TabsContent>
           </Tabs>
         </div>

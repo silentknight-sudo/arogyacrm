@@ -19,36 +19,25 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createContact } from './actions';
 import { useApp } from '@/context/app-context';
-import type { Account } from '@/types';
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'First name is required.'),
   lastName: z.string().min(1, 'Last name is required.'),
   email: z.string().email('Invalid email address.'),
   phone: z.string().optional(),
-  accountId: z.string().min(1, 'Account is required.'),
 });
 
 type CreateContactDialogProps = {
   children: React.ReactNode;
-  accounts: Account[];
-  isLoadingAccounts: boolean;
 };
 
-export function CreateContactDialog({ children, accounts, isLoadingAccounts }: CreateContactDialogProps) {
+export function CreateContactDialog({ children }: CreateContactDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
@@ -61,7 +50,6 @@ export function CreateContactDialog({ children, accounts, isLoadingAccounts }: C
       lastName: '',
       email: '',
       phone: '',
-      accountId: '',
     },
   });
 
@@ -116,35 +104,12 @@ export function CreateContactDialog({ children, accounts, isLoadingAccounts }: C
                     )} />
                 </div>
                 <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="jane.doe@acme.com" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="jane.doe@example.com" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                  <FormField control={form.control} name="phone" render={({ field }) => (
                     <FormItem><FormLabel>Phone (Optional)</FormLabel><FormControl><Input placeholder="+1-202-555-0149" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="accountId" render={({ field }) => (
-                    <FormItem><FormLabel>Account</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger disabled={isLoadingAccounts}>
-                                    <SelectValue placeholder={isLoadingAccounts ? 'Loading accounts...' : 'Select an account'} />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {isLoadingAccounts ? (
-                                    <div className="p-2">Loading...</div>
-                                ) : accounts.length > 0 ? (
-                                    accounts.map(account => (
-                                        <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                                    ))
-                                ) : (
-                                    <div className="p-2 text-sm text-muted-foreground">No accounts found.</div>
-                                )}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <Button type="submit" disabled={isPending || isLoadingAccounts || accounts.length === 0} className="w-full">
+                <Button type="submit" disabled={isPending} className="w-full">
                     {isPending ? 'Creating Contact...' : 'Create Contact'}
                 </Button>
             </form>

@@ -212,10 +212,6 @@
           "type": "string",
           "description": "The primary phone number of the contact."
         },
-        "accountId": {
-          "type": "string",
-          "description": "Reference to the Account (company) this contact is associated with. (Relationship: Account 1:N Contact)"
-        },
         "ownerId": {
           "type": "string",
           "description": "Reference to the User who owns this contact record. (Relationship: User 1:N Contact)"
@@ -241,66 +237,6 @@
         "firstName",
         "lastName",
         "email",
-        "accountId",
-        "ownerId",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Account": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Account",
-      "type": "object",
-      "description": "Represents a company or organization with which Arogya CRM does business, serving as a hub for contacts, deals, and activities.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Account entity."
-        },
-        "teamspaceId": {
-          "type": "string",
-          "description": "Reference to the Teamspace this account belongs to, ensuring data isolation. (Relationship: Teamspace 1:N Account)"
-        },
-        "name": {
-          "type": "string",
-          "description": "The official name of the company or organization."
-        },
-        "industry": {
-          "type": "string",
-          "description": "The industry sector in which the account operates."
-        },
-        "website": {
-          "type": "string",
-          "description": "The official website URL of the account.",
-          "format": "uri"
-        },
-        "phone": {
-          "type": "string",
-          "description": "The primary phone number of the account."
-        },
-        "address": {
-          "type": "string",
-          "description": "The primary physical address of the account."
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "Reference to the User (account manager) responsible for managing this account. (Relationship: User 1:N Account)"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the account record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the account record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "teamspaceId",
-        "name",
         "ownerId",
         "createdAt",
         "updatedAt"
@@ -337,10 +273,6 @@
           "description": "The estimated or actual closing date of the deal.",
           "format": "date-time"
         },
-        "accountId": {
-          "type": "string",
-          "description": "Reference to the Account associated with this deal. (Relationship: Account 1:N Deal)"
-        },
         "contactId": {
           "type": "string",
           "description": "Reference to the primary Contact associated with this deal. (Relationship: Contact 1:N Deal)"
@@ -367,7 +299,7 @@
         "amount",
         "stage",
         "closeDate",
-        "accountId",
+        "contactId",
         "ownerId",
         "createdAt",
         "updatedAt"
@@ -414,7 +346,7 @@
         },
         "relatedToEntityType": {
           "type": "string",
-          "description": "The type of entity this task is related to (e.g., 'Lead', 'Contact', 'Deal', 'Account')."
+          "description": "The type of entity this task is related to (e.g., 'Lead', 'Contact', 'Deal')."
         },
         "relatedToEntityId": {
           "type": "string",
@@ -491,7 +423,7 @@
         },
         "relatedToEntityType": {
           "type": "string",
-          "description": "The type of entity this meeting is primarily related to (e.g., 'Lead', 'Contact', 'Deal', 'Account')."
+          "description": "The type of entity this meeting is primarily related to (e.g., 'Lead', 'Contact', 'Deal')."
         },
         "relatedToEntityId": {
           "type": "string",
@@ -564,7 +496,7 @@
         },
         "relatedToEntityType": {
           "type": "string",
-          "description": "The type of entity this call is related to (e.g., 'Lead', 'Contact', 'Deal', 'Account')."
+          "description": "The type of entity this call is related to (e.g., 'Lead', 'Contact', 'Deal')."
         },
         "relatedToEntityId": {
           "type": "string",
@@ -631,7 +563,7 @@
         },
         "relatedToEntityType": {
           "type": "string",
-          "description": "The type of entity this document is primarily related to (e.g., 'Lead', 'Contact', 'Deal', 'Product', 'Account')."
+          "description": "The type of entity this document is primarily related to (e.g., 'Lead', 'Contact', 'Deal', 'Product')."
         },
         "relatedToEntityId": {
           "type": "string",
@@ -812,10 +744,6 @@
           "type": "string",
           "description": "The name or subject of the quote (e.g., 'Quote for Corporate Wellness Package')."
         },
-        "accountId": {
-          "type": "string",
-          "description": "Reference to the Account for whom this quote is created. (Relationship: Account 1:N Quote)"
-        },
         "contactId": {
           "type": "string",
           "description": "Reference to the primary Contact associated with this quote. (Relationship: Contact 1:N Quote)"
@@ -867,7 +795,6 @@
         "id",
         "teamspaceId",
         "name",
-        "accountId",
         "validUntil",
         "status",
         "totalAmount",
@@ -893,10 +820,6 @@
         "orderNumber": {
           "type": "string",
           "description": "A unique identifier or reference number for the sales order."
-        },
-        "accountId": {
-          "type": "string",
-          "description": "Reference to the Account that placed this order. (Relationship: Account 1:N SalesOrder)"
         },
         "contactId": {
           "type": "string",
@@ -953,7 +876,6 @@
         "id",
         "teamspaceId",
         "orderNumber",
-        "accountId",
         "orderDate",
         "status",
         "totalAmount",
@@ -1410,7 +1332,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores individual user profiles, including their assigned role and the teamspaces they are members of. This document is crucial for role-based and teamspace-based authorization checks. Users can typically only read/write their own profile, while 'admin' users have broader management rights. Includes denormalized 'role' and 'teamspaceIds' array for authorization independence."
+          "description": "Stores individual user profiles."
         }
       },
       {
@@ -1420,7 +1342,7 @@
           "schema": {
             "$ref": "#/backend/entities/Teamspace"
           },
-          "description": "Represents an isolated workspace for a team. This is the root for all team-specific data. It includes a 'memberIds' array for explicit team membership, enabling direct authorization checks. Only members of a teamspace can access its associated data."
+          "description": "Represents an isolated workspace for a team."
         }
       },
       {
@@ -1430,7 +1352,7 @@
           "schema": {
             "$ref": "#/backend/entities/Lead"
           },
-          "description": "Stores potential customer leads, isolated per teamspace. Each lead document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToIds' for authorization independence. Access is restricted to members of the respective teamspace and the assigned sales executives."
+          "description": "Stores potential customer leads."
         }
       },
       {
@@ -1440,17 +1362,7 @@
           "schema": {
             "$ref": "#/backend/entities/Contact"
           },
-          "description": "Stores established contacts, isolated per teamspace. Each contact document contains its 'teamspaceId' (matching the path wildcard) for authorization independence. Access is restricted to members of the respective teamspace."
-        }
-      },
-      {
-        "path": "/teamspaces/{teamspaceId}/accounts/{accountId}",
-        "definition": {
-          "entityName": "Account",
-          "schema": {
-            "$ref": "#/backend/entities/Account"
-          },
-          "description": "Stores company or organization accounts, isolated per teamspace. Each account document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the account owner."
+          "description": "Stores established contacts."
         }
       },
       {
@@ -1460,7 +1372,7 @@
           "schema": {
             "$ref": "#/backend/entities/Deal"
           },
-          "description": "Stores sales opportunities, isolated per teamspace. Each deal document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the deal owner."
+          "description": "Stores sales opportunities."
         }
       },
       {
@@ -1470,7 +1382,7 @@
           "schema": {
             "$ref": "#/backend/entities/Task"
           },
-          "description": "Stores tasks, isolated per teamspace. Each task document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToId' for authorization independence. Access is restricted to members of the respective teamspace and the assigned user."
+          "description": "Stores tasks."
         }
       },
       {
@@ -1480,7 +1392,7 @@
           "schema": {
             "$ref": "#/backend/entities/Meeting"
           },
-          "description": "Stores scheduled meetings, isolated per teamspace. Each meeting document contains its 'teamspaceId' (matching the path wildcard), 'organizerId', and 'attendeeIds' for authorization independence. Access is restricted to members of the respective teamspace, the organizer, and attendees."
+          "description": "Stores scheduled meetings."
         }
       },
       {
@@ -1490,7 +1402,7 @@
           "schema": {
             "$ref": "#/backend/entities/Call"
           },
-          "description": "Stores logged phone calls, isolated per teamspace. Each call document contains its 'teamspaceId' (matching the path wildcard) and 'callerId' for authorization independence. Access is restricted to members of the respective teamspace and the caller."
+          "description": "Stores logged phone calls."
         }
       },
       {
@@ -1500,7 +1412,7 @@
           "schema": {
             "$ref": "#/backend/entities/Document"
           },
-          "description": "Stores CRM documents and their metadata, isolated per teamspace. Each document contains its 'teamspaceId' (matching the path wildcard) and 'uploadedById' for authorization independence. Access is restricted to members of the respective teamspace and the uploader."
+          "description": "Stores CRM documents."
         }
       },
       {
@@ -1510,7 +1422,7 @@
           "schema": {
             "$ref": "#/backend/entities/Campaign"
           },
-          "description": "Stores marketing campaigns, isolated per teamspace. Each campaign document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the campaign owner (typically 'marketer' role)."
+          "description": "Stores marketing campaigns."
         }
       },
       {
@@ -1520,7 +1432,7 @@
           "schema": {
             "$ref": "#/backend/entities/Product"
           },
-          "description": "Stores globally available product catalog information, with denormalized price and stock for performance. Accessible to all relevant roles (e.g., sales, marketing for read, admin/ops for write)."
+          "description": "Stores product catalog information."
         }
       },
       {
@@ -1530,7 +1442,7 @@
           "schema": {
             "$ref": "#/backend/entities/Quote"
           },
-          "description": "Stores sales quotes, isolated per teamspace. Each quote document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the quote owner."
+          "description": "Stores sales quotes."
         }
       },
       {
@@ -1540,7 +1452,7 @@
           "schema": {
             "$ref": "#/backend/entities/SalesOrder"
           },
-          "description": "Stores confirmed sales orders, isolated per teamspace. Each sales order document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the order owner."
+          "description": "Stores confirmed sales orders."
         }
       },
       {
@@ -1550,7 +1462,7 @@
           "schema": {
             "$ref": "#/backend/entities/PurchaseOrder"
           },
-          "description": "Stores purchase orders, isolated per teamspace (e.g., 'Operations Teamspace'). Each purchase order document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the order owner."
+          "description": "Stores purchase orders."
         }
       },
       {
@@ -1560,7 +1472,7 @@
           "schema": {
             "$ref": "#/backend/entities/Invoice"
           },
-          "description": "Stores invoices issued to customers, isolated per teamspace. Each invoice document contains its 'teamspaceId' (matching the path wildcard) and 'ownerId' for authorization independence. Access is restricted to members of the respective teamspace and the invoice owner."
+          "description": "Stores invoices."
         }
       },
       {
@@ -1570,7 +1482,7 @@
           "schema": {
             "$ref": "#/backend/entities/Ticket"
           },
-          "description": "Stores customer support tickets, isolated per teamspace (e.g., 'Support Teamspace'). Each ticket document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToId' for authorization independence. Access is restricted to members of the respective teamspace and the assigned support agent."
+          "description": "Stores customer support tickets."
         }
       },
       {
@@ -1580,7 +1492,7 @@
           "schema": {
             "$ref": "#/backend/entities/Refund"
           },
-          "description": "Stores customer refund requests, isolated per teamspace. Each refund document contains its 'teamspaceId' (matching the path wildcard), 'requestedById', and 'processedById' for authorization independence. Access is restricted to members of the respective teamspace and the relevant users."
+          "description": "Stores customer refund requests."
         }
       },
       {
@@ -1590,7 +1502,7 @@
           "schema": {
             "$ref": "#/backend/entities/Complaint"
           },
-          "description": "Records and manages customer complaints, isolated per teamspace. Each complaint document contains its 'teamspaceId' (matching the path wildcard) and 'assignedToId' for authorization independence. Access is restricted to members of the respective teamspace and the assigned agent."
+          "description": "Records and manages customer complaints."
         }
       },
       {
@@ -1600,12 +1512,9 @@
           "schema": {
             "$ref": "#/backend/entities/ActivityLog"
           },
-          "description": "Records significant actions and changes for audit trails, isolated per teamspace. Each activity log document contains its 'teamspaceId' (matching the path wildcard) and 'userId' for authorization independence. Access is restricted to members of the respective teamspace and the user who performed the action."
+          "description": "Records significant actions for audit trails."
         }
       }
-    ],
-    "reasoning": "The recommended Firestore structure prioritizes secure, scalable, and debuggable authorization by adhering to the core design principles: Authorization Independence, Structural Segregation, and consistent Access Modeling. Most CRM data is organized under a 'Teamspace' hierarchy, ensuring strict data isolation per team, a key requirement for a SaaS-style CRM.\n\n**Authorization Independence:** This is achieved through extensive denormalization. For instance, every document within a teamspace-scoped subcollection (e.g., Leads, Contacts, Deals, Tasks, etc., and critically, all 'Line Item' sub-subcollections) will explicitly include its `teamspaceId`. This allows Firestore Security Rules to verify a user's access by checking if `request.auth.uid` is a member of the `teamspaceId` (by checking the `teamspaceIds` array on the user's own `/users/{userId}` document, which is a single `get()` operation per request for the user's profile, a standard and efficient practice for DBAC), rather than performing costly and complex `get()` operations on parent documents. Similarly, fields like `ownerId`, `assignedToId`, `uploadedById`, `organizerId`, `callerId`, `requestedById`, and `processedById` are stored directly on the respective documents, enabling direct authorization checks.\n\n**Structural Segregation (Homogeneous Security Posture):** Data is segregated into distinct collections based on its security requirements. Global catalog data (Products, PriceBooks, ProductPrices, Stock) resides at the root level, accessible based on a user's role. Most operational CRM data, however, is nested under `/teamspaces/{teamspaceId}/` to enforce strong data isolation. This means all documents within, for example, `/teamspaces/{teamspaceId}/leads` will share the same `teamspaceId` and thus the same primary access rules, simplifying security rule logic.\n\n**QAPs (Queries are not Filters):** The hierarchical structure `teamspaces/{teamspaceId}/<entity_plural_name>/{entityId}` inherently supports Query as a Security Primitive. When a user queries a collection like `db.collection('teamspaces').doc(myTeamspaceId).collection('leads')`, the results are naturally scoped to `myTeamspaceId`. Security rules then only need to verify that `request.auth.uid` has access to `myTeamspaceId` (i.e., is a member of that teamspace), and potentially other role-based or ownership-based conditions on the document itself. This prevents inefficient filtering of large result sets by security rules and ensures that only authorized data is ever returned.\n\n**Role-Based Access Control (DBAC):** User roles are stored explicitly in the `/users/{userId}` document. The `teamspaceIds` array on the user document also facilitates quick lookups for teamspace membership. Admin users are granted broad access based on their 'admin' role, while other roles (sales_team_lead, sales_executive, marketer, support) have access confined to their assigned teamspaces and/or documents where they are an `ownerId` or `assignedToId`.\n\nThis architecture provides a clean, predictable, and highly secure foundation for Arogya CRM, making security rules simpler to write, understand, and debug, while maintaining scalability and performance."
+    ]
   }
 }
-    
-    

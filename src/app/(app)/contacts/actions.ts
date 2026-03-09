@@ -9,7 +9,6 @@ const CreateContactSchema = z.object({
     lastName: z.string().min(1, 'Last name is required.'),
     email: z.string().email('Invalid email address.'),
     phone: z.string().optional(),
-    accountId: z.string().min(1, 'Account is required.'),
     teamspaceId: z.string().min(1, 'Teamspace ID is required.'),
     ownerId: z.string().min(1, 'Owner ID is required.'),
 });

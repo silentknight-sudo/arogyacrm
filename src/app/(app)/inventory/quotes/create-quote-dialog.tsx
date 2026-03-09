@@ -32,7 +32,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createQuote } from './actions';
 import { useApp } from '@/context/app-context';
-import type { Account, Contact, Product } from '@/types';
+import type { Contact, Product } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
@@ -45,8 +45,7 @@ const quoteStatuses = ['Draft', 'Sent', 'Accepted', 'Rejected', 'Expired'] as co
 
 const formSchema = z.object({
   name: z.string().min(2, 'Quote name is required.'),
-  accountId: z.string().min(1, 'Account is required.'),
-  contactId: z.string().optional(),
+  contactId: z.string().min(1, 'Contact is required.'),
   validUntil: z.date({ required_error: 'Valid until date is required.' }),
   status: z.enum(quoteStatuses),
   lineItems: z.array(LineItemSchema).min(1, 'Quote must have at least one line item.'),
@@ -54,13 +53,12 @@ const formSchema = z.object({
 
 type CreateQuoteDialogProps = {
   children: React.ReactNode;
-  accounts: Account[];
   contacts: Contact[];
   products: Product[];
   isLoading: boolean;
 };
 
-export function CreateQuoteDialog({ children, accounts, contacts, products, isLoading }: CreateQuoteDialogProps) {
+export function CreateQuoteDialog({ children, contacts, products, isLoading }: CreateQuoteDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
@@ -158,56 +156,19 @@ export function CreateQuoteDialog({ children, accounts, contacts, products, isLo
                     </FormItem>
                 )} />
                  <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="accountId" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Account</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger disabled={isLoading}>
-                                <SelectValue placeholder={isLoading ? "Loading..." : "Select account"} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {accounts.map(a => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                    )} />
                     <FormField control={form.control} name="contactId" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Contact (Optional)</FormLabel>
+                          <FormLabel>Primary Contact</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger disabled={isLoading}>
-                                <SelectValue placeholder="Select contact" />
+                                <SelectValue placeholder={isLoading ? "Loading..." : "Select contact"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}
                             </SelectContent>
                           </Select>
-                          <FormMessage />
-                        </FormItem>
-                    )} />
-                </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="validUntil" render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Valid Until</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                            </PopoverContent>
-                          </Popover>
                           <FormMessage />
                         </FormItem>
                     )} />
@@ -228,6 +189,25 @@ export function CreateQuoteDialog({ children, accounts, contacts, products, isLo
                         </FormItem>
                     )} />
                 </div>
+                 <FormField control={form.control} name="validUntil" render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Valid Until</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                )} />
                 
                 <FormField
                   control={form.control}

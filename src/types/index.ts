@@ -67,8 +67,7 @@ export type Deal = {
   amount: number;
   stage: DealStage;
   closeDate: string;
-  accountId: string;
-  contactId?: string;
+  contactId: string;
   ownerId: string;
   lineItems: LineItem[];
   createdAt: any;
@@ -88,19 +87,6 @@ export type Product = {
   updatedAt: any;
 };
 
-export type Account = {
-  id: string;
-  teamspaceId: string;
-  name: string;
-  industry?: string;
-  website?: string;
-  phone?: string;
-  address?: string;
-  ownerId: string;
-  createdAt?: any;
-  updatedAt?: any;
-};
-
 export type Contact = {
   id: string;
   teamspaceId: string;
@@ -108,7 +94,6 @@ export type Contact = {
   lastName: string;
   email: string;
   phone?: string;
-  accountId: string;
   ownerId: string;
   leadId?: string;
   createdAt: any;
@@ -146,8 +131,7 @@ export type SalesOrder = {
   id: string;
   teamspaceId: string;
   orderNumber: string;
-  accountId: string;
-  contactId?: string;
+  contactId: string;
   orderDate: string;
   status: SalesOrderStatus;
   totalAmount: number;
@@ -301,8 +285,7 @@ export type Quote = {
   id: string;
   teamspaceId: string;
   name: string;
-  accountId: string;
-  contactId?: string;
+  contactId: string;
   validUntil: string;
   status: QuoteStatus;
   totalAmount: number;

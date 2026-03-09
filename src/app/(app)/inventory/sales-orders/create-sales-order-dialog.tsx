@@ -32,7 +32,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createSalesOrder } from './actions';
 import { useApp } from '@/context/app-context';
-import type { Account, Contact, Product } from '@/types';
+import type { Contact, Product } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
@@ -44,8 +44,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 const salesOrderStatuses = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'] as const;
 
 const formSchema = z.object({
-  accountId: z.string().min(1, 'Account is required.'),
-  contactId: z.string().optional(),
+  contactId: z.string().min(1, 'Contact is required.'),
   orderDate: z.date({ required_error: 'Order date is required.' }),
   status: z.enum(salesOrderStatuses),
   lineItems: z.array(LineItemSchema).min(1, 'Sales Order must have at least one line item.'),
@@ -53,13 +52,12 @@ const formSchema = z.object({
 
 type CreateSalesOrderDialogProps = {
   children: React.ReactNode;
-  accounts: Account[];
   contacts: Contact[];
   products: Product[];
   isLoading: boolean;
 };
 
-export function CreateSalesOrderDialog({ children, accounts, contacts, products, isLoading }: CreateSalesOrderDialogProps) {
+export function CreateSalesOrderDialog({ children, contacts, products, isLoading }: CreateSalesOrderDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
@@ -147,56 +145,19 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
                  <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="accountId" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Account</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger disabled={isLoading}>
-                                <SelectValue placeholder={isLoading ? "Loading..." : "Select account"} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {accounts.map(a => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                    )} />
                     <FormField control={form.control} name="contactId" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Contact (Optional)</FormLabel>
+                          <FormLabel>Primary Contact</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger disabled={isLoading}>
-                                <SelectValue placeholder="Select contact" />
+                                <SelectValue placeholder={isLoading ? "Loading..." : "Select contact"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}
                             </SelectContent>
                           </Select>
-                          <FormMessage />
-                        </FormItem>
-                    )} />
-                </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="orderDate" render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Order Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                            </PopoverContent>
-                          </Popover>
                           <FormMessage />
                         </FormItem>
                     )} />
@@ -217,6 +178,25 @@ export function CreateSalesOrderDialog({ children, accounts, contacts, products,
                         </FormItem>
                     )} />
                 </div>
+                 <FormField control={form.control} name="orderDate" render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Order Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                )} />
                 
                 <FormField
                   control={form.control}

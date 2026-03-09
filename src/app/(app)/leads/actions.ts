@@ -123,20 +123,8 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
     }
 
     const batch = adminDb.batch();
-
-    // 1. Create Account
-    const accountRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('accounts').doc();
-    batch.set(accountRef, {
-      id: accountRef.id,
-      name: `${leadData.fullName}'s Company`,
-      ownerId: currentUserId,
-      teamspaceId: teamspaceId,
-      phone: leadData.phone,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
     
-    // 2. Create Contact
+    // 1. Create Contact
     const contactRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('contacts').doc();
     batch.set(contactRef, {
       id: contactRef.id,
@@ -144,7 +132,6 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       lastName: leadData.fullName.split(' ').slice(1).join(' ') || leadData.fullName.split(' ')[0],
       email: leadData.email || '',
       phone: leadData.phone || '',
-      accountId: accountRef.id,
       teamspaceId: teamspaceId,
       ownerId: currentUserId,
       avatar: `https://picsum.photos/seed/${contactRef.id}/100/100`,
@@ -152,7 +139,7 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // 3. Create Deal
+    // 2. Create Deal
     const dealRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals').doc();
     batch.set(dealRef, {
       id: dealRef.id,
@@ -160,7 +147,6 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       amount: Number(dealAmount),
       stage: 'pending',
       closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      accountId: accountRef.id,
       contactId: contactRef.id,
       ownerId: currentUserId,
       teamspaceId: teamspaceId,
@@ -169,7 +155,7 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // 4. Update Lead Status
+    // 3. Update Lead Status
     batch.update(leadRef, { 
       status: 'Converted', 
       updatedAt: FieldValue.serverTimestamp() 
@@ -179,7 +165,6 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
 
     revalidatePath('/leads');
     revalidatePath('/contacts');
-    revalidatePath('/accounts');
     revalidatePath('/deals');
 
     return { success: true };

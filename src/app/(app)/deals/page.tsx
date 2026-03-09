@@ -6,20 +6,13 @@ import KanbanBoard from './kanban-board';
 import { CreateDealDialog } from './create-deal-dialog';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
-import type { Account, Contact, Product } from '@/types';
+import type { Contact, Product } from '@/types';
 import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DealsPage() {
   const { currentTeamspace, isUserLoading, areTeamspacesLoading, currentUser } = useApp();
   const firestore = useFirestore();
-
-  const accountsQuery = useMemoFirebase(() =>
-    !isUserLoading && !areTeamspacesLoading && currentTeamspace
-      ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'accounts'))
-      : null
-  , [firestore, currentTeamspace, isUserLoading, areTeamspacesLoading]);
-  const { data: accounts, isLoading: isLoadingAccounts } = useCollection<Account>(accountsQuery);
 
   const contactsQuery = useMemoFirebase(() =>
     !isUserLoading && !areTeamspacesLoading && currentTeamspace
@@ -35,7 +28,7 @@ export default function DealsPage() {
   , [firestore, currentUser, isUserLoading]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
-  const displayLoading = isLoadingAccounts || isLoadingContacts || isUserLoading || areTeamspacesLoading || isLoadingProducts;
+  const displayLoading = isLoadingContacts || isUserLoading || areTeamspacesLoading || isLoadingProducts;
 
   return (
     <div className="flex flex-col h-full gap-8 pb-8 pt-4">
@@ -52,7 +45,6 @@ export default function DealsPage() {
             </div>
             <div className="flex items-center gap-4">
                 <CreateDealDialog 
-                    accounts={accounts || []} 
                     contacts={contacts || []}
                     products={products || []}
                     isLoading={displayLoading}

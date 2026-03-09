@@ -32,7 +32,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createDeal } from './actions';
 import { useApp } from '@/context/app-context';
-import type { DealStage, Account, Contact, Product } from '@/types';
+import type { Contact, Product } from '@/types';
 import { LineItemSchema } from '../inventory/schemas';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, Trash2 } from 'lucide-react';
@@ -43,20 +43,18 @@ const formSchema = z.object({
   name: z.string().min(2, 'Deal name must be at least 2 characters.'),
   stage: z.enum(dealStages),
   closeDate: z.string().min(1, 'Close date is required.'),
-  accountId: z.string().min(1, 'Account is required.'),
-  contactId: z.string().optional(),
+  contactId: z.string().min(1, 'Contact is required.'),
   lineItems: z.array(LineItemSchema).min(1, 'Add at least one product to the deal.'),
 });
 
 type CreateDealDialogProps = {
   children: React.ReactNode;
-  accounts: Account[];
   contacts: Contact[];
   products: Product[];
   isLoading: boolean;
 };
 
-export function CreateDealDialog({ children, accounts, contacts, products, isLoading }: CreateDealDialogProps) {
+export function CreateDealDialog({ children, contacts, products, isLoading }: CreateDealDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
@@ -148,14 +146,9 @@ export function CreateDealDialog({ children, accounts, contacts, products, isLoa
                     <FormItem><FormLabel>Deal Heading</FormLabel><FormControl><Input placeholder="e.g. Corporate Wellness Bulk Order" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="accountId" render={({ field }) => (
-                        <FormItem><FormLabel>Account</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder="Select account" /></SelectTrigger></FormControl><SelectContent>{accounts.map(a => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="contactId" render={({ field }) => (
-                        <FormItem><FormLabel>Contact (Optional)</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder="Select contact" /></SelectTrigger></FormControl><SelectContent>{contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
-                    )} />
-                </div>
+                <FormField control={form.control} name="contactId" render={({ field }) => (
+                    <FormItem><FormLabel>Primary Contact</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder="Select contact" /></SelectTrigger></FormControl><SelectContent>{contacts.map(c => (<SelectItem key={c.id} value={c.id}>{`${c.firstName} ${c.lastName}`}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                )} />
 
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="stage" render={({ field }) => (

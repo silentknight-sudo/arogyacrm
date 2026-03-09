@@ -7,7 +7,6 @@ import type { CollectionReference, QueryDocumentSnapshot } from 'firebase-admin/
 const COLLECTIONS_TO_DELETE = [
   'leads',
   'contacts',
-  'accounts',
   'deals',
   'tasks',
   'meetings',

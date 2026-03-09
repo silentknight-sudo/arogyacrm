@@ -7,8 +7,7 @@ import { LineItemSchema } from '../schemas';
 
 const CreateQuoteSchema = z.object({
     name: z.string().min(2, 'Quote name is required.'),
-    accountId: z.string().min(1, 'Account is required.'),
-    contactId: z.string().optional(),
+    contactId: z.string().min(1, 'Contact is required.'),
     validUntil: z.string().min(1, 'Valid until date is required.'),
     status: z.enum(['Draft', 'Sent', 'Accepted', 'Rejected', 'Expired']),
     lineItems: z.array(LineItemSchema).min(1, 'Quote must have at least one line item.'),
@@ -47,4 +46,3 @@ export async function createQuote(values: CreateQuoteInput): Promise<CreateQuote
         return { success: false, error: `Failed to create quote: ${errorMessage}` };
     }
 }
-    
