@@ -64,7 +64,7 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     return { success: true };
 
   } catch (error: any) {
-    return { success: boolean; error: handleAdminSDKError(error) };
+    return { success: false, error: handleAdminSDKError(error) };
   }
 }
 
@@ -98,7 +98,7 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     revalidatePath('/leads');
     return { success: true };
   } catch (error: any) {
-    return { success: boolean; error: handleAdminSDKError(error) };
+    return { success: false, error: handleAdminSDKError(error) };
   }
 }
 
@@ -172,6 +172,6 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
 
     return { success: true };
   } catch (error: any) {
-    return { success: boolean; error: handleAdminSDKError(error) };
+    return { success: false, error: handleAdminSDKError(error) };
   }
 }
