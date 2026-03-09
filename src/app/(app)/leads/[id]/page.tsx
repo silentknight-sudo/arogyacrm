@@ -1,26 +1,28 @@
 'use client';
 
 import { notFound, useParams } from 'next/navigation';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, query } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
-import type { Lead, InteractionLog } from '@/types';
+import type { Lead, InteractionLog, Product } from '@/types';
 import { LeadDetails } from './lead-details';
 import { ActivityTimeline } from './activity-timeline';
 import { AiSummary } from './ai-summary';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Mail, Phone } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, Phone, ChevronsRight } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect, useState } from 'react';
+import { ConvertToDealDialog } from '../convert-to-deal-dialog';
 
 export default function LeadDetailPage() {
   const params = useParams() || {};
   const id = params.id as string;
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, currentUser } = useApp();
   const firestore = useFirestore();
   const [mounted, setMounted] = useState(false);
+  const [isConvertDialogOpen, setConvertDialogOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -33,6 +35,11 @@ export default function LeadDetailPage() {
   , [firestore, currentTeamspace, id]);
   
   const { data: lead, isLoading } = useDoc<Lead>(leadRef);
+
+  const productsQuery = useMemoFirebase(() => 
+    currentUser ? query(collection(firestore, 'products')) : null
+  , [firestore, currentUser]);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
   if (!mounted || isLoading) {
     return <div className="space-y-4">
@@ -50,6 +57,14 @@ export default function LeadDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <ConvertToDealDialog 
+        open={isConvertDialogOpen} 
+        onOpenChange={setConvertDialogOpen} 
+        lead={lead} 
+        products={products || []}
+        isLoading={isLoadingProducts}
+      />
+      
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" asChild>
@@ -64,9 +79,15 @@ export default function LeadDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {lead.status !== 'Converted' && (
+            <Button onClick={() => setConvertDialogOpen(true)} className="herbal-gradient font-bold shadow-lg shadow-primary/20">
+              <ChevronsRight className="mr-2 h-4 w-4" />
+              Convert to Deal
+            </Button>
+          )}
           <Button variant="outline"><Mail /> Email</Button>
           <Button variant="outline"><Phone /> Call</Button>
-          <Button><Edit /> Edit Lead</Button>
+          <Button variant="secondary"><Edit /> Edit Lead</Button>
         </div>
       </div>
       

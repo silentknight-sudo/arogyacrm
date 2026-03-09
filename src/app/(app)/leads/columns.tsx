@@ -31,7 +31,6 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useApp } from '@/context/app-context';
 import { AssignLeadDialog } from './assign-lead-dialog';
-import { ConvertToDealDialog } from './convert-to-deal-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
@@ -89,7 +88,6 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
   const [result, setResult] = useState<AiLeadScoringAndPrioritizationOutput | null>(null);
   const [isScoringDialogOpen, setScoringDialogOpen] = useState(false);
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [isConvertDialogOpen, setConvertDialogOpen] = useState(false);
 
   const users = (table.options.meta as any)?.users || [];
   const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
@@ -122,7 +120,6 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
     <>
       <LeadScoringResultDialog open={isScoringDialogOpen} onOpenChange={setScoringDialogOpen} result={result} leadName={lead.fullName} />
       <AssignLeadDialog open={isAssignDialogOpen} onOpenChange={setAssignDialogOpen} lead={lead} users={users} />
-      <ConvertToDealDialog open={isConvertDialogOpen} onOpenChange={setConvertDialogOpen} lead={lead} />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -146,11 +143,6 @@ const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }
               Assign Lead
             </DropdownMenuItem>
           )}
-          <DropdownMenuSeparator />
-           <DropdownMenuItem onSelect={() => setConvertDialogOpen(true)} disabled={lead.status === 'Converted'} className="text-primary font-bold">
-                <ChevronsRight className="mr-2 h-4 w-4" />
-                Convert to Deal
-            </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleCopyId}>
             Copy lead ID
@@ -250,7 +242,7 @@ export const columns: ColumnDef<Lead>[] = [
                             <Avatar className="h-7 w-7 border-2 border-background">
                                 <AvatarFallback>+{remainingCount}</AvatarFallback>
                             </Avatar>
-                        )}
+                        ))}
                     </div>
                 </TooltipTrigger>
                 <TooltipContent>

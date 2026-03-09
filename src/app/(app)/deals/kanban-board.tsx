@@ -15,7 +15,7 @@ import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase
 import { useApp } from '@/context/app-context';
 import { collection, query, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, Calendar, ArrowRight, User, Wallet, PackageCheck } from 'lucide-react';
+import { ShoppingBag, Calendar, ArrowRight, User, Wallet, PackageCheck, Phone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -66,14 +66,22 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
                 {isLoadingContact ? (
                     <Skeleton className="h-10 w-full rounded-xl" />
                 ) : (
-                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-muted/20 border border-primary/5 shadow-inner">
-                        <div className="h-12 w-12 rounded-full herbal-gradient flex items-center justify-center text-sm font-black shadow-lg">
-                            {contact?.firstName?.[0]}{contact?.lastName?.[0]}
+                    <div className="flex flex-col gap-3 p-4 rounded-2xl bg-muted/20 border border-primary/5 shadow-inner">
+                        <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-full herbal-gradient flex items-center justify-center text-sm font-black shadow-lg">
+                                {contact?.firstName?.[0]}{contact?.lastName?.[0]}
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-lg font-black text-primary tracking-tight">{contact?.firstName} {contact?.lastName}</span>
+                                <span className="text-xs font-medium text-muted-foreground">{contact?.email}</span>
+                            </div>
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-lg font-black text-primary tracking-tight">{contact?.firstName} {contact?.lastName}</span>
-                            <span className="text-xs font-medium text-muted-foreground">{contact?.email}</span>
-                        </div>
+                        {contact?.phone && (
+                            <div className="flex items-center gap-2 text-primary font-bold text-sm bg-primary/5 p-2 rounded-xl border border-primary/10">
+                                <Phone className="h-3.5 w-3.5" />
+                                {contact.phone}
+                            </div>
+                        )}
                     </div>
                 )}
               </div>

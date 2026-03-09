@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
 import type { Lead } from '@/types';
+import { LineItemSchema } from '../inventory/schemas';
 
 export async function scoreLeadWithAI(lead: Lead) {
   try {
@@ -107,11 +108,12 @@ const ConvertAndCreateDealSchema = z.object({
   currentUserId: z.string().min(1),
   dealName: z.string().min(2),
   dealAmount: z.coerce.number().min(0),
+  lineItems: z.array(LineItemSchema),
 });
 
 export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCreateDealSchema>) {
   try {
-    const { leadId, teamspaceId, currentUserId, dealName, dealAmount } = ConvertAndCreateDealSchema.parse(values);
+    const { leadId, teamspaceId, currentUserId, dealName, dealAmount, lineItems } = ConvertAndCreateDealSchema.parse(values);
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
     const leadDoc = await leadRef.get();
@@ -150,7 +152,7 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
       contactId: contactRef.id,
       ownerId: currentUserId,
       teamspaceId: teamspaceId,
-      lineItems: [],
+      lineItems: lineItems,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -164,6 +166,7 @@ export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCrea
     await batch.commit();
 
     revalidatePath('/leads');
+    revalidatePath(`/leads/${leadId}`);
     revalidatePath('/contacts');
     revalidatePath('/deals');
 
