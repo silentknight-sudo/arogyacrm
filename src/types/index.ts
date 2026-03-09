@@ -66,6 +66,7 @@ export type Deal = {
   name: string;
   amount: number;
   stage: DealStage;
+  type: string;
   closeDate: string;
   contactId: string;
   ownerId: string;

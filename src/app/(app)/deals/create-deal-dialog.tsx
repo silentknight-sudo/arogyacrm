@@ -38,10 +38,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, Trash2 } from 'lucide-react';
 
 const dealStages = ['pending', 'not connect', 'busy', 'done', 'cancel'] as const;
+const dealTypes = ['Wellness Package', 'Single Order', 'Subscription', 'Bulk Order', 'Retail'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, 'Deal name must be at least 2 characters.'),
   stage: z.enum(dealStages),
+  type: z.string().min(1, 'Deal type is required.'),
   closeDate: z.string().min(1, 'Close date is required.'),
   contactId: z.string().min(1, 'Contact is required.'),
   lineItems: z.array(LineItemSchema).min(1, 'Add at least one product to the deal.'),
@@ -65,6 +67,7 @@ export function CreateDealDialog({ children, contacts, products, isLoading }: Cr
     defaultValues: {
       name: '',
       stage: 'pending',
+      type: 'Wellness Package',
       closeDate: '',
       lineItems: [],
     },
@@ -154,10 +157,14 @@ export function CreateDealDialog({ children, contacts, products, isLoading }: Cr
                     <FormField control={form.control} name="stage" render={({ field }) => (
                         <FormItem><FormLabel>Stage</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{dealStages.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
-                    <FormField control={form.control} name="closeDate" render={({ field }) => (
-                        <FormItem><FormLabel>Target Close Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="type" render={({ field }) => (
+                        <FormItem><FormLabel>Deal Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{dealTypes.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                 </div>
+
+                <FormField control={form.control} name="closeDate" render={({ field }) => (
+                    <FormItem><FormLabel>Target Close Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">

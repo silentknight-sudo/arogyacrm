@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -9,16 +9,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Deal, DealStage, Contact } from '@/types';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { useApp } from '@/context/app-context';
 import { doc, collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, Calendar, ArrowRight, Wallet, PackageCheck, Phone } from 'lucide-react';
+import { ShoppingBag, Calendar, ArrowRight, Wallet, PackageCheck, Phone, Tag, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { updateDealType } from './actions';
+import { useToast } from '@/hooks/use-toast';
 
 const stages: DealStage[] = ['pending', 'not connect', 'busy', 'done', 'cancel'];
+const dealTypes = ['Wellness Package', 'Single Order', 'Subscription', 'Bulk Order', 'Retail'] as const;
 
 const stageColors: Record<DealStage, string> = {
   pending: 'bg-blue-500',
@@ -29,13 +39,31 @@ const stageColors: Record<DealStage, string> = {
 };
 
 const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open: boolean; onOpenChange: (open: boolean) => void }) => {
+  const { toast } = useToast();
   const firestore = useFirestore();
   const { currentTeamspace } = useApp();
+  const [isUpdating, startTransition] = useTransition();
 
   const contactRef = useMemoFirebase(() => 
     deal?.contactId && currentTeamspace ? doc(firestore, 'teamspaces', currentTeamspace.id, 'contacts', deal.contactId) : null
   , [firestore, currentTeamspace, deal?.contactId]);
   const { data: contact, isLoading: isLoadingContact } = useDoc<Contact>(contactRef);
+
+  const handleTypeUpdate = (newType: string) => {
+    if (!deal || !currentTeamspace) return;
+    startTransition(async () => {
+        const result = await updateDealType({
+            dealId: deal.id,
+            teamspaceId: currentTeamspace.id,
+            type: newType
+        });
+        if (result.success) {
+            toast({ title: 'Deal Updated', description: `Category changed to ${newType}.` });
+        } else {
+            toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
+        }
+    });
+  };
 
   if (!deal) return null;
 
@@ -51,10 +79,25 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
             <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Strategic Deal Insight</div>
           </div>
           <DialogTitle className="text-4xl font-black tracking-tighter mb-2 leading-tight">{deal.name}</DialogTitle>
-          <p className="text-white/60 font-medium flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-accent" />
-            Projected Value: <span className="text-white font-bold">₹{deal.amount.toLocaleString('en-IN')}</span>
-          </p>
+          <div className="flex flex-wrap items-center gap-6 mt-4">
+            <p className="text-white/60 font-medium flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-accent" />
+                Projected Value: <span className="text-white font-bold">₹{deal.amount.toLocaleString('en-IN')}</span>
+            </p>
+            <div className="flex items-center gap-2 text-white/60 font-medium">
+                <Tag className="h-4 w-4 text-accent" />
+                Category: 
+                <Select disabled={isUpdating} defaultValue={deal.type} onValueChange={handleTypeUpdate}>
+                    <SelectTrigger className="h-8 bg-white/10 border-white/20 rounded-lg text-xs font-bold text-white w-40">
+                        {isUpdating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {dealTypes.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+          </div>
         </div>
 
         <ScrollArea className="max-h-[60vh] p-8">
@@ -67,7 +110,7 @@ const ViewDealDialog = ({ deal, open, onOpenChange }: { deal: Deal | null; open:
                 ) : (
                     <div className="flex flex-col gap-3 p-4 rounded-2xl bg-muted/20 border border-primary/5 shadow-inner">
                         <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-full herbal-gradient flex items-center justify-center text-sm font-black shadow-lg">
+                            <div className="h-12 w-12 rounded-full herbal-gradient flex items-center justify-center text-sm font-black shadow-lg text-white">
                                 {contact?.firstName?.[0]}{contact?.lastName?.[0]}
                             </div>
                             <div className="flex flex-col">
@@ -174,20 +217,17 @@ const DealCard = ({ deal, onClick }: { deal: Deal; onClick: () => void }) => {
                 </p>
                 
                 <div className="flex flex-wrap gap-2 mt-4">
+                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-primary/10 bg-primary/5 px-2 py-0.5">
+                        {deal.type || 'Standard'}
+                    </Badge>
                     {itemCount > 0 && (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 rounded-lg border border-primary/10 shadow-inner">
-                            <ShoppingBag className="h-3 w-3 text-primary/60" />
-                            <span className="text-[10px] text-primary/70 font-black uppercase tracking-tight">
-                                {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-muted/50 rounded-lg shadow-inner">
+                            <ShoppingBag className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[9px] text-muted-foreground font-black uppercase tracking-tight">
+                                {itemCount} Items
                             </span>
                         </div>
                     )}
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/50 rounded-lg border border-border/50">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                            {new Date(deal.closeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        </span>
-                    </div>
                 </div>
             </CardContent>
         </Card>
@@ -219,7 +259,7 @@ const KanbanColumn = ({ stage, deals, isLoading, onDealClick }: { stage: DealSta
                 <DealCard key={deal.id} deal={deal} onClick={() => onDealClick(deal)} />
             ))}
              {!isLoading && deals.length === 0 && (
-                <div className="text-center text-muted-foreground text-xs font-black pt-16 opacity-30 uppercase tracking-[0.2em]">Empty Stage</div>
+                <div className="text-center text-muted-foreground text-xs font-black pt-16 opacity-30 uppercase tracking-[0.3em]">Empty Stage</div>
             )}
         </div>
       </div>

@@ -75,7 +75,7 @@ function LeadScoringResultDialog({
           </div>
           <div className="flex items-center justify-center gap-3">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Priority Assignment</span>
-            <Badge className={`${getPriorityBadgeColor(result.priority)} rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest border-none shadow-lg`}>
+            <Badge className={`${getPriorityBadgeColor(result.priority)} rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest border-none shadow-lg text-white`}>
               {result.priority}
             </Badge>
           </div>
