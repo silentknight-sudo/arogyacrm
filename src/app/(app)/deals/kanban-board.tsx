@@ -10,9 +10,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { Deal, DealStage, Contact } from '@/types';
-import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useApp } from '@/context/app-context';
-import { collection, query, doc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingBag, Calendar, ArrowRight, Wallet, PackageCheck, Phone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -233,13 +233,13 @@ export default function KanbanBoard() {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const dealsQuery = useMemoFirebase(() =>
-    !isUserLoading && !areTeamspacesLoading && currentTeamspace
-      ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'))
-      : null
-  , [firestore, currentTeamspace, isUserLoading, areTeamspacesLoading]);
-  
-  const { data: deals, isLoading: isLoadingDeals } = useCollection<Deal>(dealsQuery);
+  const { data: deals, isLoading: isLoadingDeals } = useCollection<Deal>(
+    useMemoFirebase(() => 
+      !isUserLoading && !areTeamspacesLoading && currentTeamspace
+        ? doc(firestore, 'teamspaces', currentTeamspace.id, 'deals')
+        : null
+    , [firestore, currentTeamspace, isUserLoading, areTeamspacesLoading])
+  );
 
   const handleDealClick = (deal: Deal) => {
     setSelectedDeal(deal);

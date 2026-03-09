@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogContent,
   AlertDialogDescription,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useApp } from '@/context/app-context';
@@ -44,7 +44,7 @@ function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { ope
       case 'Low': return 'bg-green-500 hover:bg-green-500';
       default: return 'bg-gray-500 hover:bg-gray-500';
     }
-  }
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -76,7 +76,7 @@ function LeadScoringResultDialog({ open, onOpenChange, result, leadName }: { ope
           <AlertDialogAction onClick={() => onOpenChange(false)}>Close</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
-    </定期AlertDialog>
+    </AlertDialog>
   );
 }
 
@@ -271,7 +271,7 @@ export const columns: ColumnDef<Lead>[] = [
     header: 'AI Score',
     cell: ({ row }) => {
       const score = row.original.score;
-      if (score === undefined || score === null) return <span className="text-muted-foreground">-</span>
+      if (score === undefined || score === null) return <span className="text-muted-foreground">-</span>;
       return (
         <div className="flex items-center gap-1">
           <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
