@@ -8,7 +8,7 @@ import { LineItemSchema } from '../inventory/schemas';
 const CreateDealSchema = z.object({
     name: z.string().min(2, 'Deal name must be at least 2 characters.'),
     amount: z.coerce.number().min(0, 'Amount must be a positive number.'),
-    stage: z.enum(['New', 'Contacted', 'Qualified', 'Demo', 'Negotiation', 'Won', 'Lost']),
+    stage: z.enum(['done', 'pending', 'cancel', 'not connect', 'busy']),
     closeDate: z.string().min(1, 'Close date is required.'),
     accountId: z.string().min(1, 'Account is required.'),
     contactId: z.string().optional(),

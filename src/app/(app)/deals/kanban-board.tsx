@@ -9,24 +9,14 @@ import { collection, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingBag, Calendar, ArrowRight } from 'lucide-react';
 
-const stages: DealStage[] = [
-  'New',
-  'Contacted',
-  'Qualified',
-  'Demo',
-  'Negotiation',
-  'Won',
-  'Lost',
-];
+const stages: DealStage[] = ['pending', 'not connect', 'busy', 'done', 'cancel'];
 
 const stageColors: Record<DealStage, string> = {
-  New: 'bg-blue-500',
-  Contacted: 'bg-cyan-500',
-  Qualified: 'bg-teal-500',
-  Demo: 'bg-indigo-500',
-  Negotiation: 'bg-purple-500',
-  Won: 'bg-green-500',
-  Lost: 'bg-red-500',
+  pending: 'bg-blue-500',
+  'not connect': 'bg-slate-500',
+  busy: 'bg-amber-500',
+  done: 'bg-green-500',
+  cancel: 'bg-red-500',
 };
 
 

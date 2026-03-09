@@ -23,7 +23,7 @@ export default function Dashboard() {
 
     const wonDealsQuery = useMemoFirebase(() => 
         !isUserLoading && currentUser && currentTeamspace?.id
-            ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'), where('stage', '==', 'Won'))
+            ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'), where('stage', '==', 'done'))
             : null
     , [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
     const { data: wonDeals, isLoading: isLoadingWonDeals } = useCollection<Deal>(wonDealsQuery);

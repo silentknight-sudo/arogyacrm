@@ -37,7 +37,7 @@ import { LineItemSchema } from '../inventory/schemas';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, Trash2 } from 'lucide-react';
 
-const dealStages = ['New', 'Contacted', 'Qualified', 'Demo', 'Negotiation', 'Won', 'Lost'] as const;
+const dealStages = ['pending', 'not connect', 'busy', 'done', 'cancel'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, 'Deal name must be at least 2 characters.'),
@@ -66,7 +66,7 @@ export function CreateDealDialog({ children, accounts, contacts, products, isLoa
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      stage: 'New',
+      stage: 'pending',
       closeDate: '',
       lineItems: [],
     },
