@@ -7,7 +7,8 @@ const nextConfig: NextConfig = {
       'firebase-admin', 
       '@google-cloud/firestore',
       'google-auth-library',
-      'protobufjs'
+      'protobufjs',
+      'google-gax'
     ],
   },
   typescript: {
