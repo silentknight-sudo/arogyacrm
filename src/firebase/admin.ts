@@ -48,7 +48,7 @@ function getAdminApp(): App {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    // During build, return a null-like object instead of throwing
+    // Return null to allow the Lazy Proxy to handle the missing state gracefully during build
     return null as any;
   }
 
@@ -83,9 +83,13 @@ function createLazyProxy<T extends object>(initializer: () => T, name: string): 
       }
 
       if (!instance) {
-        // Return a function that throws only when invoked, keeping the build process alive
         return (...args: any[]) => {
-          throw new Error(`CRITICAL_ENVIRONMENT_ERROR: ${name} is missing credentials. Verify FIREBASE_PROJECT_ID, CLIENT_EMAIL, and PRIVATE_KEY in your dashboard.`);
+          const missing = [];
+          if (!process.env.FIREBASE_PROJECT_ID) missing.push('FIREBASE_PROJECT_ID');
+          if (!process.env.FIREBASE_CLIENT_EMAIL) missing.push('FIREBASE_CLIENT_EMAIL');
+          if (!process.env.FIREBASE_PRIVATE_KEY) missing.push('FIREBASE_PRIVATE_KEY');
+          
+          throw new Error(`CRITICAL_ENVIRONMENT_ERROR: ${name} credentials missing [${missing.join(', ')}]. Verify your environment variables in the hosting dashboard.`);
         };
       }
 
@@ -94,10 +98,6 @@ function createLazyProxy<T extends object>(initializer: () => T, name: string): 
   });
 }
 
-/**
- * SINGLETON ACCESSORS (LAZY)
- * These objects are now Proxies that only initialize Firebase when a property is accessed.
- */
 export const adminDb = createLazyProxy(() => {
   const app = getAdminApp();
   return app ? getFirestore(app) : null as any;
@@ -114,8 +114,11 @@ export const serverTimestamp = () => FieldValue.serverTimestamp();
 export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);
   const msg = error.message || '';
-  if (msg.includes('ENVIRONMENT_ERROR') || msg.includes('private key') || msg.includes('PEM')) {
-    return 'Configuration Error: Admin credentials are missing or invalid in the hosting environment.';
+  if (msg.includes('ENVIRONMENT_ERROR')) {
+    return msg; // Pass through the specific missing variables message
+  }
+  if (msg.includes('private key') || msg.includes('PEM')) {
+    return 'Configuration Error: Invalid private key format. Ensure the entire block is pasted correctly.';
   }
   return msg || 'A secure server-side operation failed.';
 }

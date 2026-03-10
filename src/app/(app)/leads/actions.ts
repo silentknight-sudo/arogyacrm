@@ -47,7 +47,6 @@ async function syncDealForLead(leadId: string, teamspaceId: string) {
       contactId: '', 
     };
 
-    // Aggregate Product Pricing with explicit typing for Firestore docs
     if (lead.productAsked && lead.productAsked.length > 0) {
       const productsSnapshot = await adminDb.collection('products').where('__name__', 'in', lead.productAsked).get();
       const lineItems: LineItem[] = productsSnapshot.docs.map((p: QueryDocumentSnapshot) => {

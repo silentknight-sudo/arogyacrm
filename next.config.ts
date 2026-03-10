@@ -8,7 +8,8 @@ const nextConfig: NextConfig = {
       '@google-cloud/firestore',
       'google-auth-library',
       'protobufjs',
-      'google-gax'
+      'google-gax',
+      '@genkit-ai/google-genai'
     ],
   },
   typescript: {
