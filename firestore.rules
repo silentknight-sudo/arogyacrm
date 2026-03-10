@@ -46,11 +46,15 @@ service cloud.firestore {
     // -- CORE RULES --
 
     match /users/{userId} {
-      // Admins read everyone. TLs read users who are in their teamspaces.
+      // Admins read everyone. 
+      // TLs read specialists who share a teamspace.
+      // Individuals read themselves.
       allow read: if isSignedIn() && (
         isAdmin() || 
         userId == request.auth.uid ||
-        (getUserData().role == 'sales_team_lead' && get(/databases/$(database)/documents/users/$(userId)).data.teamspaceIds.hasAny(getUserData().teamspaceIds))
+        (getUserData().role == 'sales_team_lead' && (
+            resource == null || resource.data.teamspaceIds.hasAny(getUserData().teamspaceIds)
+        ))
       );
       
       allow write: if isAdmin();

@@ -11,6 +11,7 @@ const CreateUserInputSchema = z.object({
   password: z.string().min(6),
   role: z.string(),
   teamspaceIds: z.array(z.string()),
+  creatorId: z.string().min(1),
 });
 export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
 
@@ -23,7 +24,28 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
   try {
     const validatedInput = CreateUserInputSchema.parse(values);
     
-    // Step 1: Create user in Firebase Authentication
+    // 1. VERIFY PERMISSIONS
+    const creatorDoc = await adminDb.collection('users').doc(validatedInput.creatorId).get();
+    if (!creatorDoc.exists) throw new Error('Unauthorized creator context.');
+    
+    const creatorData = creatorDoc.data();
+    const creatorRole = creatorData?.role;
+
+    if (creatorRole === 'sales_team_lead') {
+        // TL can only create Sales Executives
+        if (validatedInput.role !== 'sales_executive') {
+            throw new Error('Team Leaders can only onboard Sales Executives.');
+        }
+        // TL can only assign to teamspaces they are in
+        const isAuthorizedTS = validatedInput.teamspaceIds.every(id => creatorData?.teamspaceIds?.includes(id));
+        if (!isAuthorizedTS) {
+            throw new Error('You cannot assign users to workspaces outside your jurisdiction.');
+        }
+    } else if (creatorRole !== 'admin') {
+        throw new Error('You do not have administrative privileges.');
+    }
+
+    // 2. CREATE IN AUTH
     const userRecord = await adminAuth.createUser({
       email: validatedInput.email,
       password: validatedInput.password,
@@ -33,7 +55,7 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
 
     const newUserId = userRecord.uid;
 
-    // Step 2: Create the user profile document in Firestore
+    // 3. CREATE PROFILE
     const userDocRef = adminDb.collection('users').doc(newUserId);
     await userDocRef.set({
       id: newUserId,
@@ -46,7 +68,6 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
       avatar: `https://picsum.photos/seed/${newUserId}/100/100`,
     });
     
-    // Optional: Set custom claims for role-based access if needed for backend rules
     await adminAuth.setCustomUserClaims(newUserId, { role: validatedInput.role });
 
     revalidatePath('/admin/users');
@@ -68,22 +89,38 @@ export async function deleteUser(values: { userId: string, adminId: string }): P
   try {
     const { userId, adminId } = DeleteUserSchema.parse(values);
 
-    // Verify admin privileges
     const adminUserDoc = await adminDb.collection('users').doc(adminId).get();
-    if (!adminUserDoc.exists || adminUserDoc.data()?.role !== 'admin') {
-      throw new Error('You do not have permission to perform this action.');
-    }
+    if (!adminUserDoc.exists) throw new Error('Unauthorized session.');
     
+    const adminData = adminUserDoc.data();
+    const adminRole = adminData?.role;
+
+    const targetUserDoc = await adminDb.collection('users').doc(userId).get();
+    if (!targetUserDoc.exists) throw new Error('User profile not found.');
+    const targetData = targetUserDoc.data();
+
+    // HIERARCHY PROTECTION
     if (userId === adminId) {
-        throw new Error('Admins cannot delete their own account.');
+        throw new Error('Self-decommissioning is restricted.');
     }
 
-    // Step 1: Delete user from Firebase Authentication
-    await adminAuth.deleteUser(userId);
+    if (adminRole === 'admin') {
+        // Full access
+    } else if (adminRole === 'sales_team_lead') {
+        // Can only delete Sales Executives in shared teamspaces
+        if (targetData?.role !== 'sales_executive') {
+            throw new Error('Team Leaders can only manage Sales Executives.');
+        }
+        const sharesTeam = targetData?.teamspaceIds?.some((id: string) => adminData?.teamspaceIds?.includes(id));
+        if (!sharesTeam) {
+            throw new Error('This user is not within your assigned workspaces.');
+        }
+    } else {
+        throw new Error('Unauthorized.');
+    }
 
-    // Step 2: Delete the user profile document in Firestore
-    const userDocRef = adminDb.collection('users').doc(userId);
-    await userDocRef.delete();
+    await adminAuth.deleteUser(userId);
+    await adminDb.collection('users').doc(userId).delete();
 
     revalidatePath('/admin/users');
     return { success: true };

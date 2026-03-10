@@ -67,11 +67,11 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
     return ['sales_executive']; // Team leads only create executives
   }, [currentUser]);
 
-  // TEAMSPACE RESTRICTIONS: Team Leads can only assign to their own team
+  // TEAMSPACE RESTRICTIONS: Team Leads can only assign to their own teams
   const filteredTeamspaces = useMemo(() => {
     if (currentUser?.role === 'admin') return teamspaces;
-    return teamspaces.filter(ts => ts.id === currentTeamspace?.id);
-  }, [teamspaces, currentUser, currentTeamspace]);
+    return teamspaces.filter(ts => currentUser?.teamspaceIds?.includes(ts.id));
+  }, [teamspaces, currentUser]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -85,12 +85,17 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (!currentUser) return;
+    
     startTransition(async () => {
-      const result = await createUser(values);
+      const result = await createUser({
+          ...values,
+          creatorId: currentUser.id
+      });
       if (result.success) {
         toast({
           title: 'Member Registered',
-          description: `Successfully onboarded ${values.displayName}.`,
+          description: `Successfully onboarded ${values.displayName} to your team.`,
         });
         setOpen(false);
         form.reset();
@@ -111,7 +116,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
         <DialogHeader>
           <DialogTitle>Add Team Member</DialogTitle>
           <DialogDescription>
-            {currentUser?.role === 'admin' ? 'Register a new user and assign global permissions.' : 'Add a new Sales Executive to your team.'}
+            {currentUser?.role === 'admin' ? 'Register a new user and assign global permissions.' : 'Add a new Sales Executive to your workspace.'}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[80vh] px-1">
@@ -148,7 +153,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 name="password"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Temporary Password</FormLabel>
                     <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
@@ -208,7 +213,6 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                                                     field.value?.filter((value: string) => value !== item.id)
                                                 )
                                         }}
-                                        disabled={currentUser?.role === 'sales_team_lead'}
                                     />
                                     <Label htmlFor={`ts-${item.id}`} className="text-sm font-normal cursor-pointer">
                                         {item.name}
@@ -216,8 +220,8 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                                 </div>
                             ))
                         ) : (
-                            <div className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
-                                No accessible workspaces found.
+                            <div className="text-sm text-muted-foreground p-4 text-center border rounded-lg italic">
+                                No authorized workspaces available.
                             </div>
                         )}
                         </div>
@@ -226,7 +230,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                   )}
                 />
                 <Button type="submit" disabled={isPending || isLoadingTeamspaces || filteredTeamspaces.length === 0} className="w-full">
-                {isPending ? 'Processing...' : 'Onboard Member'}
+                {isPending ? 'Processing...' : 'Complete Registration'}
                 </Button>
             </form>
             </Form>
