@@ -33,7 +33,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createTicket } from './actions';
 import { useApp } from '@/context/app-context';
-import type { Contact } from '@/types';
+import type { Contact, UserProfile } from '@/types';
 
 const ticketStatuses = ['Open', 'In Progress', 'Awaiting Customer', 'Resolved', 'Closed'] as const;
 const ticketPriorities = ['Low', 'Medium', 'High', 'Urgent'] as const;
@@ -46,15 +46,17 @@ const formSchema = z.object({
     status: z.enum(ticketStatuses),
     priority: z.enum(ticketPriorities),
     contactId: z.string().min(1, 'Contact is required.'),
+    assignedToId: z.string().min(1, 'Must be assigned to a specialist.'),
 });
 
 type CreateTicketDialogProps = {
   children: React.ReactNode;
   contacts: Contact[];
+  users: UserProfile[];
   isLoading: boolean;
 };
 
-export function CreateTicketDialog({ children, contacts, isLoading }: CreateTicketDialogProps) {
+export function CreateTicketDialog({ children, contacts, users, isLoading }: CreateTicketDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
@@ -67,6 +69,7 @@ export function CreateTicketDialog({ children, contacts, isLoading }: CreateTick
       description: '',
       status: 'Open',
       priority: 'Medium',
+      assignedToId: currentUser?.id || '',
     },
   });
 
@@ -78,7 +81,6 @@ export function CreateTicketDialog({ children, contacts, isLoading }: CreateTick
     startTransition(async () => {
       const result = await createTicket({
           ...values,
-          assignedToId: currentUser.id,
           teamspaceId: currentTeamspace.id,
       });
 
@@ -132,6 +134,9 @@ export function CreateTicketDialog({ children, contacts, isLoading }: CreateTick
                         <FormItem><FormLabel>Urgency Level</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{ticketPriorities.map(p => (<SelectItem key={p} value={p}>{p}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                 </div>
+                <FormField control={form.control} name="assignedToId" render={({ field }) => (
+                    <FormItem><FormLabel>Assign Specialist</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger disabled={isLoading}><SelectValue placeholder="Select specialist" /></SelectTrigger></FormControl><SelectContent>{users.length > 0 ? users.map(u => (<SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)) : <div className="p-2 text-sm text-muted-foreground text-center">No specialists found.</div>}</SelectContent></Select><FormMessage /></FormItem>
+                )} />
                 <Button type="submit" disabled={isPending || isLoading} className="w-full h-12 rounded-xl herbal-gradient font-bold shadow-lg mt-2">
                     {isPending ? 'Initiating Ticket...' : 'Register Support Ticket'}
                 </Button>
