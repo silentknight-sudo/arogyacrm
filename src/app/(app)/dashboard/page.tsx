@@ -14,25 +14,41 @@ export default function Dashboard() {
     const { currentUser, currentTeamspace, isUserLoading } = useApp();
     const firestore = useFirestore();
 
-    const newLeadsQuery = useMemoFirebase(() => 
-        !isUserLoading && currentUser && currentTeamspace?.id
-            ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'), where('status', '==', 'New'))
-            : null
-    , [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    // ROLE-BASED QUERY LOGIC
+    const newLeadsQuery = useMemoFirebase(() => {
+        if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+        const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
+        
+        if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
+            return query(leadsRef, where('status', '==', 'new'));
+        }
+        return query(leadsRef, where('status', '==', 'new'), where('assignedToIds', 'array-contains', currentUser.id));
+    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    
     const { data: newLeads, isLoading: isLoadingLeads } = useCollection<Lead>(newLeadsQuery);
 
-    const wonDealsQuery = useMemoFirebase(() => 
-        !isUserLoading && currentUser && currentTeamspace?.id
-            ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'), where('stage', '==', 'done'))
-            : null
-    , [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    const wonDealsQuery = useMemoFirebase(() => {
+        if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+        const dealsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'deals');
+        
+        if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
+            return query(dealsRef, where('stage', '==', 'done'));
+        }
+        return query(dealsRef, where('stage', '==', 'done'), where('ownerId', '==', currentUser.id));
+    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    
     const { data: wonDeals, isLoading: isLoadingWonDeals } = useCollection<Deal>(wonDealsQuery);
 
-    const allDealsQuery = useMemoFirebase(() => 
-        !isUserLoading && currentUser && currentTeamspace?.id
-            ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'))
-            : null
-    , [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    const allDealsQuery = useMemoFirebase(() => {
+        if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+        const dealsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'deals');
+        
+        if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
+            return query(dealsRef);
+        }
+        return query(dealsRef, where('ownerId', '==', currentUser.id));
+    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    
     const { data: allDeals, isLoading: isLoadingAllDeals } = useCollection<Deal>(allDealsQuery);
 
     const [metrics, setMetrics] = useState({
@@ -72,12 +88,14 @@ export default function Dashboard() {
 
     const isLoading = isUserLoading || isLoadingLeads || isLoadingWonDeals || isLoadingAllDeals;
 
+    const roleTitle = currentUser?.role === 'admin' ? 'Global Empire' : currentUser?.role === 'sales_team_lead' ? 'Team Workspace' : 'Personal Desk';
+
     return (
         <div className="flex flex-col gap-12 pb-16 pt-4">
             <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 text-accent mb-1">
                     <Sparkles className="h-5 w-5 fill-accent" />
-                    <span className="text-xs font-black uppercase tracking-[0.3em]">Executive Summary</span>
+                    <span className="text-xs font-black uppercase tracking-[0.3em]">{roleTitle} Overview</span>
                 </div>
                 <h1 className="text-6xl font-black tracking-tighter text-primary flex items-center gap-6">
                     <div className="p-4 herbal-gradient rounded-[2rem] shadow-2xl shadow-primary/30 rotate-2 scale-110">
@@ -86,7 +104,7 @@ export default function Dashboard() {
                     Namaste, {currentUser?.displayName?.split(' ')[0] || 'User'}
                 </h1>
                 <p className="text-2xl text-muted-foreground font-semibold">
-                    Strategic performance overview for your wellness empire.
+                    Strategic performance insights for your Ayurvedic pipeline.
                 </p>
             </div>
 
@@ -172,7 +190,7 @@ export default function Dashboard() {
                                         <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">High Intent Queue</p>
                                         <Sparkles className="h-5 w-5 fill-current" />
                                     </div>
-                                    <p className="font-black text-4xl tracking-tighter">{(newLeads?.length || 0) + 3} Priority</p>
+                                    <p className="font-black text-4xl tracking-tighter">{(newLeads?.length || 0)} Priority</p>
                                     <p className="text-sm font-bold mt-3 opacity-80">Ready for wellness strategy sessions.</p>
                                 </div>
                             </div>

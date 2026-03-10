@@ -5,7 +5,7 @@ import { PlusCircle } from 'lucide-react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateUserDialog } from './create-user-dialog';
@@ -13,25 +13,39 @@ import { useApp } from '@/context/app-context';
 
 export default function UserManagementPage() {
   const firestore = useFirestore();
-  const { availableTeamspaces, areTeamspacesLoading, currentUser } = useApp();
+  const { availableTeamspaces, areTeamspacesLoading, currentUser, currentTeamspace } = useApp();
 
-  const usersQuery = useMemoFirebase(() => 
-    currentUser?.role === 'admin'
-      ? query(collection(firestore, 'users'))
-      : null
-  , [firestore, currentUser]);
+  // ROLE-BASED USER QUERY
+  const usersQuery = useMemoFirebase(() => {
+    if (!currentUser || !currentTeamspace) return null;
+    
+    if (currentUser.role === 'admin') {
+        return query(collection(firestore, 'users'));
+    }
+    
+    if (currentUser.role === 'sales_team_lead') {
+        // Team Leads see only their team members
+        return query(
+            collection(firestore, 'users'), 
+            where('teamspaceIds', 'array-contains', currentTeamspace.id)
+        );
+    }
+    
+    return null;
+  }, [firestore, currentUser, currentTeamspace]);
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 
-  const displayLoadingState = isLoading || !currentUser || currentUser.role !== 'admin';
+  const canCreateUser = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  const displayLoadingState = isLoading || !currentUser || !canCreateUser;
 
   return (
     <div className="space-y-4">
         <div className="flex items-center justify-between">
             <div>
-                <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+                <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
                 <p className="text-muted-foreground">
-                    Create and manage users and their roles.
+                    {currentUser?.role === 'admin' ? 'Global team governance and roles.' : `Managing specialists for ${currentTeamspace?.name}.`}
                 </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -41,7 +55,7 @@ export default function UserManagementPage() {
                 >
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Create User
+                        Add Team Member
                     </Button>
                 </CreateUserDialog>
             </div>

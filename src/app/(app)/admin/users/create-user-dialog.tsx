@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,7 @@ import type { Teamspace } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useApp } from '@/context/app-context';
 
 const formSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -54,8 +55,23 @@ type CreateUserDialogProps = {
 
 export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: CreateUserDialogProps) {
   const { toast } = useToast();
+  const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // ROLE RESTRICTIONS: Team Leads can only create Sales Executives
+  const availableRoles = useMemo(() => {
+    if (currentUser?.role === 'admin') {
+        return ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'];
+    }
+    return ['sales_executive']; // Team leads only create executives
+  }, [currentUser]);
+
+  // TEAMSPACE RESTRICTIONS: Team Leads can only assign to their own team
+  const filteredTeamspaces = useMemo(() => {
+    if (currentUser?.role === 'admin') return teamspaces;
+    return teamspaces.filter(ts => ts.id === currentTeamspace?.id);
+  }, [teamspaces, currentUser, currentTeamspace]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,7 +80,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
       email: '',
       password: '',
       role: 'sales_executive',
-      teamspaceIds: [],
+      teamspaceIds: currentUser?.role === 'sales_team_lead' && currentTeamspace ? [currentTeamspace.id] : [],
     },
   });
 
@@ -73,15 +89,15 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
       const result = await createUser(values);
       if (result.success) {
         toast({
-          title: 'User Created',
-          description: `Successfully created user ${values.displayName}.`,
+          title: 'Member Registered',
+          description: `Successfully onboarded ${values.displayName}.`,
         });
         setOpen(false);
         form.reset();
       } else {
         toast({
           variant: 'destructive',
-          title: 'Error Creating User',
+          title: 'Onboarding Failed',
           description: result.error,
         });
       }
@@ -93,9 +109,9 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New User</DialogTitle>
+          <DialogTitle>Add Team Member</DialogTitle>
           <DialogDescription>
-            Fill out the form to create a new user and assign their role and teamspaces.
+            {currentUser?.role === 'admin' ? 'Register a new user and assign global permissions.' : 'Add a new Sales Executive to your team.'}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[80vh] px-1">
@@ -106,7 +122,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 name="displayName"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Display Name</FormLabel>
+                    <FormLabel>Full Name</FormLabel>
                     <FormControl>
                         <Input placeholder="John Doe" {...field} />
                     </FormControl>
@@ -145,19 +161,17 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 name="role"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>System Role</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={availableRoles.length === 1}>
                         <FormControl>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="sales_team_lead">Sales Team Lead</SelectItem>
-                          <SelectItem value="sales_executive">Sales Executive</SelectItem>
-                          <SelectItem value="marketer">Marketer</SelectItem>
-                          <SelectItem value="support">Support</SelectItem>
+                          {availableRoles.map(r => (
+                              <SelectItem key={r} value={r} className="capitalize">{r.replace(/_/g, ' ')}</SelectItem>
+                          ))}
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -170,9 +184,9 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                   render={({ field }) => (
                     <FormItem>
                         <div className="mb-2">
-                            <FormLabel className="text-base">Teamspaces</FormLabel>
+                            <FormLabel className="text-base">Workspace Assignment</FormLabel>
                             <FormDescription>
-                                Select the teamspaces this user will belong to.
+                                Select the teams this user will belong to.
                             </FormDescription>
                         </div>
                         <div className="space-y-2">
@@ -181,8 +195,8 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                                 <Skeleton className="h-4 w-full" />
                                 <Skeleton className="h-4 w-3/4" />
                             </div>
-                        ) : teamspaces.length > 0 ? (
-                           teamspaces.map((item) => (
+                        ) : filteredTeamspaces.length > 0 ? (
+                           filteredTeamspaces.map((item) => (
                                 <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0">
                                     <Checkbox
                                         id={`ts-${item.id}`}
@@ -194,6 +208,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                                                     field.value?.filter((value: string) => value !== item.id)
                                                 )
                                         }}
+                                        disabled={currentUser?.role === 'sales_team_lead'}
                                     />
                                     <Label htmlFor={`ts-${item.id}`} className="text-sm font-normal cursor-pointer">
                                         {item.name}
@@ -202,7 +217,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                             ))
                         ) : (
                             <div className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
-                                No teamspaces found. Please create one first.
+                                No accessible workspaces found.
                             </div>
                         )}
                         </div>
@@ -210,8 +225,8 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                     </FormItem>
                   )}
                 />
-                <Button type="submit" disabled={isPending || isLoadingTeamspaces || teamspaces.length === 0} className="w-full">
-                {isPending ? 'Creating User...' : 'Create User'}
+                <Button type="submit" disabled={isPending || isLoadingTeamspaces || filteredTeamspaces.length === 0} className="w-full">
+                {isPending ? 'Processing...' : 'Onboard Member'}
                 </Button>
             </form>
             </Form>

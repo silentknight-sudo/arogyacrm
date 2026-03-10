@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
     Users, Contact, Handshake, Megaphone, Package,
     ShoppingCart, Receipt, Ticket, Undo2, ShieldAlert, LayoutDashboard,
-    Leaf, Shield, LayoutGrid, Calendar, Phone
+    Leaf, Shield, Calendar, Phone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/app-context';
@@ -14,31 +14,43 @@ export function MainSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { currentUser } = useApp();
 
+  // DYNAMIC MENU ARCHITECTURE
+  const isAdmin = currentUser?.role === 'admin';
+  const isTL = currentUser?.role === 'sales_team_lead';
+  const isExec = currentUser?.role === 'sales_executive';
+
   const menu = [
     { title: "INSIGHTS", items: [{ href: '/dashboard', label: 'Overview', icon: LayoutDashboard }] },
     { title: 'PIPELINE', items: [
         { href: '/leads', label: 'Prospects', icon: Users },
-        { href: '/contacts', label: 'Contacts', icon: Contact },
         { href: '/deals', label: 'Deals', icon: Handshake },
     ]},
-    { title: 'ACTIVITIES', items: [
+  ];
+
+  // Admins and Team Leads see the full activities suite
+  if (isAdmin || isTL) {
+    menu.push({ title: 'ACTIVITIES', items: [
         { href: '/tasks', label: 'Tasks', icon: Calendar },
         { href: '/meetings', label: 'Meetings', icon: Calendar },
         { href: '/calls', label: 'Calls', icon: Phone },
-    ]},
-    { title: 'GROWTH', items: [{ href: '/campaigns', label: 'Campaigns', icon: Megaphone }] },
-    { title: 'ECOMMERCE', items: [
+    ]});
+    
+    menu.push({ title: 'ECOMMERCE', items: [
         { href: '/inventory/products', label: 'Catalog', icon: Package },
-        { href: '/inventory/quotes', label: 'Quotes', icon: LayoutGrid },
         { href: '/inventory/sales-orders', label: 'Orders', icon: ShoppingCart },
         { href: '/inventory/invoices', label: 'Invoices', icon: Receipt },
-    ]},
-    { title: 'SERVICE', items: [
+    ]});
+  }
+
+  // Admins see everything else
+  if (isAdmin) {
+    menu.push({ title: 'GROWTH', items: [{ href: '/campaigns', label: 'Campaigns', icon: Megaphone }] });
+    menu.push({ title: 'SERVICE', items: [
         { href: '/support/tickets', label: 'Tickets', icon: Ticket },
         { href: '/support/refunds', label: 'Refunds', icon: Undo2 },
         { href: '/support/complaints', label: 'Escalations', icon: ShieldAlert },
-    ]},
-  ];
+    ]});
+  }
 
   return (
     <aside className={cn("flex flex-col glass-sidebar h-screen sticky top-0", className)}>
@@ -55,15 +67,17 @@ export function MainSidebar({ className }: { className?: string }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-12 space-y-10 scrollbar-hide pt-6">
-        {currentUser?.role === 'admin' && (
+        {(isAdmin || isTL) && (
             <div className="space-y-3">
                 <p className="px-5 text-[11px] font-black text-muted-foreground/40 uppercase tracking-[0.3em]">Governance</p>
                 <div className="space-y-1.5">
-                    <Link href="/admin" className={cn('sidebar-link', pathname === '/admin' && 'sidebar-link-active')}>
-                        <Shield className="h-4 w-4" /> <span>Console</span>
-                    </Link>
+                    {isAdmin && (
+                        <Link href="/admin" className={cn('sidebar-link', pathname === '/admin' && 'sidebar-link-active')}>
+                            <Shield className="h-4 w-4" /> <span>Console</span>
+                        </Link>
+                    )}
                     <Link href="/admin/users" className={cn('sidebar-link', pathname.startsWith('/admin/users') && 'sidebar-link-active')}>
-                        <Users className="h-4 w-4" /> <span>Team Management</span>
+                        <Users className="h-4 w-4" /> <span>{isAdmin ? 'Global Management' : 'Team Management'}</span>
                     </Link>
                 </div>
             </div>

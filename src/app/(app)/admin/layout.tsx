@@ -14,10 +14,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
-    // REDIRECT PROTECTION: Only permit admins to view this layout.
-    // We wait for hydration and user state to be settled.
+    // REDIRECT PROTECTION: Permit Admins and Team Leads to view this layout.
+    // Executives are restricted.
     if (mounted && !isUserLoading) {
-      if (!currentUser || currentUser.role !== 'admin') {
+      if (!currentUser || !['admin', 'sales_team_lead'].includes(currentUser.role)) {
         router.replace('/dashboard'); 
       }
     }
@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!mounted || isUserLoading) return null;
 
   // Final check before rendering protected content
-  if (currentUser?.role !== 'admin') return null;
+  if (!currentUser || !['admin', 'sales_team_lead'].includes(currentUser.role)) return null;
 
   return <>{children}</>;
 }
