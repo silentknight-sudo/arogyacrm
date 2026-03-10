@@ -4,7 +4,7 @@ import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
-import type { Lead, DealStage } from '@/types';
+import type { Lead, DealStage, LeadStatus } from '@/types';
 import { LineItemSchema } from '../inventory/schemas';
 
 export async function scoreLeadWithAI(lead: Lead) {
@@ -28,6 +28,25 @@ export async function scoreLeadWithAI(lead: Lead) {
   } catch (error) {
     console.error('Error scoring lead with AI:', error);
     return { success: false, error: 'Failed to score lead.' };
+  }
+}
+
+export async function updateLeadStatus(values: { leadId: string, teamspaceId: string, status: LeadStatus }): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { leadId, teamspaceId, status } = values;
+    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+
+    await leadRef.update({
+      status,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    revalidatePath('/leads');
+    revalidatePath(`/leads/${leadId}`);
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
   }
 }
 

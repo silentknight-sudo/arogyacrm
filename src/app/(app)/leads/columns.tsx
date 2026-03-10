@@ -1,171 +1,100 @@
 'use client';
 
-import { useState } from 'react';
+import { useTransition } from 'react';
 import { ColumnDef, type Table as TanstackTable } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Star, Bot, Users } from 'lucide-react';
+import { ArrowUpDown, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Lead, UserProfile } from '@/types';
-import { scoreLeadWithAI } from './actions';
-import { AiLeadScoringAndPrioritizationOutput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogContent,
-  AlertDialogDescription,
-} from "@/components/ui/alert-dialog";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { Lead, UserProfile, LeadStatus } from '@/types';
+import { updateLeadStatus } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { useApp } from '@/context/app-context';
-import { AssignLeadDialog } from './assign-lead-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
+import { useApp } from '@/context/app-context';
 
-const LeadScoringResultDialog = ({ 
-  open, 
-  onOpenChange, 
-  result, 
-  leadName 
-}: { 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void; 
-  result: AiLeadScoringAndPrioritizationOutput | null;
-  leadName: string;
-}) => {
-  if (!result) return null;
+const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
-  const getPriorityBadgeColor = (priority: 'High' | 'Medium' | 'Low') => {
-    switch (priority) {
-      case 'High': return 'bg-red-500 hover:bg-red-500';
-      case 'Medium': return 'bg-yellow-500 hover:bg-yellow-500';
-      case 'Low': return 'bg-green-500 hover:bg-green-500';
-      default: return 'bg-gray-500 hover:bg-gray-500';
-    }
-  };
+const GOOGLE_FORM_URL = 'https://forms.gle/arogya-lead-feedback';
 
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-2xl font-black text-primary">
-            <Bot className="h-6 w-6 text-accent fill-accent"/>
-            Strategic AI Intelligence
-          </AlertDialogTitle>
-          <AlertDialogDescription className="font-medium">
-            AI-generated performance score for {leadName}.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="my-6 space-y-6">
-          <div className="flex items-baseline justify-center gap-4 bg-primary/5 p-8 rounded-[2rem] border border-primary/5">
-            <div className="text-7xl font-black tracking-tighter text-primary">{result.leadScore}</div>
-            <div className="text-xl font-bold text-muted-foreground uppercase tracking-widest">/ 100</div>
-          </div>
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Priority Assignment</span>
-            <Badge className={`${getPriorityBadgeColor(result.priority)} rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest border-none shadow-lg text-white`}>
-              {result.priority}
-            </Badge>
-          </div>
-          <div className="space-y-2">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 px-2">Decision Reasoning</h4>
-            <p className="text-sm font-medium text-muted-foreground p-5 bg-muted/20 rounded-2xl border border-primary/5 italic">
-              "{result.reasoning}"
-            </p>
-          </div>
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogAction onClick={() => onOpenChange(false)} className="rounded-xl font-bold">Dismiss Insights</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-const LeadActions = ({ lead, table }: { lead: Lead, table: TanstackTable<Lead> }) => {
+const StatusSelector = ({ lead }: { lead: Lead }) => {
   const { toast } = useToast();
-  const { currentUser } = useApp();
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<AiLeadScoringAndPrioritizationOutput | null>(null);
-  const [isScoringDialogOpen, setScoringDialogOpen] = useState(false);
-  const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
+  const { currentTeamspace } = useApp();
+  const [isPending, startTransition] = useTransition();
 
-  const users = (table.options.meta as any)?.users || [];
-  const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
-
-  const handleScoreLead = async () => {
-    setIsLoading(true);
-    const response = await scoreLeadWithAI(lead);
-    if (response.success && response.data) {
-      setResult(response.data);
-      setScoringDialogOpen(true);
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Intelligence Extraction Failed",
-        description: response.error || 'Check system audit logs.',
+  const handleStatusChange = (newStatus: LeadStatus) => {
+    if (!currentTeamspace) return;
+    startTransition(async () => {
+      const result = await updateLeadStatus({
+        leadId: lead.id,
+        teamspaceId: currentTeamspace.id,
+        status: newStatus,
       });
-    }
-    setIsLoading(false);
-  };
-  
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(lead.id).then(() => {
-      toast({ title: 'System Key Copied', description: 'Lead reference ID stored in clipboard.' });
-    }).catch(() => {
-      toast({ variant: 'destructive', title: 'Action Failed', description: 'Permission denied for clipboard access.' });
+
+      if (result.success) {
+        toast({
+          title: 'Stage Updated',
+          description: (
+            <div className="flex flex-col gap-2">
+              <p>Lead transitioned to "{newStatus}".</p>
+              <Button variant="outline" size="sm" asChild className="w-fit">
+                <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  <ExternalLink className="h-3 w-3" />
+                  Fill Feedback Form
+                </a>
+              </Button>
+            </div>
+          ),
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Update Failed',
+          description: result.error,
+        });
+      }
     });
   };
 
   return (
-    <>
-      <LeadScoringResultDialog open={isScoringDialogOpen} onOpenChange={setScoringDialogOpen} result={result} leadName={lead.fullName} />
-      <AssignLeadDialog open={isAssignDialogOpen} onOpenChange={setAssignDialogOpen} lead={lead} users={users} />
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-primary/10">
-            <span className="sr-only">Open Menu</span>
-            <MoreHorizontal className="h-4 w-4 text-primary" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2">
-          <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-3">Prospect Operations</DropdownMenuLabel>
-           <DropdownMenuItem asChild className="rounded-xl cursor-pointer py-2.5">
-            <Link href={`/leads/${lead.id}`}>
-              <Users className="mr-3 h-4 w-4 text-primary" />
-              <span className="font-bold">View Pipeline Entry</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleScoreLead} disabled={isLoading} className="rounded-xl cursor-pointer py-2.5">
-            <Bot className="mr-3 h-4 w-4 text-accent fill-accent" />
-            <span className="font-bold">{isLoading ? 'Processing AI...' : 'Strategic AI Scoring'}</span>
-          </DropdownMenuItem>
-          {canAssign && (
-            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setAssignDialogOpen(true); }} className="rounded-xl cursor-pointer py-2.5">
-              <Users className="mr-3 h-4 w-4 text-primary" />
-              <span className="font-bold">Delegate Prospect</span>
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator className="my-2" />
-          <DropdownMenuItem onClick={handleCopyId} className="rounded-xl cursor-pointer py-2.5 text-xs text-muted-foreground">
-            Copy System Reference ID
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </>
+    <div className="flex items-center gap-2">
+      <Select 
+        disabled={isPending || lead.status === 'Converted'} 
+        defaultValue={lead.status} 
+        onValueChange={(v) => handleStatusChange(v as LeadStatus)}
+      >
+        <SelectTrigger className="h-8 w-[130px] rounded-lg text-[10px] font-black uppercase tracking-widest">
+          {isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {statuses.map(s => (
+            <SelectItem key={s} value={s} className="text-[10px] font-black uppercase">{s}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {lead.status !== 'new' && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" asChild>
+              <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Fill Google Form</TooltipContent>
+        </Tooltip>
+      )}
+    </div>
   );
 };
 
@@ -234,33 +163,40 @@ export const columns: ColumnDef<Lead>[] = [
     header: ({ column }) => {
       return (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="font-black uppercase tracking-widest text-[10px] hover:bg-transparent px-0">
-          Stakeholder Name
+          Lead Name
           <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />
         </Button>
       );
     },
     cell: ({ row }) => (
-      <div className="flex flex-col">
-        <Link href={`/leads/${row.original.id}`} className="font-black text-primary hover:text-accent transition-colors tracking-tight text-base">
-            {row.getValue('fullName')}
-        </Link>
-        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tighter">{row.original.source || 'Discovery Channel'}</span>
-      </div>
+      <Link href={`/leads/${row.original.id}`} className="font-black text-primary hover:text-accent transition-colors tracking-tight text-sm">
+          {row.getValue('fullName')}
+      </Link>
     ),
   },
   {
     accessorKey: 'email',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Contact Logic</div>,
-    cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-bold text-foreground truncate max-w-[180px]">{row.getValue('email') || 'N/A'}</span>
-            <span className="text-[10px] font-medium text-muted-foreground">{row.original.phone || 'No phone recorded'}</span>
-        </div>
-    )
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Email</div>,
+    cell: ({ row }) => <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{row.getValue('email') || 'N/A'}</span>
+  },
+  {
+    accessorKey: 'phone',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Phone Number</div>,
+    cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('phone') || 'N/A'}</span>
+  },
+  {
+    accessorKey: 'createdAt',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Assigned Date</div>,
+    cell: ({ row }) => {
+        const date = row.original.createdAt;
+        if (!date) return 'N/A';
+        const d = date.toDate ? date.toDate() : new Date(date);
+        return <span className="text-[10px] font-bold text-muted-foreground">{format(d, 'PP')}</span>;
+    },
   },
   {
     accessorKey: 'assignedToIds',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Strategic Assignment</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Assigned Person</div>,
     cell: ({ row, table }) => {
         const assignedToIds = row.getValue('assignedToIds') as string[] || [];
         const users = (table.options.meta as any)?.users || [];
@@ -269,50 +205,7 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     accessorKey: 'status',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Pipeline Stage</div>,
-    cell: ({ row }) => {
-      const status = row.getValue('status') as string;
-      const variant: 'default' | 'secondary' | 'destructive' | 'outline' =
-        status === 'Qualified' || status === 'Converted' ? 'default' :
-        status === 'New' ? 'outline' :
-        status === 'Contacted' ? 'secondary' : 'destructive';
-      return <Badge variant={variant} className="capitalize rounded-full px-3 py-0.5 text-[10px] font-black tracking-widest border-none shadow-sm">{status}</Badge>;
-    },
-  },
-   {
-    accessorKey: 'score',
-    header: ({ column }) => {
-        return (
-          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="font-black uppercase tracking-widest text-[10px] hover:bg-transparent px-0">
-            AI Tier
-            <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />
-          </Button>
-        );
-    },
-    cell: ({ row }) => {
-      const score = row.original.score;
-      if (score === undefined || score === null) return <span className="text-muted-foreground text-[10px] font-black uppercase tracking-widest opacity-20">Pending</span>;
-      return (
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-accent/10 border border-accent/20">
-            <Star className="w-3.5 h-3.5 text-accent fill-accent" />
-          </div>
-          <span className="font-black text-lg tracking-tighter text-primary">{score}</span>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: 'createdAt',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Discovery Date</div>,
-    cell: ({ row }) => {
-        const date = row.getValue('createdAt');
-        const formatted = date ? formatDistanceToNow(new Date(date), { addSuffix: true }) : 'N/A';
-        return <span className="text-xs font-medium text-muted-foreground">{formatted}</span>;
-    },
-  },
-  {
-    id: 'actions',
-    cell: ({ row, table }) => <LeadActions lead={row.original} table={table} />,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Stage</div>,
+    cell: ({ row }) => <StatusSelector lead={row.original} />,
   },
 ];

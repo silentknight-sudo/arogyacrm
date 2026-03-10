@@ -23,11 +23,11 @@ export type Teamspace = {
 };
 
 export type LeadStatus =
-  | 'New'
-  | 'Contacted'
-  | 'Qualified'
-  | 'Lost'
-  | 'Unqualified'
+  | 'new'
+  | 'pending'
+  | 'busy'
+  | 'done'
+  | 'canceled'
   | 'Converted';
 
 export type Lead = {

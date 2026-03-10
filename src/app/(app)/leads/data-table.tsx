@@ -22,10 +22,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Lead, UserProfile } from '@/types';
-import { Users as AssignIcon } from 'lucide-react';
-import { BulkAssignLeadsDialog } from './bulk-assign-leads-dialog';
 import { useApp } from '@/context/app-context';
 
 
@@ -33,20 +31,22 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   users: UserProfile[];
+  externalSelection?: Lead[];
+  onSelectionChange?: (leads: Lead[]) => void;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   users,
+  externalSelection,
+  onSelectionChange,
 }: DataTableProps<TData, TValue>) {
   const { currentUser } = useApp();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
   
-  const [isBulkAssignDialogOpen, setBulkAssignDialogOpen] = useState(false);
-
   const table = useReactTable({
     data,
     columns,
@@ -56,7 +56,10 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: (updater) => {
+        const next = typeof updater === 'function' ? updater(rowSelection) : updater;
+        setRowSelection(next);
+    },
     state: {
       sorting,
       columnFilters,
@@ -67,44 +70,44 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  const selectedRows = table.getSelectedRowModel().rows;
-  const selectedLeads = selectedRows.map(row => row.original as Lead);
-  const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  // Sync internal selection back to parent
+  useEffect(() => {
+    if (onSelectionChange) {
+        const selectedLeads = table.getSelectedRowModel().rows.map(row => row.original as Lead);
+        onSelectionChange(selectedLeads);
+    }
+  }, [rowSelection, table, onSelectionChange]);
+
+  // Sync external selection (Select N) to internal table state
+  useEffect(() => {
+    if (externalSelection) {
+        const newSelection: Record<string, boolean> = {};
+        table.getRowModel().rows.forEach(row => {
+            if (externalSelection.some(l => l.id === (row.original as Lead).id)) {
+                newSelection[row.id] = true;
+            }
+        });
+        setRowSelection(newSelection);
+    }
+  }, [externalSelection, table]);
 
   return (
     <div>
-       <BulkAssignLeadsDialog
-        open={isBulkAssignDialogOpen}
-        onOpenChange={(open) => {
-          setBulkAssignDialogOpen(open);
-          if (!open) {
-            table.resetRowSelection();
-          }
-        }}
-        leads={selectedLeads}
-        users={users}
-      />
       <div className="flex items-center py-4 gap-2">
         <Input
-          placeholder="Filter by name..."
+          placeholder="Filter by lead name..."
           value={(table.getColumn('fullName')?.getFilterValue() as string) ?? ''}
           onChange={(event) =>
             table.getColumn('fullName')?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="max-w-sm rounded-xl border-none bg-muted/20 px-4 focus-visible:ring-primary/20"
         />
-         {canAssign && selectedLeads.length > 0 && (
-            <Button onClick={() => setBulkAssignDialogOpen(true)} className="ml-auto" size="sm">
-                <AssignIcon className="mr-2 h-4 w-4"/>
-                Assign Selected ({selectedLeads.length})
-            </Button>
-        )}
       </div>
-      <div className="rounded-md border bg-card">
+      <div className="rounded-[2rem] border-none bg-background shadow-inner overflow-hidden">
         <UiTable>
-          <TableHeader>
+          <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent border-primary/5">
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
@@ -126,6 +129,7 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
+                  className="hover:bg-primary/[0.02] border-primary/5 h-16"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -141,36 +145,40 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-32 text-center text-muted-foreground font-medium italic opacity-50"
                 >
-                  No results.
+                  No strategic prospects found matching your current filters.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </UiTable>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+      <div className="flex items-center justify-end space-x-4 py-6">
+        <div className="flex-1 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
+          {table.getFilteredRowModel().rows.length} Prospect(s) Selected
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            className="rounded-xl border-primary/10 hover:bg-primary/5 font-bold"
+            >
+            Previous
+            </Button>
+            <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            className="rounded-xl border-primary/10 hover:bg-primary/5 font-bold"
+            >
+            Next
+            </Button>
+        </div>
       </div>
     </div>
   );
