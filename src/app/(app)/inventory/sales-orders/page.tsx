@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
-import type { SalesOrder, Account, Contact, Product } from '@/types';
+import type { SalesOrder, Contact, Product } from '@/types';
 import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateSalesOrderDialog } from './create-sales-order-dialog';
@@ -24,13 +23,6 @@ export default function SalesOrdersPage() {
   
   const { data: salesOrders, isLoading: isLoadingSalesOrders } = useCollection<SalesOrder>(salesOrdersQuery);
 
-  const accountsQuery = useMemoFirebase(() =>
-    currentTeamspace
-      ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'accounts'))
-      : null
-  , [firestore, currentTeamspace]);
-  const { data: accounts, isLoading: isLoadingAccounts } = useCollection<Account>(accountsQuery);
-
   const contactsQuery = useMemoFirebase(() =>
     currentTeamspace
       ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'contacts'))
@@ -42,7 +34,7 @@ export default function SalesOrdersPage() {
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
 
-  const isLoading = isLoadingSalesOrders || isLoadingAccounts || isLoadingContacts || isLoadingProducts;
+  const isLoading = isLoadingSalesOrders || isLoadingContacts || isLoadingProducts;
 
   return (
     <div className="space-y-4">
@@ -55,7 +47,6 @@ export default function SalesOrdersPage() {
             </div>
             <div className="flex items-center space-x-2">
                 <CreateSalesOrderDialog 
-                  accounts={accounts || []}
                   contacts={contacts || []}
                   products={products || []}
                   isLoading={isLoading}
@@ -78,5 +69,3 @@ export default function SalesOrdersPage() {
     </div>
   );
 }
-
-    
