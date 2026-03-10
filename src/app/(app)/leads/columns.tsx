@@ -1,10 +1,9 @@
 'use client';
 
 import { useTransition } from 'react';
-import { ColumnDef, type Table as TanstackTable } from '@tanstack/react-table';
+import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,

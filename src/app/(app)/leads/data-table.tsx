@@ -42,7 +42,6 @@ export function DataTable<TData, TValue>({
   externalSelection,
   onSelectionChange,
 }: DataTableProps<TData, TValue>) {
-  const { currentUser } = useApp();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -56,10 +55,7 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
-    onRowSelectionChange: (updater) => {
-        const next = typeof updater === 'function' ? updater(rowSelection) : updater;
-        setRowSelection(next);
-    },
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
@@ -70,24 +66,39 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  // Sync internal selection back to parent
+  // SYNC: Internal selection back to parent
+  // Use a ref to prevent looping during sync
+  const lastEmittedRef = React.useRef<string[]>([]);
+
   useEffect(() => {
     if (onSelectionChange) {
         const selectedLeads = table.getSelectedRowModel().rows.map(row => row.original as Lead);
-        onSelectionChange(selectedLeads);
+        const currentIds = selectedLeads.map(l => l.id).sort();
+        
+        // Only emit if the IDs have actually changed
+        if (JSON.stringify(currentIds) !== JSON.stringify(lastEmittedRef.current)) {
+            lastEmittedRef.current = currentIds;
+            onSelectionChange(selectedLeads);
+        }
     }
   }, [rowSelection, table, onSelectionChange]);
 
-  // Sync external selection (Select N) to internal table state
+  // SYNC: External selection (e.g., "Select N") to internal table state
   useEffect(() => {
     if (externalSelection) {
-        const newSelection: Record<string, boolean> = {};
-        table.getRowModel().rows.forEach(row => {
-            if (externalSelection.some(l => l.id === (row.original as Lead).id)) {
-                newSelection[row.id] = true;
-            }
-        });
-        setRowSelection(newSelection);
+        const externalIds = externalSelection.map(l => l.id).sort();
+        const internalIds = table.getSelectedRowModel().rows.map(r => (r.original as Lead).id).sort();
+
+        // Only update if external source provided a different set of IDs
+        if (JSON.stringify(externalIds) !== JSON.stringify(internalIds)) {
+            const newSelection: Record<string, boolean> = {};
+            table.getRowModel().rows.forEach(row => {
+                if (externalIds.includes((row.original as Lead).id)) {
+                    newSelection[row.id] = true;
+                }
+            });
+            setRowSelection(newSelection);
+        }
     }
   }, [externalSelection, table]);
 
