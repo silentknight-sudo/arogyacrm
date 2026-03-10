@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Trash2 } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Trash2, KeyRound } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useApp } from '@/context/app-context';
+import { ChangePasswordDialog } from './change-password-dialog';
 
 
 const UserActions = ({ user }: { user: UserProfile }) => {
@@ -36,6 +37,7 @@ const UserActions = ({ user }: { user: UserProfile }) => {
   const { currentUser } = useApp();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(user.id).then(() => {
@@ -77,6 +79,9 @@ const UserActions = ({ user }: { user: UserProfile }) => {
     });
   }
 
+  const canManagePassword = currentUser?.role === 'admin' || 
+    (currentUser?.role === 'sales_team_lead' && user.role === 'sales_executive');
+
   return (
     <>
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
@@ -97,6 +102,12 @@ const UserActions = ({ user }: { user: UserProfile }) => {
         </AlertDialogContent>
       </AlertDialog>
 
+      <ChangePasswordDialog 
+        open={isPasswordDialogOpen} 
+        onOpenChange={setIsPasswordDialogOpen} 
+        user={user} 
+      />
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -104,11 +115,21 @@ const UserActions = ({ user }: { user: UserProfile }) => {
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="rounded-xl w-48">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuItem onClick={handleCopyId}>
             Copy user ID
           </DropdownMenuItem>
+          
+          <DropdownMenuSeparator />
+          
+          {canManagePassword && (
+            <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)}>
+              <KeyRound className="mr-2 h-4 w-4 text-primary" />
+              Reset Password
+            </DropdownMenuItem>
+          )}
+
           <DropdownMenuSeparator />
           <DropdownMenuItem 
             onClick={() => setIsAlertOpen(true)}

@@ -1,15 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { useApp } from '@/context/app-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { LogOut, Shield } from 'lucide-react';
+import { LogOut, Shield, KeyRound, Lock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { EditProfileDialog } from './edit-profile-dialog';
+import { ChangePasswordDialog } from '../admin/users/change-password-dialog';
 
 function ProfileDetailRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
@@ -23,6 +25,7 @@ function ProfileDetailRow({ label, value }: { label: string; value: React.ReactN
 
 export default function ProfilePage() {
   const { currentUser, logout, isUserLoading, availableTeamspaces, areTeamspacesLoading } = useApp();
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
 
   if (isUserLoading || !currentUser) {
     return (
@@ -64,53 +67,85 @@ export default function ProfilePage() {
         .filter(Boolean)
         .map(name => <Badge key={name} variant="secondary">{name}</Badge>);
 
+  const hasManagementPrivileges = ['admin', 'sales_team_lead'].includes(currentUser.role);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
-        <p className="text-muted-foreground">View and manage your personal information.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-primary">My Profile</h1>
+        <p className="text-muted-foreground font-medium">Manage your professional credentials and identity.</p>
       </div>
 
-      <Card>
+      <Card className="premium-card">
         <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                 <Avatar className="h-24 w-24 border">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                 <Avatar className="h-24 w-24 border-4 border-background shadow-xl ring-1 ring-primary/5">
                     <AvatarImage src={currentUser.avatar} alt={currentUser.displayName} />
-                    <AvatarFallback className="text-3xl">
+                    <AvatarFallback className="text-3xl font-black bg-primary/10 text-primary">
                         {currentUser.displayName?.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                    <CardTitle className="text-3xl">{currentUser.displayName}</CardTitle>
-                    <CardDescription className="mt-1">{currentUser.email}</CardDescription>
+                <div className="flex-1 space-y-1">
+                    <CardTitle className="text-3xl font-black tracking-tight text-primary">{currentUser.displayName}</CardTitle>
+                    <CardDescription className="text-lg font-medium">{currentUser.email}</CardDescription>
                 </div>
-                <EditProfileDialog>
-                  <Button variant="outline">Edit Profile</Button>
-                </EditProfileDialog>
+                <div className="flex gap-2">
+                    <EditProfileDialog>
+                        <Button variant="outline" className="rounded-xl font-bold">Edit Profile</Button>
+                    </EditProfileDialog>
+                </div>
             </div>
         </CardHeader>
         <CardContent className="space-y-6">
-            <Separator />
-             <ProfileDetailRow label="Role" value={<Badge variant="outline" className="capitalize"><Shield className="mr-2 h-3 w-3" /> {currentUser.role.replace(/_/g, ' ')}</Badge>} />
-            <Separator />
+            <Separator className="opacity-50" />
+             <ProfileDetailRow label="System Role" value={<Badge variant="outline" className="capitalize font-black gold-glow bg-accent/5 border-accent/20 text-accent-foreground px-4 py-1"><Shield className="mr-2 h-3 w-3" /> {currentUser.role.replace(/_/g, ' ')}</Badge>} />
+            <Separator className="opacity-50" />
             <ProfileDetailRow 
-                label="Teamspaces" 
+                label="Assigned Workspaces" 
                 value={
                     <div className="flex flex-wrap gap-2">
                          {teamspaceNames}
                     </div>
                 } 
             />
+            
+            {hasManagementPrivileges && (
+                <>
+                    <Separator className="opacity-50" />
+                    <div className="pt-2">
+                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-4 flex items-center gap-2">
+                            <Lock className="h-3 w-3" /> Security Settings
+                        </h3>
+                        <div className="p-6 rounded-[1.5rem] bg-muted/20 border border-primary/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div>
+                                <p className="font-bold text-primary">Professional Credentials</p>
+                                <p className="text-xs text-muted-foreground font-medium">Update your secure access password periodically.</p>
+                            </div>
+                            <Button variant="secondary" className="rounded-xl font-black text-xs uppercase tracking-widest px-6" onClick={() => setIsPasswordDialogOpen(true)}>
+                                <KeyRound className="mr-2 h-4 w-4" />
+                                Update Password
+                            </Button>
+                        </div>
+                    </div>
+                </>
+            )}
         </CardContent>
-         <CardFooter className="flex-col sm:flex-row justify-between items-start sm:items-center border-t pt-6 gap-4">
-            <p className="text-sm text-muted-foreground">To change your password or other sensitive details, contact an admin.</p>
-            <Button variant="destructive" onClick={logout}>
+         <CardFooter className="flex-col sm:flex-row justify-between items-start sm:items-center border-t border-primary/5 pt-8 gap-4 px-6 pb-8">
+            <p className="text-xs text-muted-foreground font-medium max-w-sm italic">
+                Your account is protected by enterprise-grade encryption. To modify core organizational settings, please consult the system administrator.
+            </p>
+            <Button variant="destructive" onClick={logout} className="rounded-xl px-8 font-black uppercase tracking-widest shadow-lg shadow-destructive/20 active:scale-95 transition-all">
                 <LogOut className="mr-2 h-4 w-4" />
-                Log Out
+                Secure Sign Out
             </Button>
         </CardFooter>
       </Card>
+
+      <ChangePasswordDialog 
+        open={isPasswordDialogOpen} 
+        onOpenChange={setIsPasswordDialogOpen} 
+        user={currentUser} 
+      />
     </div>
   );
 }
