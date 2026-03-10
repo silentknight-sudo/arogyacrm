@@ -1,200 +1,375 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Users, TrendingUp, Target, Leaf, Sparkles, Zap, ArrowUpRight } from 'lucide-react';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { 
+    DollarSign, Users, TrendingUp, Target, Leaf, Sparkles, Zap, 
+    ArrowUpRight, BarChart3, Trophy, PieChart as PieChartIcon, 
+    Activity, ChevronRight, UserCheck
+} from 'lucide-react';
+import { 
+    Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, 
+    CartesianGrid, Line, LineChart, Cell, Pie, PieChart 
+} from 'recharts';
 import { useApp } from '@/context/app-context';
-import type { Lead, Deal } from '@/types';
+import type { Lead, Deal, UserProfile } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import { subMonths, format, eachMonthOfInterval } from 'date-fns';
+import { collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
+import { subMonths, format, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+
+const COLORS = ['#2D5A27', '#D4AF37', '#4ade80', '#fbbf24', '#1A3A17'];
 
 export default function Dashboard() {
     const { currentUser, currentTeamspace, isUserLoading } = useApp();
     const firestore = useFirestore();
 
-    // ROLE-BASED QUERY LOGIC
-    const newLeadsQuery = useMemoFirebase(() => {
-        if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-        const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
-        
-        if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
-            return query(leadsRef, where('status', '==', 'new'));
-        }
-        return query(leadsRef, where('status', '==', 'new'), where('assignedToIds', 'array-contains', currentUser.id));
-    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
-    
-    const { data: newLeads, isLoading: isLoadingLeads } = useCollection<Lead>(newLeadsQuery);
+    // 1. DATA FETCHING: Role-Based Intelligence
+    const isAdmin = currentUser?.role === 'admin';
+    const isTL = currentUser?.role === 'sales_team_lead';
 
-    const wonDealsQuery = useMemoFirebase(() => {
-        if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-        const dealsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'deals');
-        
-        if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
-            return query(dealsRef, where('stage', '==', 'done'));
-        }
-        return query(dealsRef, where('stage', '==', 'done'), where('ownerId', '==', currentUser.id));
-    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
-    
-    const { data: wonDeals, isLoading: isLoadingWonDeals } = useCollection<Deal>(wonDealsQuery);
-
+    // Fetch all deals for global/team/personal view
+    // Using collectionGroup for Admin to get true global view
     const allDealsQuery = useMemoFirebase(() => {
-        if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-        const dealsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'deals');
+        if (isUserLoading || !currentUser) return null;
+        if (isAdmin) return query(collectionGroup(firestore, 'deals'));
+        if (!currentTeamspace) return null;
         
-        if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
-            return query(dealsRef);
-        }
+        const dealsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'deals');
+        if (isTL) return query(dealsRef);
         return query(dealsRef, where('ownerId', '==', currentUser.id));
     }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
-    
-    const { data: allDeals, isLoading: isLoadingAllDeals } = useCollection<Deal>(allDealsQuery);
 
-    const [metrics, setMetrics] = useState({
-        totalRevenue: 0,
-        conversionRate: 0,
-        wonCount: 0,
-        chartData: [] as any[],
-    });
+    const { data: deals, isLoading: isLoadingDeals } = useCollection<Deal>(allDealsQuery);
 
-    useEffect(() => {
-        if (wonDeals && allDeals) {
-            const rev = wonDeals.reduce((acc, d) => acc + (d.amount || 0), 0);
-            const rate = allDeals.length > 0 ? (wonDeals.length / allDeals.length) * 100 : 0;
-            
-            const months = eachMonthOfInterval({
-                start: subMonths(new Date(), 5),
-                end: new Date()
-            }).map(m => ({ month: format(m, 'MMM'), revenue: 0 }));
+    // Fetch all leads
+    const allLeadsQuery = useMemoFirebase(() => {
+        if (isUserLoading || !currentUser) return null;
+        if (isAdmin) return query(collectionGroup(firestore, 'leads'));
+        if (!currentTeamspace) return null;
 
-            wonDeals.forEach(d => {
-                try {
-                    if (!d.closeDate) return;
-                    const m = format(new Date(d.closeDate), 'MMM');
-                    const entry = months.find(x => x.month === m);
-                    if (entry) entry.revenue += (d.amount || 0);
-                } catch(e) {}
-            });
+        const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
+        if (isTL) return query(leadsRef);
+        return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
+    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
-            setMetrics({
-                totalRevenue: rev,
-                conversionRate: rate,
-                wonCount: wonDeals.length,
-                chartData: months
-            });
+    const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(allLeadsQuery);
+
+    // Fetch users for leaderboard (Team Leads for Admin, Sales Execs for TL)
+    const usersQuery = useMemoFirebase(() => {
+        if (isUserLoading || !currentUser) return null;
+        if (isAdmin) return query(collection(firestore, 'users'), where('role', '==', 'sales_team_lead'));
+        if (isTL && currentTeamspace) {
+            return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
         }
-    }, [wonDeals, allDeals]);
+        return null;
+    }, [firestore, currentUser, isUserLoading, currentTeamspace]);
 
-    const isLoading = isUserLoading || isLoadingLeads || isLoadingWonDeals || isLoadingAllDeals;
+    const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-    const roleTitle = currentUser?.role === 'admin' ? 'Global Empire' : currentUser?.role === 'sales_team_lead' ? 'Team Workspace' : 'Personal Desk';
+    // 2. METRICS CALCULATION
+    const metrics = useMemo(() => {
+        if (!deals || !leads) return null;
+
+        const wonDeals = deals.filter(d => d.stage === 'done');
+        const totalRevenue = wonDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
+        const conversionRate = deals.length > 0 ? (wonDeals.length / deals.length) * 100 : 0;
+        
+        // Monthly Growth Data
+        const months = eachMonthOfInterval({
+            start: subMonths(new Date(), 5),
+            end: new Date()
+        }).map(m => ({
+            month: format(m, 'MMM'),
+            revenue: 0,
+            leads: 0
+        }));
+
+        wonDeals.forEach(d => {
+            if (!d.closeDate) return;
+            const m = format(new Date(d.closeDate), 'MMM');
+            const entry = months.find(x => x.month === m);
+            if (entry) entry.revenue += (d.amount || 0);
+        });
+
+        leads.forEach(l => {
+            const date = l.createdAt?.toDate ? l.createdAt.toDate() : new Date(l.createdAt);
+            const m = format(date, 'MMM');
+            const entry = months.find(x => x.month === m);
+            if (entry) entry.leads += 1;
+        });
+
+        // Leaderboard Calculation
+        const leaderboard = (users || [])
+            .map(user => {
+                const userDeals = deals.filter(d => d.ownerId === user.id && d.stage === 'done');
+                const userRevenue = userDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
+                return {
+                    ...user,
+                    revenue: userRevenue,
+                    dealCount: userDeals.length
+                };
+            })
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 5);
+
+        return {
+            totalRevenue,
+            conversionRate,
+            wonCount: wonDeals.length,
+            leadsCount: leads.length,
+            chartData: months,
+            leaderboard
+        };
+    }, [deals, leads, users]);
+
+    const isLoading = isUserLoading || isLoadingDeals || isLoadingLeads || isLoadingUsers;
+
+    if (isLoading || !metrics) {
+        return (
+            <div className="space-y-12 pb-16 pt-4">
+                <div className="flex flex-col gap-4">
+                    <Skeleton className="h-12 w-64 rounded-xl" />
+                    <Skeleton className="h-6 w-96 rounded-lg" />
+                </div>
+                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)}
+                </div>
+                <div className="grid gap-10 lg:grid-cols-7">
+                    <Skeleton className="lg:col-span-4 h-[500px] rounded-[2.5rem]" />
+                    <Skeleton className="lg:col-span-3 h-[500px] rounded-[2.5rem]" />
+                </div>
+            </div>
+        );
+    }
+
+    const roleTitle = isAdmin ? 'Global Empire' : isTL ? 'Team Headquarters' : 'Personal Desk';
 
     return (
         <div className="flex flex-col gap-12 pb-16 pt-4">
+            {/* 3. STRATEGIC HEADER */}
             <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 text-accent mb-1">
                     <Sparkles className="h-5 w-5 fill-accent" />
                     <span className="text-xs font-black uppercase tracking-[0.3em]">{roleTitle} Overview</span>
                 </div>
-                <h1 className="text-6xl font-black tracking-tighter text-primary flex items-center gap-6">
-                    <div className="p-4 herbal-gradient rounded-[2rem] shadow-2xl shadow-primary/30 rotate-2 scale-110">
-                        <Leaf className="h-10 w-10 text-white animate-pulse" />
+                <div className="flex items-center justify-between flex-wrap gap-6">
+                    <h1 className="text-6xl font-black tracking-tighter text-primary flex items-center gap-6">
+                        <div className="p-4 herbal-gradient rounded-[2rem] shadow-2xl shadow-primary/30 rotate-2 scale-110">
+                            <Leaf className="h-10 w-10 text-white animate-pulse" />
+                        </div>
+                        Namaste, {currentUser?.displayName?.split(' ')[0]}
+                    </h1>
+                    <div className="flex items-center gap-4 bg-white/50 backdrop-blur-xl p-2 rounded-[2rem] border border-primary/5 shadow-inner">
+                        <div className="px-6 py-2 border-r border-primary/10">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Pipeline Status</p>
+                            <div className="flex items-center gap-2">
+                                <Activity className="h-4 w-4 text-[#4ade80]" />
+                                <span className="text-lg font-black text-primary">Operational</span>
+                            </div>
+                        </div>
+                        <div className="px-6 py-2">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Workspace</p>
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="rounded-full font-black border-primary/20 text-primary">{currentTeamspace?.name || 'All Workspaces'}</Badge>
+                            </div>
+                        </div>
                     </div>
-                    Namaste, {currentUser?.displayName?.split(' ')[0] || 'User'}
-                </h1>
-                <p className="text-2xl text-muted-foreground font-semibold">
-                    Strategic performance insights for your Ayurvedic pipeline.
-                </p>
+                </div>
             </div>
 
+            {/* 4. KEY METRIC CARDS */}
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
                 {[
-                    { label: 'Total Revenue', value: `₹${metrics.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-primary', bg: 'bg-primary/5', trend: '+12.5%' },
-                    { label: 'New Growth', value: `+${newLeads?.length || 0}`, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+4.2%' },
-                    { label: 'Conversion', value: `${metrics.conversionRate.toFixed(1)}%`, icon: Target, color: 'text-accent', bg: 'bg-accent/5', trend: '+2.1%' },
-                    { label: 'Active Success', value: metrics.wonCount, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', trend: '+8.9%' },
+                    { label: 'Total Revenue', value: `₹${metrics.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-primary', trend: '+12.5%', desc: 'Verified Billings' },
+                    { label: 'Growth Leads', value: `+${metrics.leadsCount}`, icon: Users, color: 'text-blue-600', trend: '+4.2%', desc: 'Prospect Momentum' },
+                    { label: 'Conversion', value: `${metrics.conversionRate.toFixed(1)}%`, icon: Target, color: 'text-accent', trend: '+2.1%', desc: 'Lead to Deal Efficiency' },
+                    { label: 'Won Success', value: metrics.wonCount, icon: TrendingUp, color: 'text-[#4ade80]', trend: '+8.9%', desc: 'Completed Cycles' },
                 ].map((stat, i) => (
-                    <Card key={i} className="premium-card group border-none shadow-xl">
+                    <Card key={i} className="premium-card group border-none shadow-xl overflow-hidden relative">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
                         <CardHeader className="flex flex-row items-center justify-between pb-4">
                             <CardTitle className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{stat.label}</CardTitle>
-                            <div className={`p-3 rounded-2xl ${stat.bg} group-hover:rotate-12 transition-transform duration-500`}>
-                                <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                            </div>
+                            <stat.icon className={`h-5 w-5 ${stat.color} opacity-40 group-hover:opacity-100 transition-opacity`} />
                         </CardHeader>
                         <CardContent>
-                            {isLoading ? <Skeleton className="h-12 w-32 rounded-xl" /> : (
-                                <div className="space-y-2">
-                                    <div className="text-4xl font-black tracking-tighter">{stat.value}</div>
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-50 w-fit px-2 py-1 rounded-lg">
+                            <div className="space-y-2">
+                                <div className="text-4xl font-black tracking-tighter text-primary">{stat.value}</div>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-1 text-[10px] font-black text-[#4ade80] bg-[#4ade80]/10 px-2 py-0.5 rounded-full">
                                         <ArrowUpRight className="h-3 w-3" /> {stat.trend}
                                     </div>
+                                    <span className="text-[10px] font-bold text-muted-foreground italic">{stat.desc}</span>
                                 </div>
-                            )}
+                            </div>
                         </CardContent>
                     </Card>
                 ))}
             </div>
 
+            {/* 5. PRIMARY VISUALIZATIONS */}
             <div className="grid gap-10 lg:grid-cols-7">
-                <Card className="lg:col-span-4 premium-card p-10 bg-card/40 backdrop-blur-xl border-white/10 shadow-2xl">
-                    <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
+                {/* Revenue Momentum Chart */}
+                <Card className="lg:col-span-4 premium-card p-10 bg-white/40 backdrop-blur-3xl border-white/20 shadow-2xl">
+                    <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between flex-wrap gap-4">
                         <div className="space-y-1">
                             <CardTitle className="text-3xl font-black tracking-tight text-primary">Revenue Momentum</CardTitle>
-                            <p className="text-sm font-medium text-muted-foreground">Historical billing performance.</p>
+                            <CardDescription className="text-sm font-bold text-muted-foreground">Comparative billing and prospect velocity.</CardDescription>
                         </div>
-                        <div className="text-[10px] font-black text-muted-foreground bg-muted/50 px-4 py-2 rounded-full uppercase tracking-[0.2em]">6 Month Outlook</div>
+                        <div className="flex gap-2">
+                            <Badge className="rounded-full bg-primary/10 text-primary border-none px-4 py-1 font-black text-[10px] uppercase">Revenue</Badge>
+                            <Badge className="rounded-full bg-blue-100 text-blue-600 border-none px-4 py-1 font-black text-[10px] uppercase">Leads</Badge>
+                        </div>
                     </CardHeader>
                     <CardContent className="h-[450px] px-0 pt-10">
-                        {isLoading ? <Skeleton className="h-full w-full rounded-[2.5rem]" /> : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={metrics.chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
-                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 13, fontWeight: 700}} dy={15} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 13, fontWeight: 700}} tickFormatter={v => `₹${v/1000}k`} dx={-10} />
-                                    <Tooltip 
-                                        cursor={{fill: 'rgba(45,90,39,0.03)', radius: 12}} 
-                                        contentStyle={{borderRadius: '1.5rem', border: 'none', boxShadow: '0 25px 50px rgba(0,0,0,0.15)', fontWeight: 800, padding: '1.5rem'}} 
-                                    />
-                                    <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[12, 12, 12, 12]} barSize={40} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        )}
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={metrics.chartData}>
+                                <defs>
+                                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#2D5A27" stopOpacity={1} />
+                                        <stop offset="100%" stopColor="#1A3A17" stopOpacity={0.8} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
+                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 800}} dy={15} />
+                                <YAxis axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 800}} tickFormatter={v => `₹${v/1000}k`} dx={-10} />
+                                <Tooltip 
+                                    cursor={{fill: 'rgba(45,90,39,0.03)', radius: 12}} 
+                                    contentStyle={{borderRadius: '1.5rem', border: 'none', boxShadow: '0 25px 50px rgba(0,0,0,0.15)', fontWeight: 800, padding: '1.5rem', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)'}} 
+                                />
+                                <Bar dataKey="revenue" fill="url(#revenueGradient)" radius={[12, 12, 12, 12]} barSize={40} />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </CardContent>
                 </Card>
 
-                <Card className="lg:col-span-3 premium-card p-10 flex flex-col justify-between herbal-gradient shadow-2xl scale-[1.02]">
+                {/* 6. LEADERBOARD: Strategic Performance */}
+                <Card className="lg:col-span-3 premium-card p-10 herbal-gradient shadow-2xl border-none">
                     <CardHeader className="px-0 pt-0">
-                        <CardTitle className="text-3xl font-black tracking-tight text-white flex items-center gap-4">
-                            <Zap className="h-8 w-8 text-accent fill-accent" />
-                            Growth Hub
-                        </CardTitle>
-                        <p className="text-white/60 font-medium text-sm mt-2">Real-time opportunities and market stats.</p>
+                        <div className="flex items-center gap-4 mb-2">
+                            <div className="p-3 bg-accent rounded-2xl shadow-xl shadow-accent/20">
+                                <Trophy className="h-6 w-6 text-accent-foreground" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-3xl font-black tracking-tight text-white">{isAdmin ? 'Leaderboard' : 'Top Specialists'}</CardTitle>
+                                <CardDescription className="text-white/60 font-bold">{isAdmin ? 'Aggregated Team Lead Performance' : 'Highest contributing executives'}</CardDescription>
+                            </div>
+                        </div>
                     </CardHeader>
-                    <CardContent className="space-y-10 px-0 pt-10">
-                        {isLoading ? <Skeleton className="h-80 w-full rounded-[2.5rem] bg-white/10" /> : (
-                            <div className="flex flex-col gap-8">
-                                <div className="p-8 rounded-[2.5rem] bg-white/10 border border-white/10 hover:bg-white/[0.15] transition-all cursor-pointer group shadow-inner">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <p className="text-[10px] font-black uppercase text-accent tracking-[0.3em]">Market Dominance</p>
-                                        <div className="h-3 w-3 rounded-full bg-accent animate-pulse shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
+                    <CardContent className="space-y-6 px-0 pt-8">
+                        {metrics.leaderboard.length > 0 ? metrics.leaderboard.map((user, idx) => (
+                            <div key={user.id} className="flex items-center justify-between p-5 rounded-[2rem] bg-white/5 border border-white/5 hover:bg-white/10 transition-all group">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <Avatar className="h-12 w-12 border-2 border-accent/20 ring-4 ring-white/5">
+                                            <AvatarImage src={user.avatar} />
+                                            <AvatarFallback className="bg-white/10 text-white font-black">{user.displayName?.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-accent flex items-center justify-center text-[10px] font-black text-accent-foreground shadow-lg">
+                                            #{idx + 1}
+                                        </div>
                                     </div>
-                                    <p className="font-black text-3xl tracking-tight text-white group-hover:translate-x-2 transition-transform">Immunity Boosters</p>
-                                    <div className="w-full bg-white/10 h-4 rounded-full mt-6 overflow-hidden p-1 shadow-inner">
-                                        <div className="bg-accent h-full w-[82%] rounded-full shadow-lg" />
+                                    <div className="flex flex-col">
+                                        <span className="font-black text-white text-lg tracking-tight group-hover:text-accent transition-colors">{user.displayName}</span>
+                                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{user.role.replace(/_/g, ' ')}</span>
                                     </div>
-                                    <p className="text-xs font-bold text-white/50 mt-4 uppercase tracking-widest">82% Volume Lead</p>
                                 </div>
-                                <div className="p-8 rounded-[2.5rem] bg-accent text-accent-foreground shadow-2xl hover:scale-105 transition-transform">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">High Intent Queue</p>
-                                        <Sparkles className="h-5 w-5 fill-current" />
-                                    </div>
-                                    <p className="font-black text-4xl tracking-tighter">{(newLeads?.length || 0)} Priority</p>
-                                    <p className="text-sm font-bold mt-3 opacity-80">Ready for wellness strategy sessions.</p>
+                                <div className="text-right">
+                                    <div className="text-xl font-black text-white tracking-tighter">₹{user.revenue.toLocaleString()}</div>
+                                    <div className="text-[10px] font-bold text-accent uppercase tracking-widest">{user.dealCount} Successful Cycles</div>
                                 </div>
                             </div>
+                        )) : (
+                            <div className="text-center py-20 bg-white/5 rounded-[2.5rem] border border-dashed border-white/10 italic text-white/40 font-medium">
+                                Waiting for cycle completion data...
+                            </div>
                         )}
+                        
+                        <div className="mt-8 p-8 rounded-[2.5rem] bg-accent text-accent-foreground shadow-2xl hover:scale-105 transition-transform group cursor-pointer">
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Global Dominance</p>
+                                <Sparkles className="h-5 w-5 fill-current" />
+                            </div>
+                            <p className="font-black text-4xl tracking-tighter">{(metrics.leadsCount)} Priority Prospects</p>
+                            <p className="text-sm font-bold mt-3 opacity-80 flex items-center gap-2">
+                                Ready for wellness strategy sessions <ChevronRight className="h-4 w-4 group-hover:translate-x-2 transition-transform" />
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* 7. GROWTH & PIPELINE INSIGHTS */}
+            <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
+                {/* Status Distribution */}
+                <Card className="premium-card p-10 shadow-2xl">
+                    <CardHeader className="px-0 pt-0">
+                        <CardTitle className="text-2xl font-black text-primary flex items-center gap-3">
+                            <PieChartIcon className="h-6 w-6 text-accent" />
+                            Pipeline Distribution
+                        </CardTitle>
+                        <CardDescription className="font-bold">Deal lifecycle concentration.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[300px] px-0 pt-6">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={[
+                                        { name: 'Pending', value: deals.filter(d => d.stage === 'pending').length },
+                                        { name: 'Done', value: deals.filter(d => d.stage === 'done').length },
+                                        { name: 'Busy', value: deals.filter(d => d.stage === 'busy').length },
+                                        { name: 'No Connect', value: deals.filter(d => d.stage === 'not connect').length },
+                                    ]}
+                                    innerRadius={60}
+                                    outerRadius={100}
+                                    paddingAngle={8}
+                                    dataKey="value"
+                                >
+                                    {[...Array(4)].map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{borderRadius: '1rem', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', fontWeight: 800}}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                {/* Team Collaboration Insight (Admin/TL Only) */}
+                <Card className="premium-card p-10 shadow-2xl lg:col-span-2">
+                    <CardHeader className="px-0 pt-0">
+                        <CardTitle className="text-2xl font-black text-primary flex items-center gap-3">
+                            <UserCheck className="h-6 w-6 text-blue-600" />
+                            Collaboration Velocity
+                        </CardTitle>
+                        <CardDescription className="font-bold">Average response time and engagement per workspace.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="px-0 pt-8">
+                        <div className="space-y-8">
+                            <div className="p-8 rounded-[2rem] bg-muted/20 border border-primary/5 group hover:bg-primary/5 transition-all">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Market Readiness</span>
+                                    <span className="text-sm font-black text-primary">82% Capacity</span>
+                                </div>
+                                <div className="w-full h-3 bg-muted rounded-full overflow-hidden p-0.5 shadow-inner">
+                                    <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: '82%' }} />
+                                </div>
+                                <p className="text-[10px] font-bold text-muted-foreground mt-4 italic">High-velocity intake detected in Immunity Boosters category.</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="p-6 rounded-[2rem] border border-primary/10 bg-white shadow-sm flex flex-col items-center justify-center text-center group hover:shadow-xl transition-all">
+                                    <BarChart3 className="h-8 w-8 text-accent mb-3" />
+                                    <span className="text-2xl font-black text-primary">14.2h</span>
+                                    <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest mt-1">Avg. Response</span>
+                                </div>
+                                <div className="p-6 rounded-[2rem] border border-primary/10 bg-white shadow-sm flex flex-col items-center justify-center text-center group hover:shadow-xl transition-all">
+                                    <Zap className="h-8 w-8 text-[#4ade80] mb-3" />
+                                    <span className="text-2xl font-black text-primary">2.4x</span>
+                                    <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest mt-1">ROI Multiplier</span>
+                                </div>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
