@@ -44,7 +44,6 @@ export default function SalesPipelinePage() {
     return rawDeals.filter(d => d.ownerId === assigneeFilter);
   }, [rawDeals, assigneeFilter]);
 
-  // STRATEGIC MEMOIZATION: Separate data sets for each stage table to prevent infinite loops
   const stagedData = useMemo(() => {
     const map: Record<DealStage, Deal[]> = {
       new: [],
@@ -77,15 +76,19 @@ export default function SalesPipelinePage() {
 
   const loading = isUserLoading || isLoadingDeals || isLoadingUsers || isLoadingContacts || isLoadingProducts;
 
+  const handleSelectionChange = (stage: DealStage, stageDeals: Deal[]) => {
+    setSelectedDeals(prev => {
+        const otherStages = prev.filter(d => d.stage !== stage);
+        return [...otherStages, ...stageDeals];
+    });
+  };
+
   const handleSelectN = (stage: DealStage) => {
     const count = parseInt(selectCount);
     if (isNaN(count) || count <= 0) return;
     
     const stageDeals = stagedData[stage].slice(0, count);
-    setSelectedDeals(prev => {
-        const otherStages = prev.filter(d => d.stage !== stage);
-        return [...otherStages, ...stageDeals];
-    });
+    handleSelectionChange(stage, stageDeals);
   };
 
   const canManageBulk = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
@@ -163,6 +166,7 @@ export default function SalesPipelinePage() {
             {stages.map(stage => {
                 const stageDeals = stagedData[stage];
                 const stageTotal = stageDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
+                const currentStageSelected = selectedDeals.filter(d => d.stage === stage);
                 
                 return (
                     <div key={stage} className="space-y-4">
@@ -190,8 +194,9 @@ export default function SalesPipelinePage() {
                                     data={stageDeals} 
                                     users={users || []} 
                                     contacts={contacts || []}
-                                    externalSelection={selectedDeals}
-                                    onSelectionChange={setSelectedDeals}
+                                    products={products || []}
+                                    externalSelection={currentStageSelected}
+                                    onSelectionChange={(deals) => handleSelectionChange(stage, deals)}
                                 />
                             )}
                         </div>

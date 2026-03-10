@@ -21,15 +21,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import React, { useEffect, useRef } from 'react';
-import type { Deal, UserProfile, Contact } from '@/types';
+import type { Deal, UserProfile, Contact, Product } from '@/types';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   users: UserProfile[];
   contacts: Contact[];
+  products: Product[];
   externalSelection?: Deal[];
   onSelectionChange?: (deals: Deal[]) => void;
 }
@@ -39,6 +39,7 @@ export function DataTable<TData, TValue>({
   data,
   users,
   contacts,
+  products,
   externalSelection,
   onSelectionChange,
 }: DataTableProps<TData, TValue>) {
@@ -64,38 +65,46 @@ export function DataTable<TData, TValue>({
     meta: {
       users,
       contacts,
+      products,
     },
   });
 
   const lastEmittedRef = useRef<string[]>([]);
+  const isUpdatingFromExternal = useRef(false);
 
-  // DEEP EQUALITY SYNC: Prevents the infinite loop and context errors
-  useEffect(() => {
-    if (onSelectionChange) {
-        const currentSelection = table.getSelectedRowModel().rows.map(row => (row.original as any).id).sort();
-        if (JSON.stringify(currentSelection) !== JSON.stringify(lastEmittedRef.current)) {
-            lastEmittedRef.current = currentSelection;
-            onSelectionChange(table.getSelectedRowModel().rows.map(r => r.original as any));
-        }
-    }
-  }, [rowSelection, table, onSelectionChange]);
-
+  // EXTERNAL -> INTERNAL: Sync selection from parent
   useEffect(() => {
     if (externalSelection) {
         const externalIds = externalSelection.map(d => d.id).sort();
-        const currentSelection = table.getSelectedRowModel().rows.map(row => (row.original as any).id).sort();
+        const currentInternalIds = table.getSelectedRowModel().rows.map(row => (row.original as any).id).sort();
 
-        if (JSON.stringify(externalIds) !== JSON.stringify(currentSelection)) {
+        if (JSON.stringify(externalIds) !== JSON.stringify(currentInternalIds)) {
             const newSelection: Record<string, boolean> = {};
             table.getRowModel().rows.forEach(row => {
                 if (externalIds.includes((row.original as any).id)) {
                     newSelection[row.id] = true;
                 }
             });
+            isUpdatingFromExternal.current = true;
             setRowSelection(newSelection);
+            // Reset flag after render cycle to allow user interaction to emit again
+            setTimeout(() => { isUpdatingFromExternal.current = false; }, 0);
         }
     }
   }, [externalSelection, table]);
+
+  // INTERNAL -> EXTERNAL: Emit selection changes back to parent
+  useEffect(() => {
+    if (onSelectionChange && !isUpdatingFromExternal.current) {
+        const currentSelection = table.getSelectedRowModel().rows.map(row => row.original as any);
+        const currentIds = currentSelection.map(d => d.id).sort();
+        
+        if (JSON.stringify(currentIds) !== JSON.stringify(lastEmittedRef.current)) {
+            lastEmittedRef.current = currentIds;
+            onSelectionChange(currentSelection);
+        }
+    }
+  }, [rowSelection, onSelectionChange, table]);
 
   return (
     <div>
@@ -152,7 +161,7 @@ export function DataTable<TData, TValue>({
       </div>
       <div className="flex items-center justify-end space-x-4 py-4 px-4">
         <div className="flex-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
-          {table.getFilteredSelectedRowModel().rows.length} Selected
+          {table.getFilteredSelectedRowModel().rows.length} Selected in this Stage
         </div>
         <div className="flex items-center gap-2">
             <Button

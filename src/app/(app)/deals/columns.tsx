@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Deal, UserProfile, DealStage, Contact } from '@/types';
+import type { Deal, UserProfile, DealStage, Contact, Product } from '@/types';
 import { updateDealStage } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -20,6 +20,8 @@ import { useApp } from '@/context/app-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const stages: DealStage[] = ['new', 'pending', 'not connect', 'busy', 'done', 'cancel'];
 
@@ -69,6 +71,41 @@ const StageSelector = ({ deal }: { deal: Deal }) => {
       </SelectContent>
     </Select>
   );
+};
+
+const ItemsCell = ({ lineItems }: { lineItems: any[] }) => {
+    if (!lineItems || lineItems.length === 0) return <span className="text-[10px] font-black uppercase text-muted-foreground opacity-40 italic">No Items</span>;
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 flex gap-2 items-center text-muted-foreground hover:text-primary rounded-lg border-primary/5">
+                    <Package className="h-3 w-3" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">
+                        {lineItems.length} Products
+                    </span>
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0 rounded-2xl border-none shadow-2xl bg-card">
+                <div className="p-3 border-b border-muted/50 bg-muted/20">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Strategic Order Configuration</p>
+                </div>
+                <ScrollArea className="h-48">
+                    <div className="p-2 space-y-1">
+                        {lineItems.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-muted/10 border border-primary/5">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-xs font-bold leading-tight">{item.productName}</span>
+                                    <span className="text-[9px] text-muted-foreground uppercase font-black">Qty: {item.quantity}</span>
+                                </div>
+                                <span className="text-[10px] font-black text-primary">₹{item.subtotal.toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </PopoverContent>
+        </Popover>
+    );
 };
 
 export const columns: ColumnDef<Deal>[] = [
@@ -155,6 +192,11 @@ export const columns: ColumnDef<Deal>[] = [
             </div>
         );
     }
+  },
+  {
+    accessorKey: 'lineItems',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Items</div>,
+    cell: ({ row }) => <ItemsCell lineItems={row.original.lineItems} />,
   },
   {
     accessorKey: 'stage',
