@@ -40,9 +40,9 @@ export default function SalesOrdersPage() {
     <div className="space-y-4">
         <div className="flex items-center justify-between">
             <div>
-                <h1 className="text-2xl font-bold tracking-tight">Sales Orders</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-primary">Sales Orders</h1>
                 <p className="text-muted-foreground">
-                    Create and manage your sales orders.
+                    Manage confirmed stakeholder orders and fulfillment.
                 </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -51,7 +51,7 @@ export default function SalesOrdersPage() {
                   products={products || []}
                   isLoading={isLoading}
                 >
-                    <Button>
+                    <Button className="herbal-gradient font-bold rounded-xl shadow-lg">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Create Sales Order
                     </Button>

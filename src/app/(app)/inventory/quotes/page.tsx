@@ -40,9 +40,9 @@ export default function QuotesPage() {
     <div className="space-y-4">
         <div className="flex items-center justify-between">
             <div>
-                <h1 className="text-2xl font-bold tracking-tight">Quotes</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-primary">Quotes</h1>
                 <p className="text-muted-foreground">
-                    Create and manage sales quotes.
+                    Create and manage sales quotes for stakeholders.
                 </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -51,7 +51,7 @@ export default function QuotesPage() {
                   products={products || []}
                   isLoading={isLoading}
                 >
-                    <Button>
+                    <Button className="herbal-gradient font-bold rounded-xl shadow-lg">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Create Quote
                     </Button>

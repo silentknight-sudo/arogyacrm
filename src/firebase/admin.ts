@@ -115,7 +115,7 @@ export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);
   const msg = error.message || '';
   if (msg.includes('ENVIRONMENT_ERROR')) {
-    return msg; // Pass through the specific missing variables message
+    return msg;
   }
   if (msg.includes('private key') || msg.includes('PEM')) {
     return 'Configuration Error: Invalid private key format. Ensure the entire block is pasted correctly.';
