@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { 
     DollarSign, Users, TrendingUp, Target, Leaf, Sparkles, Zap, 
     ArrowUpRight, BarChart3, Trophy, PieChart as PieChartIcon, 
-    Activity, ChevronRight, UserCheck
+    Activity, ChevronRight, UserCheck, AlertCircle
 } from 'lucide-react';
 import { 
     Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, 
@@ -13,11 +13,12 @@ import {
 import { useApp } from '@/context/app-context';
 import type { Lead, Deal, UserProfile } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
-import { subMonths, format, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { collection, query, where, collectionGroup } from 'firebase/firestore';
+import { subMonths, format, eachMonthOfInterval, startOfMonth, endOfMonth, isValid } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const COLORS = ['#2D5A27', '#D4AF37', '#4ade80', '#fbbf24', '#1A3A17'];
 
@@ -30,7 +31,6 @@ export default function Dashboard() {
     const isTL = currentUser?.role === 'sales_team_lead';
 
     // Fetch all deals for global/team/personal view
-    // Using collectionGroup for Admin to get true global view
     const allDealsQuery = useMemoFirebase(() => {
         if (isUserLoading || !currentUser) return null;
         if (isAdmin) return query(collectionGroup(firestore, 'deals'));
@@ -70,11 +70,14 @@ export default function Dashboard() {
 
     // 2. METRICS CALCULATION
     const metrics = useMemo(() => {
-        if (!deals || !leads) return null;
+        // We initialize with default empty values to prevent crashes if Firestore returns empty arrays
+        const safeDeals = deals || [];
+        const safeLeads = leads || [];
+        const safeUsers = users || [];
 
-        const wonDeals = deals.filter(d => d.stage === 'done');
-        const totalRevenue = wonDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
-        const conversionRate = deals.length > 0 ? (wonDeals.length / deals.length) * 100 : 0;
+        const wonDeals = safeDeals.filter(d => d.stage === 'done');
+        const totalRevenue = wonDeals.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+        const conversionRate = safeDeals.length > 0 ? (wonDeals.length / safeDeals.length) * 100 : 0;
         
         // Monthly Growth Data
         const months = eachMonthOfInterval({
@@ -88,23 +91,31 @@ export default function Dashboard() {
 
         wonDeals.forEach(d => {
             if (!d.closeDate) return;
-            const m = format(new Date(d.closeDate), 'MMM');
-            const entry = months.find(x => x.month === m);
-            if (entry) entry.revenue += (d.amount || 0);
+            try {
+                const date = new Date(d.closeDate);
+                if (!isValid(date)) return;
+                const m = format(date, 'MMM');
+                const entry = months.find(x => x.month === m);
+                if (entry) entry.revenue += (Number(d.amount) || 0);
+            } catch (e) {}
         });
 
-        leads.forEach(l => {
-            const date = l.createdAt?.toDate ? l.createdAt.toDate() : new Date(l.createdAt);
-            const m = format(date, 'MMM');
-            const entry = months.find(x => x.month === m);
-            if (entry) entry.leads += 1;
+        safeLeads.forEach(l => {
+            if (!l.createdAt) return;
+            try {
+                const date = l.createdAt?.toDate ? l.createdAt.toDate() : new Date(l.createdAt);
+                if (!isValid(date)) return;
+                const m = format(date, 'MMM');
+                const entry = months.find(x => x.month === m);
+                if (entry) entry.leads += 1;
+            } catch (e) {}
         });
 
         // Leaderboard Calculation
-        const leaderboard = (users || [])
+        const leaderboard = safeUsers
             .map(user => {
-                const userDeals = deals.filter(d => d.ownerId === user.id && d.stage === 'done');
-                const userRevenue = userDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
+                const userDeals = safeDeals.filter(d => d.ownerId === user.id && d.stage === 'done');
+                const userRevenue = userDeals.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
                 return {
                     ...user,
                     revenue: userRevenue,
@@ -118,15 +129,16 @@ export default function Dashboard() {
             totalRevenue,
             conversionRate,
             wonCount: wonDeals.length,
-            leadsCount: leads.length,
+            leadsCount: safeLeads.length,
             chartData: months,
             leaderboard
         };
     }, [deals, leads, users]);
 
     const isLoading = isUserLoading || isLoadingDeals || isLoadingLeads || isLoadingUsers;
+    const hasNoData = !isLoading && (!deals || !leads) && !isUserLoading;
 
-    if (isLoading || !metrics) {
+    if (isLoading) {
         return (
             <div className="space-y-12 pb-16 pt-4">
                 <div className="flex flex-col gap-4">
@@ -140,6 +152,29 @@ export default function Dashboard() {
                     <Skeleton className="lg:col-span-4 h-[500px] rounded-[2.5rem]" />
                     <Skeleton className="lg:col-span-3 h-[500px] rounded-[2.5rem]" />
                 </div>
+            </div>
+        );
+    }
+
+    if (hasNoData) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
+                <div className="p-6 rounded-full bg-muted/50">
+                    <AlertCircle className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-3xl font-black tracking-tight text-primary">Strategic Hub Offline</h2>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                        We couldn't retrieve your operational data. This usually happens when a workspace hasn't been initialized or indexes are still propagating.
+                    </p>
+                </div>
+                <Alert className="max-w-md border-primary/10 bg-primary/5">
+                    <Zap className="h-4 w-4" />
+                    <AlertTitle>Action Required</AlertTitle>
+                    <AlertDescription>
+                        Try adding a new Prospect or Deal to trigger the initial database synchronization.
+                    </AlertDescription>
+                </Alert>
             </div>
         );
     }
@@ -316,10 +351,10 @@ export default function Dashboard() {
                             <PieChart>
                                 <Pie
                                     data={[
-                                        { name: 'Pending', value: deals.filter(d => d.stage === 'pending').length },
-                                        { name: 'Done', value: deals.filter(d => d.stage === 'done').length },
-                                        { name: 'Busy', value: deals.filter(d => d.stage === 'busy').length },
-                                        { name: 'No Connect', value: deals.filter(d => d.stage === 'not connect').length },
+                                        { name: 'Pending', value: (deals || []).filter(d => d.stage === 'pending').length },
+                                        { name: 'Done', value: (deals || []).filter(d => d.stage === 'done').length },
+                                        { name: 'Busy', value: (deals || []).filter(d => d.stage === 'busy').length },
+                                        { name: 'No Connect', value: (deals || []).filter(d => d.stage === 'not connect').length },
                                     ]}
                                     innerRadius={60}
                                     outerRadius={100}
