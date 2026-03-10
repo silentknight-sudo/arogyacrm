@@ -10,7 +10,7 @@ import type { Deal, UserProfile, DealStage, Contact, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateDealDialog } from './create-deal-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Handshake, Users as UsersIcon, Wallet, Filter } from 'lucide-react';
+import { PlusCircle, Handshake, Users as UsersIcon, Wallet } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { BulkAssignDealsDialog } from './bulk-assign-deals-dialog';
 import {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition, useState } from 'react';
+import { useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown, ExternalLink, Loader2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,6 @@ import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 
 const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
