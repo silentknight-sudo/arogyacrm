@@ -46,9 +46,6 @@ service cloud.firestore {
     // -- CORE RULES --
 
     match /users/{userId} {
-      // Admins read everyone. 
-      // TLs read only the specialists they personally onboarded.
-      // Individuals read themselves.
       allow read: if isSignedIn() && (
         isAdmin() || 
         userId == request.auth.uid ||
@@ -84,15 +81,19 @@ service cloud.firestore {
       }
 
       match /deals/{dealId} {
+        // HIERARCHICAL VISIBILITY:
+        // Admin: Read everything (via collection group or member check)
+        // Team Lead: Read if they are the teamLeadId
+        // Executive: Read if they are the ownerId
         allow read: if isMember(teamspaceId) && (
           isAdmin() || 
-          getUserData().role == 'sales_team_lead' || 
+          resource.data.teamLeadId == request.auth.uid || 
           resource.data.ownerId == request.auth.uid
         );
         
         allow write: if isMember(teamspaceId) && (
           isAdmin() || 
-          getUserData().role == 'sales_team_lead' || 
+          resource.data.teamLeadId == request.auth.uid || 
           resource.data.ownerId == request.auth.uid
         );
       }

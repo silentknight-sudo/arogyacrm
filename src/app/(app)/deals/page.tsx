@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -32,9 +31,25 @@ export default function SalesPipelinePage() {
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [selectedDeals, setSelectedDeals] = useState<Deal[]>([]);
 
+  /**
+   * HIERARCHICAL QUERY:
+   * Admin: All deals
+   * Team Lead: Deals where teamLeadId == currentUser.id
+   * Executive: Deals where ownerId == currentUser.id
+   */
   const dealsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-    return query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'));
+    const dealsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'deals');
+    
+    if (currentUser.role === 'admin') {
+      return query(dealsRef);
+    }
+    
+    if (currentUser.role === 'sales_team_lead') {
+      return query(dealsRef, where('teamLeadId', '==', currentUser.id));
+    }
+    
+    return query(dealsRef, where('ownerId', '==', currentUser.id));
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
   const { data: rawDeals, isLoading: isLoadingDeals } = useCollection<Deal>(dealsQuery);
@@ -62,21 +77,12 @@ export default function SalesPipelinePage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-    
     if (currentUser.role === 'admin') {
-        return query(
-          collection(firestore, 'users'), 
-          where('teamspaceIds', 'array-contains', currentTeamspace.id)
-        );
+        return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
     }
-    
     if (currentUser.role === 'sales_team_lead') {
-        return query(
-          collection(firestore, 'users'), 
-          where('createdBy', '==', currentUser.id)
-        );
+        return query(collection(firestore, 'users'), where('createdBy', '==', currentUser.id));
     }
-    
     return null;
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
   

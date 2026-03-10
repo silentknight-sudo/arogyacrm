@@ -15,7 +15,6 @@ import {
 import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { updateLeadStatus, updateLeadProducts } from './actions';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
@@ -69,7 +68,7 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
   return (
     <div className="flex items-center gap-2">
       <Select 
-        disabled={isPending || lead.status === 'Converted'} 
+        disabled={isPending} 
         defaultValue={lead.status} 
         onValueChange={(v) => handleStatusChange(v as LeadStatus)}
       >
@@ -230,9 +229,9 @@ export const columns: ColumnDef<Lead>[] = [
       );
     },
     cell: ({ row }) => (
-      <Link href={`/leads/${row.original.id}`} className="font-black text-primary hover:text-accent transition-colors tracking-tight text-sm">
+      <span className="font-black text-primary tracking-tight text-sm">
           {row.getValue('fullName')}
-      </Link>
+      </span>
     ),
   },
   {

@@ -4,8 +4,83 @@ import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
-import type { Lead, DealStage, LeadStatus } from '@/types';
+import type { Lead, DealStage, LeadStatus, Deal } from '@/types';
 import { LineItemSchema } from '../inventory/schemas';
+
+/**
+ * STRATEGIC SYNC: Automated Deal Conversion Logic
+ * Ensures every active lead is mirrored as a Deal in the Sales Pipeline.
+ */
+async function syncDealForLead(leadId: string, teamspaceId: string) {
+  try {
+    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+    const leadDoc = await leadRef.get();
+    const lead = leadDoc.data() as Lead;
+    
+    if (!lead || lead.status === 'canceled') return;
+
+    const dealsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals');
+    const existingDealQuery = await dealsRef.where('leadId', '==', leadId).limit(1).get();
+    
+    const ownerId = lead.assignedToIds?.[0] || '';
+    let teamLeadId = '';
+    
+    if (ownerId) {
+      const userDoc = await adminDb.collection('users').doc(ownerId).get();
+      const userData = userDoc.data();
+      if (userData?.role === 'sales_executive') {
+        teamLeadId = userData.createdBy || '';
+      } else if (userData?.role === 'sales_team_lead') {
+        teamLeadId = ownerId;
+      }
+    }
+
+    const dealData: Partial<Deal> = {
+      leadId: leadId,
+      name: `Automated: ${lead.fullName}`,
+      ownerId: ownerId,
+      teamLeadId: teamLeadId,
+      stage: (lead.status === 'new' ? 'new' : 'pending') as DealStage,
+      type: 'Automated Conversion',
+      closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: FieldValue.serverTimestamp(),
+      contactId: '', // Automated leads don't always have a contact record yet
+    };
+
+    // Aggregate Product Pricing
+    if (lead.productAsked && lead.productAsked.length > 0) {
+      const productsSnapshot = await adminDb.collection('products').where('__name__', 'in', lead.productAsked).get();
+      const lineItems = productsSnapshot.docs.map(p => {
+        const d = p.data();
+        return {
+          productId: p.id,
+          productName: d.name,
+          unitPrice: d.price,
+          quantity: 1,
+          subtotal: d.price
+        };
+      });
+      dealData.lineItems = lineItems;
+      dealData.amount = lineItems.reduce((s, i) => s + i.subtotal, 0);
+    } else {
+      dealData.lineItems = [];
+      dealData.amount = 0;
+    }
+
+    if (existingDealQuery.empty) {
+      const newDealRef = dealsRef.doc();
+      await newDealRef.set({
+        ...dealData,
+        id: newDealRef.id,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      await existingDealQuery.docs[0].ref.update(dealData);
+    }
+  } catch (error) {
+    console.error('DEAL_SYNC_FAILURE:', error);
+  }
+}
 
 export async function scoreLeadWithAI(lead: Lead) {
   try {
@@ -41,8 +116,11 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    // TRIGGER SYNC
+    await syncDealForLead(leadId, teamspaceId);
+
     revalidatePath('/leads');
-    revalidatePath(`/leads/${leadId}`);
+    revalidatePath('/deals');
 
     return { success: true };
   } catch (error: any) {
@@ -60,8 +138,11 @@ export async function updateLeadProducts(values: { leadId: string, teamspaceId: 
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    // TRIGGER SYNC: Automatic Deal creation/update on product selection
+    await syncDealForLead(leadId, teamspaceId);
+
     revalidatePath('/leads');
-    revalidatePath(`/leads/${leadId}`);
+    revalidatePath('/deals');
 
     return { success: true };
   } catch (error: any) {
@@ -87,9 +168,7 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     const currentUserData = currentUserDoc.data();
     const role = currentUserData?.role;
 
-    // VALIDATE HIERARCHY
     if (role === 'admin') {
-        // Admin must only assign to Team Leads
         for (const id of newAssignedToIds) {
             const target = await adminDb.collection('users').doc(id).get();
             if (target.data()?.role !== 'sales_team_lead') {
@@ -97,9 +176,8 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
             }
         }
     } else if (role === 'sales_team_lead') {
-        // TL must only assign to Executives THEY created
         for (const id of newAssignedToIds) {
-            if (id === currentUserId) continue; // Skip self
+            if (id === currentUserId) continue; 
             const target = await adminDb.collection('users').doc(id).get();
             const targetData = target.data();
             if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
@@ -117,8 +195,11 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    // SYNC DEAL OWNERSHIP
+    await syncDealForLead(leadId, teamspaceId);
+
     revalidatePath('/leads');
-    revalidatePath(`/leads/${leadId}`);
+    revalidatePath('/deals');
 
     return { success: true };
 
@@ -145,7 +226,6 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     const currentUserData = currentUserDoc.data();
     const role = currentUserData?.role;
 
-    // VALIDATE HIERARCHY
     if (role === 'admin') {
         for (const id of newAssignedToIds) {
             const target = await adminDb.collection('users').doc(id).get();
@@ -176,83 +256,19 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     });
 
     await batch.commit();
-    revalidatePath('/leads');
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: handleAdminSDKError(error) };
-  }
-}
 
-const ConvertAndCreateDealSchema = z.object({
-  leadId: z.string().min(1),
-  teamspaceId: z.string().min(1),
-  currentUserId: z.string().min(1),
-  dealName: z.string().min(2),
-  dealType: z.string().min(1),
-  dealStage: z.string().min(1),
-  dealAmount: z.coerce.number().min(0),
-  lineItems: z.array(LineItemSchema),
-});
-
-export async function convertAndCreateDeal(values: z.infer<typeof ConvertAndCreateDealSchema>) {
-  try {
-    const { leadId, teamspaceId, currentUserId, dealName, dealType, dealStage, dealAmount, lineItems } = ConvertAndCreateDealSchema.parse(values);
-
-    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
-    const leadDoc = await leadRef.get();
-    if (!leadDoc.exists) throw new Error("Prospect record not found.");
-    const leadData = leadDoc.data() as Lead;
-
-    if (leadData.status === 'Converted') {
-        throw new Error("This prospect has already been converted.");
+    // TRIGGER SYNC FOR BATCH
+    for (const id of leadIds) {
+      await syncDealForLead(id, teamspaceId);
     }
 
-    const batch = adminDb.batch();
-    
-    const contactRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('contacts').doc();
-    batch.set(contactRef, {
-      id: contactRef.id,
-      firstName: leadData.fullName.split(' ')[0],
-      lastName: leadData.fullName.split(' ').slice(1).join(' ') || leadData.fullName.split(' ')[0],
-      email: leadData.email || '',
-      phone: leadData.phone || '',
-      teamspaceId: teamspaceId,
-      ownerId: currentUserId,
-      avatar: `https://picsum.photos/seed/${contactRef.id}/100/100`,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
-    const dealRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals').doc();
-    batch.set(dealRef, {
-      id: dealRef.id,
-      name: dealName,
-      type: dealType,
-      amount: Number(dealAmount),
-      stage: dealStage as DealStage,
-      closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      contactId: contactRef.id,
-      ownerId: currentUserId,
-      teamspaceId: teamspaceId,
-      lineItems: lineItems,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
-    batch.update(leadRef, { 
-      status: 'Converted', 
-      updatedAt: FieldValue.serverTimestamp() 
-    });
-    
-    await batch.commit();
-
     revalidatePath('/leads');
-    revalidatePath(`/leads/${leadId}`);
-    revalidatePath('/contacts');
     revalidatePath('/deals');
-
     return { success: true };
   } catch (error: any) {
     return { success: false, error: handleAdminSDKError(error) };
   }
 }
+
+// Export internal sync for import service
+export { syncDealForLead };

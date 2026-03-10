@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -69,7 +68,6 @@ export default function LeadsPage() {
     }
     
     if (currentUser.role === 'sales_team_lead') {
-        // Strict Hierarchical Filter: TLs only see specialists they created
         return query(
           collection(firestore, 'users'), 
           where('createdBy', '==', currentUser.id)

@@ -64,6 +64,8 @@ export type DealStage = 'new' | 'pending' | 'not connect' | 'busy' | 'done' | 'c
 export type Deal = {
   id: string;
   teamspaceId: string;
+  leadId?: string;
+  teamLeadId?: string;
   name: string;
   amount: number;
   stage: DealStage;

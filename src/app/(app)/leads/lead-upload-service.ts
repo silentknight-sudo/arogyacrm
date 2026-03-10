@@ -1,11 +1,11 @@
 'use server';
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
-import type { RawLead } from '@/types';
 import { revalidatePath } from 'next/cache';
+import { syncDealForLead } from './actions';
 
 const UploadLeadsSchema = z.object({
-  rawLeads: z.array(z.any()), // Keeping it flexible for now
+  rawLeads: z.array(z.any()),
   assignedToId: z.string().min(1),
   teamspaceId: z.string().min(1),
 });
@@ -21,14 +21,17 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
       throw new Error('No leads to import.');
     }
     
+    const createdLeadIds: string[] = [];
     const batch = adminDb.batch();
 
     for (const rawLead of rawLeads) {
       const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
+      const id = leadRef.id;
+      createdLeadIds.push(id);
       
       const newLeadData = {
-        id: leadRef.id,
-        fullName: rawLead['Name'] || '',
+        id: id,
+        fullName: rawLead['Name'] || 'Unknown Prospect',
         email: rawLead['Email address'] || '',
         phone: rawLead['Phone'] || '',
         source: rawLead['Source'] || 'Meta Ads',
@@ -48,7 +51,15 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     
     await batch.commit();
 
+    /**
+     * AUTOMATIC CONVERSION: Initiate deals for all imported leads
+     */
+    for (const id of createdLeadIds) {
+      await syncDealForLead(id, teamspaceId);
+    }
+
     revalidatePath('/leads');
+    revalidatePath('/deals');
 
     return { success: true, count: rawLeads.length };
 
