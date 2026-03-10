@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -59,11 +60,25 @@ export default function LeadsPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-    return query(
-      collection(firestore, 'users'), 
-      where('teamspaceIds', 'array-contains', currentTeamspace.id)
-    );
+    
+    if (currentUser.role === 'admin') {
+        return query(
+          collection(firestore, 'users'), 
+          where('teamspaceIds', 'array-contains', currentTeamspace.id)
+        );
+    }
+    
+    if (currentUser.role === 'sales_team_lead') {
+        // Strict Hierarchical Filter: TLs only see specialists they created
+        return query(
+          collection(firestore, 'users'), 
+          where('createdBy', '==', currentUser.id)
+        );
+    }
+    
+    return null;
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+  
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);

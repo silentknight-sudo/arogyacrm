@@ -1,3 +1,4 @@
+
 'use client';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
@@ -30,9 +31,23 @@ export default function RefundsPage() {
   const { data: salesOrders, isLoading: isLoadingSalesOrders } = useCollection<SalesOrder>(salesOrdersQuery);
 
   const usersQuery = useMemoFirebase(() => {
-    return (!isUserLoading && currentUser && currentTeamspace?.id)
-        ? query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id)) 
-        : null;
+    if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+    
+    if (currentUser.role === 'admin') {
+        return query(
+          collection(firestore, 'users'), 
+          where('teamspaceIds', 'array-contains', currentTeamspace.id)
+        );
+    }
+    
+    if (currentUser.role === 'sales_team_lead') {
+        return query(
+          collection(firestore, 'users'), 
+          where('createdBy', '==', currentUser.id)
+        );
+    }
+    
+    return null;
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);

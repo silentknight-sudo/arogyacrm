@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -61,7 +62,22 @@ export default function SalesPipelinePage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-    return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
+    
+    if (currentUser.role === 'admin') {
+        return query(
+          collection(firestore, 'users'), 
+          where('teamspaceIds', 'array-contains', currentTeamspace.id)
+        );
+    }
+    
+    if (currentUser.role === 'sales_team_lead') {
+        return query(
+          collection(firestore, 'users'), 
+          where('createdBy', '==', currentUser.id)
+        );
+    }
+    
+    return null;
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);

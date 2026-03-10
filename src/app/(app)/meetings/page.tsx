@@ -1,3 +1,4 @@
+
 'use client';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
@@ -23,11 +24,24 @@ export default function MeetingsPage() {
   const { data: meetings, isLoading: isLoadingMeetings } = useCollection<Meeting>(meetingsQuery);
 
   const usersQuery = useMemoFirebase(() => {
-    const memberIds = currentTeamspace?.memberIds || [];
-    return (!isUserLoading && currentUser && memberIds.length > 0)
-        ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
-        : null;
-  }, [firestore, currentTeamspace?.memberIds, currentUser, isUserLoading]);
+    if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+    
+    if (currentUser.role === 'admin') {
+        const memberIds = currentTeamspace?.memberIds || [];
+        return memberIds.length > 0
+            ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
+            : null;
+    }
+    
+    if (currentUser.role === 'sales_team_lead') {
+        return query(
+          collection(firestore, 'users'), 
+          where('createdBy', '==', currentUser.id)
+        );
+    }
+    
+    return null;
+  }, [firestore, currentTeamspace?.id, currentTeamspace?.memberIds, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
