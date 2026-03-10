@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getAuth, Auth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
+import { getAuth, Auth as AdminAuth } from 'firebase-admin/auth';
+import { getFirestore, FieldValue, Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 /**
  * HYPER-RESILIENT PEM PARSER
@@ -32,10 +32,15 @@ function formatPrivateKey(key: string | undefined): string {
   return cleaned;
 }
 
+let adminApp: App | null = null;
+
 function getAdminApp(): App {
+  if (adminApp) return adminApp;
+  
   const existingApps = getApps();
   if (existingApps.length > 0) {
-    return existingApps[0];
+    adminApp = existingApps[0];
+    return adminApp;
   }
 
   const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -43,15 +48,16 @@ function getAdminApp(): App {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    throw new Error('CRITICAL_ENVIRONMENT_ERROR: Admin credentials missing from environment.');
+    throw new Error('CRITICAL_ENVIRONMENT_ERROR: Admin credentials missing from environment. Verify FIREBASE_PROJECT_ID, CLIENT_EMAIL, and PRIVATE_KEY.');
   }
 
   try {
     const privateKey = formatPrivateKey(rawPrivateKey);
-    return initializeApp({
+    adminApp = initializeApp({
       credential: cert({ projectId, clientEmail, privateKey }),
       projectId,
     });
+    return adminApp;
   } catch (error: any) {
     console.error('FIREBASE_ADMIN_INIT_FAILURE:', error.message);
     throw new Error(`FIREBASE_ADMIN_INIT_ERROR: ${error.message}`);
@@ -59,14 +65,28 @@ function getAdminApp(): App {
 }
 
 /**
- * SINGLETON ACCESSORS
- * Initialized on first import to ensure stability.
+ * LAZY PROXY FACTORY
+ * Prevents Next.js from evaluating the SDK during the build phase.
+ * Blocks promise-like properties to prevent "Grant Access" loops.
  */
-const app = getAdminApp();
-export const adminDb: Firestore = getFirestore(app);
-export const adminAuth: Auth = getAuth(app);
+function createLazyProxy<T extends object>(initializer: () => T): T {
+  return new Proxy({} as T, {
+    get(target, prop, receiver) {
+      if (prop === 'then' || prop === 'toJSON' || prop === 'constructor') {
+        return undefined;
+      }
+      return Reflect.get(initializer(), prop, receiver);
+    }
+  });
+}
 
-// Consistent exports for server-side mutations
+/**
+ * SINGLETON ACCESSORS (LAZY)
+ * These objects are now Proxies that only initialize Firebase when a property is accessed.
+ */
+export const adminDb = createLazyProxy(() => getFirestore(getAdminApp()));
+export const adminAuth = createLazyProxy(() => getAuth(getAdminApp()));
+
 export { FieldValue };
 export const serverTimestamp = () => FieldValue.serverTimestamp();
 
