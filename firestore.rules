@@ -47,13 +47,13 @@ service cloud.firestore {
 
     match /users/{userId} {
       // Admins read everyone. 
-      // TLs read specialists who share a teamspace.
+      // TLs read only the specialists they personally onboarded.
       // Individuals read themselves.
       allow read: if isSignedIn() && (
         isAdmin() || 
         userId == request.auth.uid ||
         (getUserData().role == 'sales_team_lead' && (
-            resource == null || resource.data.teamspaceIds.hasAny(getUserData().teamspaceIds)
+            resource == null || resource.data.createdBy == request.auth.uid
         ))
       );
       

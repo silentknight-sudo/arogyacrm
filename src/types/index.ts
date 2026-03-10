@@ -12,6 +12,7 @@ export type UserProfile = {
   avatar?: string;
   role: UserRole;
   teamspaceIds: string[];
+  createdBy?: string;
 };
 
 export type Teamspace = {

@@ -3,8 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
     DollarSign, Users, TrendingUp, Target, Leaf, Sparkles, Zap, 
-    ArrowUpRight, BarChart3, Trophy, PieChart as PieChartIcon, 
-    Activity, ChevronRight, UserCheck, AlertCircle
+    ArrowUpRight, BarChart3, Trophy, Activity, ChevronRight, UserCheck, AlertCircle
 } from 'lucide-react';
 import { 
     Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, 
@@ -56,15 +55,16 @@ export default function Dashboard() {
 
     const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(allLeadsQuery);
 
-    // Fetch users for leaderboard
+    // Fetch users for leaderboard: Strict Creator Lock for Team Leads
     const usersQuery = useMemoFirebase(() => {
         if (isUserLoading || !currentUser) return null;
         if (isAdmin) return query(collection(firestore, 'users'), where('role', '==', 'sales_team_lead'));
-        if (isTL && currentTeamspace) {
-            return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
+        if (isTL) {
+            // Team Leads only see and track members they personally onboarded
+            return query(collection(firestore, 'users'), where('createdBy', '==', currentUser.id));
         }
         return null;
-    }, [firestore, currentUser, isUserLoading, currentTeamspace, isAdmin, isTL]);
+    }, [firestore, currentUser, isUserLoading, isAdmin, isTL]);
 
     const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
@@ -133,14 +133,8 @@ export default function Dashboard() {
     }, [deals, leads, users]);
 
     const isLoading = isUserLoading || isLoadingDeals || isLoadingLeads || isLoadingUsers || areTeamspacesLoading;
-    
-    // Check if context is ready (Admin is always ready, others need a teamspace)
     const isContextReady = isAdmin || !!currentTeamspace;
-    
-    // Check for retrieval error (data is null after loading finishes)
     const isError = !isLoading && isContextReady && (deals === null || leads === null);
-    
-    // Check if the user simply has no workspaces
     const noWorkspaces = !isUserLoading && !areTeamspacesLoading && !isAdmin && (!currentUser?.teamspaceIds || currentUser.teamspaceIds.length === 0);
 
     if (isLoading) {
@@ -170,7 +164,7 @@ export default function Dashboard() {
                 <div className="space-y-2">
                     <h2 className="text-3xl font-black tracking-tight text-primary">Workspace Required</h2>
                     <p className="text-muted-foreground max-w-md mx-auto">
-                        Your account is not currently assigned to any teamspaces. Please contact an administrator to be onboarded to a functional unit.
+                        Your account is not currently assigned to any teamspaces. Please contact an administrator.
                     </p>
                 </div>
             </div>
@@ -186,14 +180,14 @@ export default function Dashboard() {
                 <div className="space-y-2">
                     <h2 className="text-3xl font-black tracking-tight text-primary">Strategic Hub Offline</h2>
                     <p className="text-muted-foreground max-w-md mx-auto">
-                        We couldn't retrieve your operational data. This usually happens when security rules are being updated or indexes are still propagating.
+                        We couldn't retrieve your operational data. This usually happens during security rule propagation.
                     </p>
                 </div>
                 <Alert className="max-w-md border-primary/10 bg-primary/5">
                     <Zap className="h-4 w-4" />
                     <AlertTitle>Action Required</AlertTitle>
                     <AlertDescription>
-                        Try adding a new Prospect or Deal to trigger the initial database synchronization.
+                        Try adding a new Prospect or Deal to trigger synchronization.
                     </AlertDescription>
                 </Alert>
             </div>
@@ -240,8 +234,8 @@ export default function Dashboard() {
                 {[
                     { label: 'Total Revenue', value: `₹${metrics.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-primary', trend: '+12.5%', desc: 'Verified Billings' },
                     { label: 'Growth Leads', value: `+${metrics.leadsCount}`, icon: Users, color: 'text-blue-600', trend: '+4.2%', desc: 'Prospect Momentum' },
-                    { label: 'Conversion', value: `${metrics.conversionRate.toFixed(1)}%`, icon: Target, color: 'text-accent', trend: '+2.1%', desc: 'Lead to Deal Efficiency' },
-                    { label: 'Won Success', value: metrics.wonCount, icon: TrendingUp, color: 'text-[#4ade80]', trend: '+8.9%', desc: 'Completed Cycles' },
+                    { label: 'Conversion', value: `${metrics.conversionRate.toFixed(1)}%`, icon: Target, color: 'text-accent', trend: '+2.1%', desc: 'Efficiency' },
+                    { label: 'Won Success', value: metrics.wonCount, icon: TrendingUp, color: 'text-[#4ade80]', trend: '+8.9%', desc: 'Cycles' },
                 ].map((stat, i) => (
                     <Card key={i} className="premium-card group border-none shadow-xl overflow-hidden relative">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
@@ -307,7 +301,7 @@ export default function Dashboard() {
                             </div>
                             <div>
                                 <CardTitle className="text-3xl font-black tracking-tight text-white">{isAdmin ? 'Leaderboard' : 'Top Specialists'}</CardTitle>
-                                <CardDescription className="text-white/60 font-bold">{isAdmin ? 'Aggregated Team Lead Performance' : 'Highest contributing executives'}</CardDescription>
+                                <CardDescription className="text-white/60 font-bold">{isAdmin ? 'Aggregated Team Lead Performance' : 'Highest contributing recruits'}</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
@@ -336,7 +330,7 @@ export default function Dashboard() {
                             </div>
                         )) : (
                             <div className="text-center py-20 bg-white/5 rounded-[2.5rem] border border-dashed border-white/10 italic text-white/40 font-medium">
-                                Waiting for cycle completion data...
+                                No performance data for your recruits.
                             </div>
                         )}
                         

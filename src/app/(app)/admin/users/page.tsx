@@ -15,7 +15,7 @@ export default function UserManagementPage() {
   const firestore = useFirestore();
   const { availableTeamspaces, areTeamspacesLoading, currentUser, currentTeamspace } = useApp();
 
-  // ROLE-BASED USER QUERY
+  // ROLE-BASED USER QUERY: Strict Creator Lock for Team Leads
   const usersQuery = useMemoFirebase(() => {
     if (!currentUser || !currentTeamspace) return null;
     
@@ -24,10 +24,10 @@ export default function UserManagementPage() {
     }
     
     if (currentUser.role === 'sales_team_lead') {
-        // Team Leads see only their team members
+        // Team Leads see only members they personally created
         return query(
             collection(firestore, 'users'), 
-            where('teamspaceIds', 'array-contains', currentTeamspace.id)
+            where('createdBy', '==', currentUser.id)
         );
     }
     
@@ -45,7 +45,7 @@ export default function UserManagementPage() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
                 <p className="text-muted-foreground">
-                    {currentUser?.role === 'admin' ? 'Global team governance and roles.' : `Managing specialists for ${currentTeamspace?.name}.`}
+                    {currentUser?.role === 'admin' ? 'Global team governance and roles.' : `Managing specialists onboarded by you for ${currentTeamspace?.name}.`}
                 </p>
             </div>
             <div className="flex items-center space-x-2">

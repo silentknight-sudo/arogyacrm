@@ -66,6 +66,7 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       avatar: `https://picsum.photos/seed/${newUserId}/100/100`,
+      createdBy: validatedInput.creatorId,
     });
     
     await adminAuth.setCustomUserClaims(newUserId, { role: validatedInput.role });
@@ -107,13 +108,9 @@ export async function deleteUser(values: { userId: string, adminId: string }): P
     if (adminRole === 'admin') {
         // Full access
     } else if (adminRole === 'sales_team_lead') {
-        // Can only delete Sales Executives in shared teamspaces
-        if (targetData?.role !== 'sales_executive') {
-            throw new Error('Team Leaders can only manage Sales Executives.');
-        }
-        const sharesTeam = targetData?.teamspaceIds?.some((id: string) => adminData?.teamspaceIds?.includes(id));
-        if (!sharesTeam) {
-            throw new Error('This user is not within your assigned workspaces.');
+        // Can only delete Sales Executives they personally created
+        if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== adminId) {
+            throw new Error('You can only manage members you have personally onboarded.');
         }
     } else {
         throw new Error('Unauthorized.');
@@ -158,15 +155,9 @@ export async function updateUserPassword(values: z.infer<typeof UpdatePasswordSc
     } else if (adminRole === 'admin') {
         // Admin can change anyone
     } else if (adminRole === 'sales_team_lead') {
-        // TL can only change Sales Executives in their teamspaces
-        if (targetData?.role !== 'sales_executive') {
-            throw new Error('Team Leaders can only reset passwords for Sales Executives.');
-        }
-        const hasCommonTeamspace = targetData?.teamspaceIds?.some((id: string) => 
-            adminData?.teamspaceIds?.includes(id)
-        );
-        if (!hasCommonTeamspace) {
-            throw new Error('This user is not in your assigned workspaces.');
+        // TL can only change Sales Executives they personally created
+        if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== adminId) {
+            throw new Error('You can only reset credentials for members you have personally onboarded.');
         }
     } else {
         throw new Error('Unauthorized: You do not have management privileges.');
