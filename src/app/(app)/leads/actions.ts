@@ -18,7 +18,7 @@ export async function scoreLeadWithAI(lead: Lead) {
         jobTitle: lead.demographicData?.jobTitle || '',
         country: lead.demographicData?.country || '',
       },
-      productAsked: lead.productAsked,
+      productAsked: lead.productAsked || [],
       leadStatus: lead.status,
       notes: lead.notes,
     };
@@ -38,6 +38,25 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
 
     await leadRef.update({
       status,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    revalidatePath('/leads');
+    revalidatePath(`/leads/${leadId}`);
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
+export async function updateLeadProducts(values: { leadId: string, teamspaceId: string, products: string[] }): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { leadId, teamspaceId, products } = values;
+    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+
+    await leadRef.update({
+      productAsked: products,
       updatedAt: FieldValue.serverTimestamp(),
     });
 

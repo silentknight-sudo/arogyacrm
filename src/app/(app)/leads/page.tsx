@@ -6,7 +6,7 @@ import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
-import type { Lead, UserProfile, LeadStatus } from '@/types';
+import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,6 @@ export default function LeadsPage() {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // Base query handles role-based isolation
     let q = currentUser.role === 'admin' 
       ? query(leadsRef) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
@@ -47,7 +46,6 @@ export default function LeadsPage() {
       q = query(q, where('status', '==', statusFilter));
     }
     
-    // Assignee filter is handled in-memory below to accommodate Firestore's single array-contains limitation
     return q;
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, statusFilter]);
 
@@ -56,7 +54,6 @@ export default function LeadsPage() {
   const leads = useMemo(() => {
     if (!rawLeads) return null;
     if (assigneeFilter === 'all') return rawLeads;
-    // Apply secondary filter in memory
     return rawLeads.filter(lead => lead.assignedToIds?.includes(assigneeFilter));
   }, [rawLeads, assigneeFilter]);
 
@@ -67,10 +64,12 @@ export default function LeadsPage() {
       where('teamspaceIds', 'array-contains', currentTeamspace.id)
     );
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
-  
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-  const loading = isUserLoading || isLoadingLeads || isLoadingUsers;
+  const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+
+  const loading = isUserLoading || isLoadingLeads || isLoadingUsers || isLoadingProducts;
 
   const handleSelectNLeads = () => {
     const count = parseInt(selectCount);
@@ -102,7 +101,7 @@ export default function LeadsPage() {
                   </Button>
                 </UploadLeadsDialog>
               )}
-              <CreateLeadDialog>
+              <CreateLeadDialog products={products || []} isLoading={loading}>
                   <Button className="rounded-2xl herbal-gradient shadow-2xl shadow-primary/30 px-10 py-7 text-lg font-black gold-glow scale-105 hover:scale-110 active:scale-95 transition-all">
                       <PlusCircle className="mr-3 h-6 w-6" />
                       Add Prospect
@@ -129,7 +128,6 @@ export default function LeadsPage() {
 
             {canManageBulk && (
                 <div className="flex items-center gap-4 bg-muted/20 p-2 rounded-2xl border border-primary/5">
-                    {/* Specialist Filter Trigger */}
                     <div className="flex items-center gap-2 px-3 border-r border-primary/10 mr-2 h-10">
                         <UsersIcon className="h-4 w-4 text-primary" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Filter Specialist:</span>
@@ -140,9 +138,7 @@ export default function LeadsPage() {
                             <SelectContent className="rounded-xl border-none shadow-2xl bg-card/95 backdrop-blur-xl">
                                 <SelectItem value="all" className="text-[10px] font-black uppercase tracking-widest">All Specialists</SelectItem>
                                 {users?.map((u) => (
-                                    <SelectItem key={u.id} value={u.id} className="text-[10px] font-black uppercase tracking-widest">
-                                        {u.displayName}
-                                    </SelectItem>
+                                    <SelectItem key={u.id} value={u.id} className="text-[10px] font-black uppercase tracking-widest">{u.displayName}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -167,7 +163,7 @@ export default function LeadsPage() {
                         </Button>
                         {selectedLeads.length > 0 && (
                             <Button 
-                                className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10"
+                                className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10 ml-4"
                                 onClick={() => setBulkAssignOpen(true)}
                             >
                                 Assign {selectedLeads.length} Selected
@@ -189,6 +185,7 @@ export default function LeadsPage() {
                 columns={columns} 
                 data={leads || []} 
                 users={users || []} 
+                products={products || []}
                 externalSelection={selectedLeads}
                 onSelectionChange={setSelectedLeads}
               />

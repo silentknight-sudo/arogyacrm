@@ -22,15 +22,15 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import React, { useState, useEffect } from 'react';
-import type { Lead, UserProfile } from '@/types';
-import { useApp } from '@/context/app-context';
+import React, { useEffect } from 'react';
+import type { Lead, UserProfile, Product } from '@/types';
 
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   users: UserProfile[];
+  products: Product[];
   externalSelection?: Lead[];
   onSelectionChange?: (leads: Lead[]) => void;
 }
@@ -39,6 +39,7 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   users,
+  products,
   externalSelection,
   onSelectionChange,
 }: DataTableProps<TData, TValue>) {
@@ -63,11 +64,10 @@ export function DataTable<TData, TValue>({
     },
     meta: {
       users,
+      products,
     },
   });
 
-  // SYNC: Internal selection back to parent
-  // Use a ref to prevent looping during sync
   const lastEmittedRef = React.useRef<string[]>([]);
 
   useEffect(() => {
@@ -75,7 +75,6 @@ export function DataTable<TData, TValue>({
         const selectedLeads = table.getSelectedRowModel().rows.map(row => row.original as Lead);
         const currentIds = selectedLeads.map(l => l.id).sort();
         
-        // Only emit if the IDs have actually changed
         if (JSON.stringify(currentIds) !== JSON.stringify(lastEmittedRef.current)) {
             lastEmittedRef.current = currentIds;
             onSelectionChange(selectedLeads);
@@ -83,13 +82,11 @@ export function DataTable<TData, TValue>({
     }
   }, [rowSelection, table, onSelectionChange]);
 
-  // SYNC: External selection (e.g., "Select N") to internal table state
   useEffect(() => {
     if (externalSelection) {
         const externalIds = externalSelection.map(l => l.id).sort();
         const internalIds = table.getSelectedRowModel().rows.map(r => (r.original as Lead).id).sort();
 
-        // Only update if external source provided a different set of IDs
         if (JSON.stringify(externalIds) !== JSON.stringify(internalIds)) {
             const newSelection: Record<string, boolean> = {};
             table.getRowModel().rows.forEach(row => {

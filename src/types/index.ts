@@ -44,7 +44,7 @@ export type Lead = {
   score?: number;
   priority?: 'High' | 'Medium' | 'Low';
   reasoning?: string;
-  productAsked?: string;
+  productAsked?: string[];
   engagementScore?: number;
   demographicData?: {
     industry: string;

@@ -1,8 +1,8 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useTransition, useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowUpDown, ExternalLink, Loader2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -12,14 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Lead, UserProfile, LeadStatus } from '@/types';
-import { updateLeadStatus } from './actions';
+import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
+import { updateLeadStatus, updateLeadProducts } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
@@ -95,6 +98,66 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
       )}
     </div>
   );
+};
+
+const ProductSelector = ({ lead, products }: { lead: Lead, products: Product[] }) => {
+    const { toast } = useToast();
+    const { currentTeamspace } = useApp();
+    const [isPending, startTransition] = useTransition();
+    const selectedIds = lead.productAsked || [];
+
+    const handleProductToggle = (productId: string) => {
+        if (!currentTeamspace) return;
+        const newSelection = selectedIds.includes(productId)
+            ? selectedIds.filter(id => id !== productId)
+            : [...selectedIds, productId];
+
+        startTransition(async () => {
+            const result = await updateLeadProducts({
+                leadId: lead.id,
+                teamspaceId: currentTeamspace.id,
+                products: newSelection
+            });
+            if (!result.success) {
+                toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
+            }
+        });
+    };
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 flex gap-2 items-center text-muted-foreground hover:text-primary rounded-lg border-primary/5">
+                    <Package className="h-3 w-3" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">
+                        {selectedIds.length === 0 ? 'Select Products' : `${selectedIds.length} Products`}
+                    </span>
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0 rounded-2xl border-none shadow-2xl bg-card">
+                <div className="p-3 border-b border-muted/50 bg-muted/20">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Lead Interest Catalog</p>
+                </div>
+                <ScrollArea className="h-64">
+                    <div className="p-2 space-y-1">
+                        {products.map(product => (
+                            <div key={product.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors cursor-pointer group" onClick={() => handleProductToggle(product.id)}>
+                                <Checkbox 
+                                    checked={selectedIds.includes(product.id)}
+                                    onCheckedChange={() => handleProductToggle(product.id)}
+                                    className="rounded-full border-2"
+                                />
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-xs font-bold leading-tight group-hover:text-primary">{product.name}</span>
+                                    <span className="text-[9px] text-muted-foreground uppercase font-black">{product.category}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </PopoverContent>
+        </Popover>
+    );
 };
 
 const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], users: UserProfile[] }) => {
@@ -200,6 +263,14 @@ export const columns: ColumnDef<Lead>[] = [
         const assignedToIds = row.getValue('assignedToIds') as string[] || [];
         const users = (table.options.meta as any)?.users || [];
         return <AssignedToCell assignedToIds={assignedToIds} users={users} />;
+    }
+  },
+  {
+    accessorKey: 'productAsked',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Products</div>,
+    cell: ({ row, table }) => {
+        const products = (table.options.meta as any)?.products || [];
+        return <ProductSelector lead={row.original} products={products} />;
     }
   },
   {
