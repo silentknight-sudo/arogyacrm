@@ -4,8 +4,8 @@ import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
-import type { Lead, DealStage, LeadStatus, Deal } from '@/types';
-import { LineItemSchema } from '../inventory/schemas';
+import type { Lead, DealStage, LeadStatus, Deal, LineItem } from '@/types';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 /**
  * STRATEGIC SYNC: Automated Deal Conversion Logic
@@ -50,7 +50,7 @@ async function syncDealForLead(leadId: string, teamspaceId: string) {
     // Aggregate Product Pricing
     if (lead.productAsked && lead.productAsked.length > 0) {
       const productsSnapshot = await adminDb.collection('products').where('__name__', 'in', lead.productAsked).get();
-      const lineItems = productsSnapshot.docs.map(p => {
+      const lineItems: LineItem[] = productsSnapshot.docs.map((p: QueryDocumentSnapshot) => {
         const d = p.data();
         return {
           productId: p.id,
