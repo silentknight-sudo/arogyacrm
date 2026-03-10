@@ -303,7 +303,7 @@ export default function KanbanBoard() {
   const { data: deals, isLoading: isLoadingDeals } = useCollection<Deal>(
     useMemoFirebase(() => 
       !isUserLoading && !areTeamspacesLoading && currentTeamspace
-        ? collection(firestore, 'teamspaces', currentTeamspace.id, 'deals')
+        ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'deals'))
         : null
     , [firestore, currentTeamspace, isUserLoading, areTeamspacesLoading])
   );
