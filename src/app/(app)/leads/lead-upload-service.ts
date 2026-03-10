@@ -32,8 +32,8 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
         email: rawLead['Email address'] || '',
         phone: rawLead['Phone'] || '',
         source: rawLead['Source'] || 'Meta Ads',
-        status: 'New',
-        assignedToId: assignedToId,
+        status: 'new',
+        assignedToIds: [assignedToId],
         teamspaceId: teamspaceId,
         attributionFields: JSON.stringify({
             'form': rawLead['Form'],
