@@ -58,7 +58,7 @@ export type Lead = {
   updatedAt: any;
 };
 
-export type DealStage = 'done' | 'pending' | 'cancel' | 'not connect' | 'busy';
+export type DealStage = 'new' | 'pending' | 'not connect' | 'busy' | 'done' | 'cancel';
 
 export type Deal = {
   id: string;

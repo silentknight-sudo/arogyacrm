@@ -6,7 +6,7 @@ import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
-import type { Deal, UserProfile, DealStage } from '@/types';
+import type { Deal, UserProfile, DealStage, Contact, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateDealDialog } from './create-deal-dialog';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const stages: DealStage[] = ['pending', 'not connect', 'busy', 'done', 'cancel'];
+const stages: DealStage[] = ['new', 'pending', 'not connect', 'busy', 'done', 'cancel'];
 
 export default function SalesPipelinePage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
@@ -44,6 +44,22 @@ export default function SalesPipelinePage() {
     return rawDeals.filter(d => d.ownerId === assigneeFilter);
   }, [rawDeals, assigneeFilter]);
 
+  // STRATEGIC MEMOIZATION: Separate data sets for each stage table to prevent infinite loops
+  const stagedData = useMemo(() => {
+    const map: Record<DealStage, Deal[]> = {
+      new: [],
+      pending: [],
+      'not connect': [],
+      busy: [],
+      done: [],
+      cancel: []
+    };
+    filteredDeals.forEach(deal => {
+      if (map[deal.stage]) map[deal.stage].push(deal);
+    });
+    return map;
+  }, [filteredDeals]);
+
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
@@ -54,18 +70,18 @@ export default function SalesPipelinePage() {
   const contactsQuery = useMemoFirebase(() =>
     !isUserLoading && currentTeamspace ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'contacts')) : null
   , [firestore, currentTeamspace, isUserLoading]);
-  const { data: contacts } = useCollection(contactsQuery);
+  const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
 
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
-  const { data: products } = useCollection(productsQuery);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
-  const loading = isUserLoading || isLoadingDeals || isLoadingUsers;
+  const loading = isUserLoading || isLoadingDeals || isLoadingUsers || isLoadingContacts || isLoadingProducts;
 
   const handleSelectN = (stage: DealStage) => {
     const count = parseInt(selectCount);
     if (isNaN(count) || count <= 0) return;
     
-    const stageDeals = filteredDeals.filter(d => d.stage === stage).slice(0, count);
+    const stageDeals = stagedData[stage].slice(0, count);
     setSelectedDeals(prev => {
         const otherStages = prev.filter(d => d.stage !== stage);
         return [...otherStages, ...stageDeals];
@@ -145,7 +161,7 @@ export default function SalesPipelinePage() {
         
         <div className="space-y-12">
             {stages.map(stage => {
-                const stageDeals = filteredDeals.filter(d => d.stage === stage);
+                const stageDeals = stagedData[stage];
                 const stageTotal = stageDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
                 
                 return (
@@ -173,6 +189,7 @@ export default function SalesPipelinePage() {
                                     columns={columns} 
                                     data={stageDeals} 
                                     users={users || []} 
+                                    contacts={contacts || []}
                                     externalSelection={selectedDeals}
                                     onSelectionChange={setSelectedDeals}
                                 />

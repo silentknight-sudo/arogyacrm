@@ -9,7 +9,7 @@ import type { DealStage } from '@/types';
 const CreateDealSchema = z.object({
     name: z.string().min(2, 'Deal name must be at least 2 characters.'),
     amount: z.coerce.number().min(0, 'Amount must be a positive number.'),
-    stage: z.enum(['done', 'pending', 'cancel', 'not connect', 'busy']),
+    stage: z.enum(['new', 'pending', 'cancel', 'not connect', 'busy', 'done']),
     type: z.string().min(1, 'Deal type is required.'),
     closeDate: z.string().min(1, 'Close date is required.'),
     contactId: z.string().min(1, 'Contact is required.'),

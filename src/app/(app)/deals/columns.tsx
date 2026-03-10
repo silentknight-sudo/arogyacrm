@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, Loader2, Phone } from 'lucide-react';
+import { ArrowUpDown, Loader2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -12,15 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Deal, UserProfile, DealStage } from '@/types';
+import type { Deal, UserProfile, DealStage, Contact } from '@/types';
 import { updateDealStage } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
-const stages: DealStage[] = ['pending', 'not connect', 'busy', 'done', 'cancel'];
+const stages: DealStage[] = ['new', 'pending', 'not connect', 'busy', 'done', 'cancel'];
 
 const StageSelector = ({ deal }: { deal: Deal }) => {
   const { toast } = useToast();
@@ -97,7 +98,7 @@ export const columns: ColumnDef<Deal>[] = [
     header: ({ column }) => {
       return (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="font-black uppercase tracking-widest text-[10px] hover:bg-transparent px-0">
-          Deal Headline
+          Deal Name
           <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />
         </Button>
       );
@@ -105,52 +106,59 @@ export const columns: ColumnDef<Deal>[] = [
     cell: ({ row }) => <span className="font-black text-primary tracking-tight text-sm">{row.getValue('name')}</span>,
   },
   {
-    accessorKey: 'amount',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Value</div>,
-    cell: ({ row }) => {
-        const amount = parseFloat(row.getValue('amount'))
-        return <span className="text-sm font-black text-primary">₹{amount.toLocaleString('en-IN')}</span>
-    },
+    id: 'email',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Email</div>,
+    cell: ({ row, table }) => {
+        const contactId = row.original.contactId;
+        const contacts = (table.options.meta as any)?.contacts || [] as Contact[];
+        const contact = contacts.find((c: Contact) => c.id === contactId);
+        return <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{contact?.email || 'N/A'}</span>
+    }
   },
   {
-    accessorKey: 'closeDate',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Target Date</div>,
+    id: 'phone',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Phone Number</div>,
+    cell: ({ row, table }) => {
+        const contactId = row.original.contactId;
+        const contacts = (table.options.meta as any)?.contacts || [] as Contact[];
+        const contact = contacts.find((c: Contact) => c.id === contactId);
+        return <span className="text-xs font-bold text-foreground">{contact?.phone || 'N/A'}</span>
+    }
+  },
+  {
+    accessorKey: 'updatedAt',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Update Date</div>,
     cell: ({ row }) => {
-        const date = row.getValue('closeDate') as string;
-        return <span className="text-[10px] font-bold text-muted-foreground">{date ? format(new Date(date), 'PP') : 'N/A'}</span>;
+        const date = row.original.updatedAt || row.original.createdAt;
+        if (!date) return 'N/A';
+        const d = date.toDate ? date.toDate() : new Date(date);
+        return <span className="text-[10px] font-bold text-muted-foreground">{format(d, 'PP')}</span>;
     },
   },
   {
     accessorKey: 'ownerId',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Specialist</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Assigned Person</div>,
     cell: ({ row, table }) => {
         const ownerId = row.getValue('ownerId') as string;
         const users = (table.options.meta as any)?.users || [] as UserProfile[];
         const user = users.find((u: UserProfile) => u.id === ownerId);
         
-        if (!user) return <span className="text-[10px] font-bold text-muted-foreground opacity-40">Unassigned</span>;
+        if (!user) return <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Unassigned</span>;
 
         return (
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2">
-                        <Avatar className="h-7 w-7 ring-1 ring-primary/5">
-                            <AvatarImage src={user.avatar} alt={user.displayName} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-[9px] font-black">{user.displayName?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs font-bold text-foreground">{user.displayName}</span>
-                    </div>
-                </TooltipTrigger>
-                <TooltipContent className="bg-[#0D1F0B] text-white border-none rounded-xl p-2">
-                    <p className="text-[9px] font-black uppercase tracking-widest">{user.role.replace(/_/g, ' ')}</p>
-                </TooltipContent>
-            </Tooltip>
+            <div className="flex items-center gap-2">
+                <Avatar className="h-7 w-7 ring-1 ring-primary/5">
+                    <AvatarImage src={user.avatar} alt={user.displayName} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-[9px] font-black">{user.displayName?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-bold text-foreground">{user.displayName}</span>
+            </div>
         );
     }
   },
   {
     accessorKey: 'stage',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Pipeline Move</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Stage</div>,
     cell: ({ row }) => <StageSelector deal={row.original} />,
   },
 ];

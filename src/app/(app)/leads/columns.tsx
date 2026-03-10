@@ -247,10 +247,10 @@ export const columns: ColumnDef<Lead>[] = [
     cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('phone') || 'N/A'}</span>
   },
   {
-    accessorKey: 'createdAt',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Assigned Date</div>,
+    accessorKey: 'updatedAt',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Update Date</div>,
     cell: ({ row }) => {
-        const date = row.original.createdAt;
+        const date = row.original.updatedAt || row.original.createdAt;
         if (!date) return 'N/A';
         const d = date.toDate ? date.toDate() : new Date(date);
         return <span className="text-[10px] font-bold text-muted-foreground">{format(d, 'PP')}</span>;
