@@ -15,6 +15,13 @@ import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { BulkAssignLeadsDialog } from './bulk-assign-leads-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const statusFilters: (LeadStatus | 'all')[] = ['all', 'new', 'pending', 'busy', 'done', 'canceled'];
 
@@ -22,6 +29,7 @@ export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
@@ -30,18 +38,27 @@ export default function LeadsPage() {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
+    // Base query handles role-based isolation
     let q = currentUser.role === 'admin' 
       ? query(leadsRef) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
 
     if (statusFilter !== 'all') {
-      q = query(leadsRef, where('status', '==', statusFilter));
+      q = query(q, where('status', '==', statusFilter));
     }
     
+    // Assignee filter is handled in-memory below to accommodate Firestore's single array-contains limitation
     return q;
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, statusFilter]);
 
-  const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
+  const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
+
+  const leads = useMemo(() => {
+    if (!rawLeads) return null;
+    if (assigneeFilter === 'all') return rawLeads;
+    // Apply secondary filter in memory
+    return rawLeads.filter(lead => lead.assignedToIds?.includes(assigneeFilter));
+  }, [rawLeads, assigneeFilter]);
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
@@ -112,33 +129,51 @@ export default function LeadsPage() {
 
             {canManageBulk && (
                 <div className="flex items-center gap-4 bg-muted/20 p-2 rounded-2xl border border-primary/5">
-                    <div className="flex items-center gap-2 px-3">
+                    {/* Specialist Filter Trigger */}
+                    <div className="flex items-center gap-2 px-3 border-r border-primary/10 mr-2 h-10">
                         <UsersIcon className="h-4 w-4 text-primary" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Quantity:</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Filter Specialist:</span>
+                        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                            <SelectTrigger className="w-[160px] h-9 rounded-xl bg-background border-none shadow-inner text-[10px] font-black uppercase tracking-tighter">
+                                <SelectValue placeholder="All Members" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-none shadow-2xl bg-card/95 backdrop-blur-xl">
+                                <SelectItem value="all" className="text-[10px] font-black uppercase tracking-widest">All Specialists</SelectItem>
+                                {users?.map((u) => (
+                                    <SelectItem key={u.id} value={u.id} className="text-[10px] font-black uppercase tracking-widest">
+                                        {u.displayName}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <Input 
-                        type="number" 
-                        placeholder="e.g. 5" 
-                        value={selectCount}
-                        onChange={(e) => setSelectCount(e.target.value)}
-                        className="w-20 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
-                    />
-                    <Button 
-                        variant="secondary" 
-                        size="sm" 
-                        onClick={handleSelectNLeads}
-                        className="rounded-xl font-bold px-6"
-                    >
-                        Select Top
-                    </Button>
-                    {selectedLeads.length > 0 && (
+
+                    <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Quantity:</span>
+                        <Input 
+                            type="number" 
+                            placeholder="e.g. 5" 
+                            value={selectCount}
+                            onChange={(e) => setSelectCount(e.target.value)}
+                            className="w-20 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
+                        />
                         <Button 
-                            className="rounded-xl herbal-gradient shadow-lg px-6 font-bold"
-                            onClick={() => setBulkAssignOpen(true)}
+                            variant="secondary" 
+                            size="sm" 
+                            onClick={handleSelectNLeads}
+                            className="rounded-xl font-bold px-6 h-10"
                         >
-                            Assign {selectedLeads.length} Selected
+                            Select Top
                         </Button>
-                    )}
+                        {selectedLeads.length > 0 && (
+                            <Button 
+                                className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10"
+                                onClick={() => setBulkAssignOpen(true)}
+                            >
+                                Assign {selectedLeads.length} Selected
+                            </Button>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
