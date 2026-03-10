@@ -25,6 +25,24 @@ service cloud.firestore {
       );
     }
 
+    // -- COLLECTION GROUP RULES (Required for Admin Global Dashboard) --
+    
+    match /{path=**}/leads/{leadId} {
+      allow read: if isAdmin();
+    }
+    
+    match /{path=**}/deals/{dealId} {
+      allow read: if isAdmin();
+    }
+    
+    match /{path=**}/contacts/{contactId} {
+      allow read: if isAdmin();
+    }
+    
+    match /{path=**}/activityLogs/{logId} {
+      allow read: if isAdmin();
+    }
+
     // -- CORE RULES --
 
     match /users/{userId} {
@@ -35,7 +53,6 @@ service cloud.firestore {
         (getUserData().role == 'sales_team_lead' && get(/databases/$(database)/documents/users/$(userId)).data.teamspaceIds.hasAny(getUserData().teamspaceIds))
       );
       
-      // Admin can write anyone. TL can create only if they follow restrictions (handled in actions, but rules protect).
       allow write: if isAdmin();
     }
 
@@ -49,10 +66,6 @@ service cloud.firestore {
       allow write: if isAdmin();
 
       match /leads/{leadId} {
-        // VISIBILITY:
-        // 1. Admins see everything in workspace.
-        // 2. TLs see everything in their workspace.
-        // 3. Executives see only leads assigned to them.
         allow read: if isMember(teamspaceId) && (
           isAdmin() || 
           getUserData().role == 'sales_team_lead' || 

@@ -23,14 +23,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 const COLORS = ['#2D5A27', '#D4AF37', '#4ade80', '#fbbf24', '#1A3A17'];
 
 export default function Dashboard() {
-    const { currentUser, currentTeamspace, isUserLoading } = useApp();
+    const { currentUser, currentTeamspace, isUserLoading, areTeamspacesLoading } = useApp();
     const firestore = useFirestore();
 
     // 1. DATA FETCHING: Role-Based Intelligence
     const isAdmin = currentUser?.role === 'admin';
     const isTL = currentUser?.role === 'sales_team_lead';
 
-    // Fetch all deals for global/team/personal view
+    // Fetch deals
     const allDealsQuery = useMemoFirebase(() => {
         if (isUserLoading || !currentUser) return null;
         if (isAdmin) return query(collectionGroup(firestore, 'deals'));
@@ -39,11 +39,11 @@ export default function Dashboard() {
         const dealsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'deals');
         if (isTL) return query(dealsRef);
         return query(dealsRef, where('ownerId', '==', currentUser.id));
-    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, isAdmin, isTL]);
 
     const { data: deals, isLoading: isLoadingDeals } = useCollection<Deal>(allDealsQuery);
 
-    // Fetch all leads
+    // Fetch leads
     const allLeadsQuery = useMemoFirebase(() => {
         if (isUserLoading || !currentUser) return null;
         if (isAdmin) return query(collectionGroup(firestore, 'leads'));
@@ -52,11 +52,11 @@ export default function Dashboard() {
         const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
         if (isTL) return query(leadsRef);
         return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
-    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, isAdmin, isTL]);
 
     const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(allLeadsQuery);
 
-    // Fetch users for leaderboard (Team Leads for Admin, Sales Execs for TL)
+    // Fetch users for leaderboard
     const usersQuery = useMemoFirebase(() => {
         if (isUserLoading || !currentUser) return null;
         if (isAdmin) return query(collection(firestore, 'users'), where('role', '==', 'sales_team_lead'));
@@ -64,13 +64,12 @@ export default function Dashboard() {
             return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
         }
         return null;
-    }, [firestore, currentUser, isUserLoading, currentTeamspace]);
+    }, [firestore, currentUser, isUserLoading, currentTeamspace, isAdmin, isTL]);
 
     const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
     // 2. METRICS CALCULATION
     const metrics = useMemo(() => {
-        // We initialize with default empty values to prevent crashes if Firestore returns empty arrays
         const safeDeals = deals || [];
         const safeLeads = leads || [];
         const safeUsers = users || [];
@@ -79,7 +78,6 @@ export default function Dashboard() {
         const totalRevenue = wonDeals.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
         const conversionRate = safeDeals.length > 0 ? (wonDeals.length / safeDeals.length) * 100 : 0;
         
-        // Monthly Growth Data
         const months = eachMonthOfInterval({
             start: subMonths(new Date(), 5),
             end: new Date()
@@ -111,7 +109,6 @@ export default function Dashboard() {
             } catch (e) {}
         });
 
-        // Leaderboard Calculation
         const leaderboard = safeUsers
             .map(user => {
                 const userDeals = safeDeals.filter(d => d.ownerId === user.id && d.stage === 'done');
@@ -135,8 +132,16 @@ export default function Dashboard() {
         };
     }, [deals, leads, users]);
 
-    const isLoading = isUserLoading || isLoadingDeals || isLoadingLeads || isLoadingUsers;
-    const hasNoData = !isLoading && (!deals || !leads) && !isUserLoading;
+    const isLoading = isUserLoading || isLoadingDeals || isLoadingLeads || isLoadingUsers || areTeamspacesLoading;
+    
+    // Check if context is ready (Admin is always ready, others need a teamspace)
+    const isContextReady = isAdmin || !!currentTeamspace;
+    
+    // Check for retrieval error (data is null after loading finishes)
+    const isError = !isLoading && isContextReady && (deals === null || leads === null);
+    
+    // Check if the user simply has no workspaces
+    const noWorkspaces = !isUserLoading && !areTeamspacesLoading && !isAdmin && (!currentUser?.teamspaceIds || currentUser.teamspaceIds.length === 0);
 
     if (isLoading) {
         return (
@@ -156,7 +161,23 @@ export default function Dashboard() {
         );
     }
 
-    if (hasNoData) {
+    if (noWorkspaces) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
+                <div className="p-6 rounded-full bg-muted/50">
+                    <UserCheck className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-3xl font-black tracking-tight text-primary">Workspace Required</h2>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                        Your account is not currently assigned to any teamspaces. Please contact an administrator to be onboarded to a functional unit.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (isError) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
                 <div className="p-6 rounded-full bg-muted/50">
@@ -165,7 +186,7 @@ export default function Dashboard() {
                 <div className="space-y-2">
                     <h2 className="text-3xl font-black tracking-tight text-primary">Strategic Hub Offline</h2>
                     <p className="text-muted-foreground max-w-md mx-auto">
-                        We couldn't retrieve your operational data. This usually happens when a workspace hasn't been initialized or indexes are still propagating.
+                        We couldn't retrieve your operational data. This usually happens when security rules are being updated or indexes are still propagating.
                     </p>
                 </div>
                 <Alert className="max-w-md border-primary/10 bg-primary/5">
@@ -183,7 +204,7 @@ export default function Dashboard() {
 
     return (
         <div className="flex flex-col gap-12 pb-16 pt-4">
-            {/* 3. STRATEGIC HEADER */}
+            {/* STRATEGIC HEADER */}
             <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 text-accent mb-1">
                     <Sparkles className="h-5 w-5 fill-accent" />
@@ -207,14 +228,14 @@ export default function Dashboard() {
                         <div className="px-6 py-2">
                             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Workspace</p>
                             <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="rounded-full font-black border-primary/20 text-primary">{currentTeamspace?.name || 'All Workspaces'}</Badge>
+                                <Badge variant="outline" className="rounded-full font-black border-primary/20 text-primary">{currentTeamspace?.name || 'Global Catalog'}</Badge>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* 4. KEY METRIC CARDS */}
+            {/* KEY METRIC CARDS */}
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
                 {[
                     { label: 'Total Revenue', value: `₹${metrics.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-primary', trend: '+12.5%', desc: 'Verified Billings' },
@@ -243,9 +264,8 @@ export default function Dashboard() {
                 ))}
             </div>
 
-            {/* 5. PRIMARY VISUALIZATIONS */}
+            {/* VISUALIZATIONS */}
             <div className="grid gap-10 lg:grid-cols-7">
-                {/* Revenue Momentum Chart */}
                 <Card className="lg:col-span-4 premium-card p-10 bg-white/40 backdrop-blur-3xl border-white/20 shadow-2xl">
                     <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between flex-wrap gap-4">
                         <div className="space-y-1">
@@ -279,7 +299,6 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
 
-                {/* 6. LEADERBOARD: Strategic Performance */}
                 <Card className="lg:col-span-3 premium-card p-10 herbal-gradient shadow-2xl border-none">
                     <CardHeader className="px-0 pt-0">
                         <div className="flex items-center gap-4 mb-2">
@@ -330,80 +349,6 @@ export default function Dashboard() {
                             <p className="text-sm font-bold mt-3 opacity-80 flex items-center gap-2">
                                 Ready for wellness strategy sessions <ChevronRight className="h-4 w-4 group-hover:translate-x-2 transition-transform" />
                             </p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* 7. GROWTH & PIPELINE INSIGHTS */}
-            <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
-                {/* Status Distribution */}
-                <Card className="premium-card p-10 shadow-2xl">
-                    <CardHeader className="px-0 pt-0">
-                        <CardTitle className="text-2xl font-black text-primary flex items-center gap-3">
-                            <PieChartIcon className="h-6 w-6 text-accent" />
-                            Pipeline Distribution
-                        </CardTitle>
-                        <CardDescription className="font-bold">Deal lifecycle concentration.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px] px-0 pt-6">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={[
-                                        { name: 'Pending', value: (deals || []).filter(d => d.stage === 'pending').length },
-                                        { name: 'Done', value: (deals || []).filter(d => d.stage === 'done').length },
-                                        { name: 'Busy', value: (deals || []).filter(d => d.stage === 'busy').length },
-                                        { name: 'No Connect', value: (deals || []).filter(d => d.stage === 'not connect').length },
-                                    ]}
-                                    innerRadius={60}
-                                    outerRadius={100}
-                                    paddingAngle={8}
-                                    dataKey="value"
-                                >
-                                    {[...Array(4)].map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                                </Pie>
-                                <Tooltip 
-                                    contentStyle={{borderRadius: '1rem', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', fontWeight: 800}}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-
-                {/* Team Collaboration Insight (Admin/TL Only) */}
-                <Card className="premium-card p-10 shadow-2xl lg:col-span-2">
-                    <CardHeader className="px-0 pt-0">
-                        <CardTitle className="text-2xl font-black text-primary flex items-center gap-3">
-                            <UserCheck className="h-6 w-6 text-blue-600" />
-                            Collaboration Velocity
-                        </CardTitle>
-                        <CardDescription className="font-bold">Average response time and engagement per workspace.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="px-0 pt-8">
-                        <div className="space-y-8">
-                            <div className="p-8 rounded-[2rem] bg-muted/20 border border-primary/5 group hover:bg-primary/5 transition-all">
-                                <div className="flex items-center justify-between mb-4">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Market Readiness</span>
-                                    <span className="text-sm font-black text-primary">82% Capacity</span>
-                                </div>
-                                <div className="w-full h-3 bg-muted rounded-full overflow-hidden p-0.5 shadow-inner">
-                                    <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: '82%' }} />
-                                </div>
-                                <p className="text-[10px] font-bold text-muted-foreground mt-4 italic">High-velocity intake detected in Immunity Boosters category.</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="p-6 rounded-[2rem] border border-primary/10 bg-white shadow-sm flex flex-col items-center justify-center text-center group hover:shadow-xl transition-all">
-                                    <BarChart3 className="h-8 w-8 text-accent mb-3" />
-                                    <span className="text-2xl font-black text-primary">14.2h</span>
-                                    <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest mt-1">Avg. Response</span>
-                                </div>
-                                <div className="p-6 rounded-[2rem] border border-primary/10 bg-white shadow-sm flex flex-col items-center justify-center text-center group hover:shadow-xl transition-all">
-                                    <Zap className="h-8 w-8 text-[#4ade80] mb-3" />
-                                    <span className="text-2xl font-black text-primary">2.4x</span>
-                                    <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest mt-1">ROI Multiplier</span>
-                                </div>
-                            </div>
                         </div>
                     </CardContent>
                 </Card>
