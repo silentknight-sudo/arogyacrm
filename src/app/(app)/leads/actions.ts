@@ -44,10 +44,10 @@ async function syncDealForLead(leadId: string, teamspaceId: string) {
       type: 'Automated Conversion',
       closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: FieldValue.serverTimestamp(),
-      contactId: '', // Automated leads don't always have a contact record yet
+      contactId: '', 
     };
 
-    // Aggregate Product Pricing
+    // Aggregate Product Pricing with explicit typing for Firestore docs
     if (lead.productAsked && lead.productAsked.length > 0) {
       const productsSnapshot = await adminDb.collection('products').where('__name__', 'in', lead.productAsked).get();
       const lineItems: LineItem[] = productsSnapshot.docs.map((p: QueryDocumentSnapshot) => {
@@ -151,7 +151,6 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // TRIGGER SYNC
     await syncDealForLead(leadId, teamspaceId);
 
     revalidatePath('/leads');
@@ -173,7 +172,6 @@ export async function updateLeadProducts(values: { leadId: string, teamspaceId: 
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // TRIGGER SYNC: Automatic Deal creation/update on product selection
     await syncDealForLead(leadId, teamspaceId);
 
     revalidatePath('/leads');
@@ -230,7 +228,6 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // SYNC DEAL OWNERSHIP
     await syncDealForLead(leadId, teamspaceId);
 
     revalidatePath('/leads');
@@ -292,7 +289,6 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
 
     await batch.commit();
 
-    // TRIGGER SYNC FOR BATCH
     for (const id of leadIds) {
       await syncDealForLead(id, teamspaceId);
     }
@@ -305,5 +301,4 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
   }
 }
 
-// Export internal sync for import service
 export { syncDealForLead };
