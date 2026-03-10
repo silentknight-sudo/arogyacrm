@@ -25,12 +25,24 @@ export async function createDeal(values: CreateDealInput): Promise<CreateDealRes
     try {
         const validatedInput = CreateDealSchema.parse(values);
 
+        // HIERARCHY INHERITANCE: Resolve the Team Lead ID for the deal
+        const ownerDoc = await adminDb.collection('users').doc(validatedInput.ownerId).get();
+        const ownerData = ownerDoc.data();
+        let teamLeadId = '';
+        
+        if (ownerData?.role === 'sales_executive') {
+            teamLeadId = ownerData.createdBy || '';
+        } else if (ownerData?.role === 'sales_team_lead') {
+            teamLeadId = validatedInput.ownerId;
+        }
+
         const newDealRef = adminDb.collection('teamspaces').doc(validatedInput.teamspaceId).collection('deals').doc();
         const newDealId = newDealRef.id;
         
         const newDealData = {
             id: newDealId,
             ...validatedInput,
+            teamLeadId,
             amount: Number(validatedInput.amount),
             createdAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp(),

@@ -1,19 +1,19 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
     DollarSign, Users, TrendingUp, Target, Leaf, Sparkles, Zap, 
-    ArrowUpRight, BarChart3, Trophy, Activity, ChevronRight, UserCheck, AlertCircle
+    ArrowUpRight, Trophy, Activity, ChevronRight, UserCheck, AlertCircle
 } from 'lucide-react';
 import { 
     Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, 
-    CartesianGrid, Line, LineChart, Cell, Pie, PieChart 
+    CartesianGrid, Cell 
 } from 'recharts';
 import { useApp } from '@/context/app-context';
 import type { Lead, Deal, UserProfile } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, collectionGroup } from 'firebase/firestore';
-import { subMonths, format, eachMonthOfInterval, startOfMonth, endOfMonth, isValid } from 'date-fns';
+import { subMonths, format, eachMonthOfInterval, isValid } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -29,38 +29,40 @@ export default function Dashboard() {
     const isAdmin = currentUser?.role === 'admin';
     const isTL = currentUser?.role === 'sales_team_lead';
 
-    // Fetch deals
+    // Fetch deals: Scoped by Hierarchical Responsibility
     const allDealsQuery = useMemoFirebase(() => {
         if (isUserLoading || !currentUser) return null;
         if (isAdmin) return query(collectionGroup(firestore, 'deals'));
         if (!currentTeamspace) return null;
         
         const dealsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'deals');
-        if (isTL) return query(dealsRef);
+        if (isTL) return query(dealsRef, where('teamLeadId', '==', currentUser.id));
         return query(dealsRef, where('ownerId', '==', currentUser.id));
     }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, isAdmin, isTL]);
 
     const { data: deals, isLoading: isLoadingDeals } = useCollection<Deal>(allDealsQuery);
 
-    // Fetch leads
+    // Fetch leads: Scoped by Hierarchical Responsibility
     const allLeadsQuery = useMemoFirebase(() => {
         if (isUserLoading || !currentUser) return null;
         if (isAdmin) return query(collectionGroup(firestore, 'leads'));
         if (!currentTeamspace) return null;
 
         const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
-        if (isTL) return query(leadsRef);
+        if (isTL) {
+            // Leads are visible to TLs if they are assigned OR if they manage the assignee
+            return query(leadsRef); // Team rules allow reading the whole teamspace leads
+        }
         return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
     }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, isAdmin, isTL]);
 
     const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(allLeadsQuery);
 
-    // Fetch users for leaderboard: Strict Creator Lock for Team Leads
+    // Fetch users for leaderboard: Strict Creator Lock
     const usersQuery = useMemoFirebase(() => {
         if (isUserLoading || !currentUser) return null;
         if (isAdmin) return query(collection(firestore, 'users'), where('role', '==', 'sales_team_lead'));
         if (isTL) {
-            // Team Leads only see and track members they personally onboarded
             return query(collection(firestore, 'users'), where('createdBy', '==', currentUser.id));
         }
         return null;
@@ -68,7 +70,7 @@ export default function Dashboard() {
 
     const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
-    // 2. METRICS CALCULATION
+    // 2. METRICS CALCULATION: Resilient Data Processing
     const metrics = useMemo(() => {
         const safeDeals = deals || [];
         const safeLeads = leads || [];
@@ -178,16 +180,16 @@ export default function Dashboard() {
                     <AlertCircle className="h-12 w-12 text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
-                    <h2 className="text-3xl font-black tracking-tight text-primary">Strategic Hub Offline</h2>
+                    <h2 className="text-3xl font-black tracking-tight text-primary">Strategic Hub Error</h2>
                     <p className="text-muted-foreground max-w-md mx-auto">
-                        We couldn't retrieve your operational data. This usually happens during security rule propagation.
+                        We couldn't retrieve your operational data. This usually happens if security rules are still propagating or if there's a connectivity issue.
                     </p>
                 </div>
                 <Alert className="max-w-md border-primary/10 bg-primary/5">
                     <Zap className="h-4 w-4" />
                     <AlertTitle>Action Required</AlertTitle>
                     <AlertDescription>
-                        Try adding a new Prospect or Deal to trigger synchronization.
+                        Please refresh the page or contact support if the issue persists.
                     </AlertDescription>
                 </Alert>
             </div>
@@ -207,7 +209,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between flex-wrap gap-6">
                     <h1 className="text-6xl font-black tracking-tighter text-primary flex items-center gap-6">
                         <div className="p-4 herbal-gradient rounded-[2rem] shadow-2xl shadow-primary/30 rotate-2 scale-110">
-                            <Leaf className="h-10 w-10 text-white animate-pulse" />
+                            <Leaf className="h-10 w-10 text-white" />
                         </div>
                         Namaste, {currentUser?.displayName?.split(' ')[0]}
                     </h1>
@@ -341,7 +343,7 @@ export default function Dashboard() {
                             </div>
                             <p className="font-black text-4xl tracking-tighter">{(metrics.leadsCount)} Priority Prospects</p>
                             <p className="text-sm font-bold mt-3 opacity-80 flex items-center gap-2">
-                                Ready for wellness strategy sessions <ChevronRight className="h-4 w-4 group-hover:translate-x-2 transition-transform" />
+                                Ready for wellness strategy sessions
                             </p>
                         </div>
                     </CardContent>
