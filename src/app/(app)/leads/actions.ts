@@ -84,9 +84,30 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
     if (!currentUserDoc.exists) throw new Error('User context not found.');
     
-    const role = currentUserDoc.data()?.role;
-    if (!['admin', 'sales_team_lead'].includes(role)) {
-      throw new Error('Unauthorized: Only admins or team leads can delegate prospects.');
+    const currentUserData = currentUserDoc.data();
+    const role = currentUserData?.role;
+
+    // VALIDATE HIERARCHY
+    if (role === 'admin') {
+        // Admin must only assign to Team Leads
+        for (const id of newAssignedToIds) {
+            const target = await adminDb.collection('users').doc(id).get();
+            if (target.data()?.role !== 'sales_team_lead') {
+                throw new Error('Administrators can only delegate to verified Team Leaders.');
+            }
+        }
+    } else if (role === 'sales_team_lead') {
+        // TL must only assign to Executives THEY created
+        for (const id of newAssignedToIds) {
+            if (id === currentUserId) continue; // Skip self
+            const target = await adminDb.collection('users').doc(id).get();
+            const targetData = target.data();
+            if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
+                throw new Error('Team Leaders can only delegate to specialists they have personally onboarded.');
+            }
+        }
+    } else {
+        throw new Error('Unauthorized: You do not have delegation privileges.');
     }
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
@@ -119,8 +140,30 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = BulkAssignSchema.parse(values);
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    if (!currentUserDoc.exists || !['admin', 'sales_team_lead'].includes(currentUserDoc.data()?.role)) {
-      throw new Error('Unauthorized: Only admins or team leads can perform bulk delegation.');
+    if (!currentUserDoc.exists) throw new Error('Unauthorized session.');
+    
+    const currentUserData = currentUserDoc.data();
+    const role = currentUserData?.role;
+
+    // VALIDATE HIERARCHY
+    if (role === 'admin') {
+        for (const id of newAssignedToIds) {
+            const target = await adminDb.collection('users').doc(id).get();
+            if (target.data()?.role !== 'sales_team_lead') {
+                throw new Error('Strategic delegation restricted to Team Leaders only.');
+            }
+        }
+    } else if (role === 'sales_team_lead') {
+        for (const id of newAssignedToIds) {
+            if (id === currentUserId) continue;
+            const target = await adminDb.collection('users').doc(id).get();
+            const targetData = target.data();
+            if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
+                throw new Error('You can only delegate prospects to specialists you have onboarded.');
+            }
+        }
+    } else {
+        throw new Error('Unauthorized access.');
     }
 
     const batch = adminDb.batch();

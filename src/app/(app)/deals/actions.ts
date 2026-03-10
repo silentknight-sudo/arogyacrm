@@ -77,8 +77,25 @@ export async function bulkAssignDeals(values: z.infer<typeof BulkAssignDealsSche
     const { dealIds, teamspaceId, newOwnerId, currentUserId } = BulkAssignDealsSchema.parse(values);
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    if (!currentUserDoc.exists || !['admin', 'sales_team_lead'].includes(currentUserDoc.data()?.role)) {
-      throw new Error('Unauthorized: Executive governance required for bulk delegation.');
+    if (!currentUserDoc.exists) throw new Error('User context missing.');
+    
+    const currentUserData = currentUserDoc.data();
+    const role = currentUserData?.role;
+
+    // VALIDATE HIERARCHY
+    if (role === 'admin') {
+        const target = await adminDb.collection('users').doc(newOwnerId).get();
+        if (target.data()?.role !== 'sales_team_lead') {
+            throw new Error('Administrators can only reassign deals to Team Leaders.');
+        }
+    } else if (role === 'sales_team_lead') {
+        const target = await adminDb.collection('users').doc(newOwnerId).get();
+        const targetData = target.data();
+        if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
+            throw new Error('You can only reassign deals to specialists you have onboarded.');
+        }
+    } else {
+        throw new Error('Unauthorized: Executive authority required for reassignment.');
     }
 
     const batch = adminDb.batch();

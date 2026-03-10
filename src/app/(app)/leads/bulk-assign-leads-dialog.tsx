@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useTransition, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ import type { Lead, UserProfile } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const formSchema = z.object({
-  assignedToIds: z.array(z.string()).min(1, 'You must select at least one user.'),
+  assignedToIds: z.array(z.string()).min(1, 'Select at least one authorized specialist.'),
 });
 
 type BulkAssignLeadsDialogProps = {
@@ -44,6 +44,19 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
   const { currentUser, currentTeamspace } = useApp();
   const [isPending, startTransition] = useTransition();
 
+  // HIERARCHICAL FILTERING:
+  // Admin assigns ONLY to Team Leads. Team Leads assign ONLY to Executives they created.
+  const filteredUsers = useMemo(() => {
+    if (!currentUser) return [];
+    if (currentUser.role === 'admin') {
+      return users.filter(u => u.role === 'sales_team_lead');
+    }
+    if (currentUser.role === 'sales_team_lead') {
+      return users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
+    }
+    return [];
+  }, [users, currentUser]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,33 +65,39 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!currentUser || !currentTeamspace) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You are not authenticated.' });
+    if (!currentUser || !currentTeamspace?.id) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Active session required.' });
       return;
     }
     if (leads.length === 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No leads selected.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'No prospects selected.' });
         return;
     }
+    
     startTransition(async () => {
+      // For TLs, ensure they stay assigned for oversight
+      const finalIds = currentUser.role === 'sales_team_lead'
+        ? Array.from(new Set([currentUser.id, ...values.assignedToIds]))
+        : values.assignedToIds;
+
       const result = await bulkAssignLeads({
         leadIds: leads.map(l => l.id),
         teamspaceId: currentTeamspace.id,
-        newAssignedToIds: values.assignedToIds,
+        newAssignedToIds: finalIds,
         currentUserId: currentUser.id,
       });
 
       if (result.success) {
         toast({
-          title: 'Leads Assigned',
-          description: `${leads.length} lead(s) have been assigned.`,
+          title: 'Batch Delegation Success',
+          description: `${leads.length} prospects have been reassigned to your authorized team.`,
         });
         onOpenChange(false);
         form.reset();
       } else {
         toast({
           variant: 'destructive',
-          title: 'Assignment Failed',
+          title: 'Delegation Failed',
           description: result.error,
         });
       }
@@ -87,22 +106,24 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md rounded-[2rem] p-8">
         <DialogHeader>
-          <DialogTitle>Assign {leads.length} Lead(s)</DialogTitle>
-          <DialogDescription>Select one or more users to assign these leads to.</DialogDescription>
+          <DialogTitle className="text-2xl font-black text-primary">Bulk Pipeline Delegation</DialogTitle>
+          <DialogDescription className="font-medium">
+            Redistribute {leads.length} selected prospects to authorized specialists.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="assignedToIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Team Members</FormLabel>
-                  <ScrollArea className="h-40 rounded-md border p-4">
-                    <div className="space-y-3">
-                    {users.length > 0 ? users.map((user) => (
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Authorized Specialists</FormLabel>
+                  <ScrollArea className="h-48 rounded-2xl border bg-muted/20 p-4">
+                    <div className="space-y-4">
+                    {filteredUsers.length > 0 ? filteredUsers.map((user) => (
                       <div key={user.id} className="flex flex-row items-center space-x-3 space-y-0">
                         <Checkbox
                           id={`bulk-user-${user.id}`}
@@ -110,17 +131,17 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
                           onCheckedChange={(checked) => {
                             return checked
                               ? field.onChange([...(field.value || []), user.id])
-                              : field.onChange(
-                                  field.value?.filter((value: string) => value !== user.id)
-                                )
+                              : field.onChange(field.value?.filter(v => v !== user.id))
                           }}
+                          className="rounded-full h-5 w-5"
                         />
-                        <Label htmlFor={`bulk-user-${user.id}`} className="text-sm font-normal cursor-pointer">
+                        <Label htmlFor={`bulk-user-${user.id}`} className="text-sm font-bold cursor-pointer flex flex-col">
                           {user.displayName}
+                          <span className="text-[9px] uppercase font-black text-muted-foreground">{user.role.replace(/_/g, ' ')}</span>
                         </Label>
                       </div>
                     )) : (
-                        <div className="text-center text-sm text-muted-foreground py-4">No team members found.</div>
+                        <div className="text-center text-xs text-muted-foreground py-8 italic">No authorized recipients available.</div>
                     )}
                     </div>
                   </ScrollArea>
@@ -128,8 +149,8 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isPending || users.length === 0} className="w-full">
-              {isPending ? 'Assigning...' : `Assign ${leads.length} Lead(s)`}
+            <Button type="submit" disabled={isPending || filteredUsers.length === 0} className="w-full h-14 rounded-2xl herbal-gradient font-black shadow-xl">
+              {isPending ? 'Processing Batch...' : `Assign ${leads.length} Strategic Assets`}
             </Button>
           </form>
         </Form>

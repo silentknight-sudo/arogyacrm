@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useTransition, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,7 @@ import type { Deal, UserProfile } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formSchema = z.object({
-  newOwnerId: z.string().min(1, 'Please select a specialist.'),
+  newOwnerId: z.string().min(1, 'Please select an authorized specialist.'),
 });
 
 type BulkAssignDealsDialogProps = {
@@ -41,6 +41,19 @@ export function BulkAssignDealsDialog({ open, onOpenChange, deals, users }: Bulk
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [isPending, startTransition] = useTransition();
+
+  // HIERARCHICAL FILTERING:
+  // Admin assigns ONLY to Team Leads. Team Leads assign ONLY to Executives they created.
+  const filteredUsers = useMemo(() => {
+    if (!currentUser) return [];
+    if (currentUser.role === 'admin') {
+      return users.filter(u => u.role === 'sales_team_lead');
+    }
+    if (currentUser.role === 'sales_team_lead') {
+      return users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
+    }
+    return [];
+  }, [users, currentUser]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,7 +76,7 @@ export function BulkAssignDealsDialog({ open, onOpenChange, deals, users }: Bulk
       });
 
       if (result.success) {
-        toast({ title: 'Delegation Successful', description: `Reassigned ${deals.length} deals to new specialist.` });
+        toast({ title: 'Delegation Successful', description: `Reassigned ${deals.length} deals to your authorized team member.` });
         onOpenChange(false);
         form.reset();
       } else {
@@ -76,8 +89,8 @@ export function BulkAssignDealsDialog({ open, onOpenChange, deals, users }: Bulk
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md rounded-[2rem] p-8 border-none shadow-2xl bg-[#0D1F0B] text-white">
         <DialogHeader className="mb-6">
-          <DialogTitle className="text-2xl font-black text-[#4ade80]">Bulk Delegation</DialogTitle>
-          <DialogDescription className="text-white/60">Select a specialist to take ownership of {deals.length} deals.</DialogDescription>
+          <DialogTitle className="text-2xl font-black text-[#4ade80]">Authorized Reassignment</DialogTitle>
+          <DialogDescription className="text-white/60">Transfer {deals.length} deals to a specialist within your jurisdiction.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -86,7 +99,7 @@ export function BulkAssignDealsDialog({ open, onOpenChange, deals, users }: Bulk
               name="newOwnerId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-white/40">Target Specialist</FormLabel>
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-white/40">Authorized Recipient</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="rounded-xl bg-white/5 border-white/10 h-12">
@@ -94,17 +107,19 @@ export function BulkAssignDealsDialog({ open, onOpenChange, deals, users }: Bulk
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-[#0D1F0B] text-white border-white/10">
-                      {users.map(u => (
+                      {filteredUsers.length > 0 ? filteredUsers.map(u => (
                         <SelectItem key={u.id} value={u.id}>{u.displayName} ({u.role.replace(/_/g, ' ')})</SelectItem>
-                      ))}
+                      )) : (
+                        <div className="p-4 text-center text-xs text-white/40 italic">No authorized specialists found.</div>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-12 font-black rounded-xl herbal-gradient shadow-lg">
-              {isPending ? 'Processing...' : `Assign ${deals.length} Opportunities`}
+            <Button type="submit" disabled={isPending || filteredUsers.length === 0} className="w-full h-12 font-black rounded-xl herbal-gradient shadow-lg">
+              {isPending ? 'Processing Transfer...' : `Assign ${deals.length} Opportunities`}
             </Button>
           </form>
         </Form>

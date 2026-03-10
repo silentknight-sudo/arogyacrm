@@ -44,15 +44,15 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
   const { currentUser, currentTeamspace } = useApp();
   const [isPending, startTransition] = useTransition();
 
-  // FILTERING LOGIC: Hierarchical Assignment
-  // Admin assigns to Team Leads. Team Leads assign to Executives.
+  // HIERARCHICAL FILTERING:
+  // Admin assigns ONLY to Team Leads. Team Leads assign ONLY to Executives they created.
   const filteredUsers = useMemo(() => {
     if (!currentUser) return [];
     if (currentUser.role === 'admin') {
       return users.filter(u => u.role === 'sales_team_lead');
     }
     if (currentUser.role === 'sales_team_lead') {
-      return users.filter(u => u.role === 'sales_executive');
+      return users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
     }
     return [];
   }, [users, currentUser]);
@@ -96,10 +96,10 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
     });
   };
 
-  const title = currentUser?.role === 'admin' ? 'Assign to Team Lead' : 'Distribute to Executive';
+  const title = currentUser?.role === 'admin' ? 'Strategic Delegation (Admin)' : 'Team Distribution (TL)';
   const description = currentUser?.role === 'admin' 
-    ? `Select a Team Lead to manage ${lead.fullName}.` 
-    : `Select a Sales Executive to handle ${lead.fullName}.`;
+    ? `Delegate ${lead.fullName} to a verified Team Leader.` 
+    : `Assign ${lead.fullName} to a Sales Executive you have onboarded.`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,7 +117,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
               name="assignedToIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40 px-2">Available Team Members</FormLabel>
+                  <FormLabel className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40 px-2">Authorized Recipients</FormLabel>
                   <ScrollArea className="h-72 rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-inner">
                     <div className="space-y-6">
                     {filteredUsers.length > 0 ? filteredUsers.map((user) => (
@@ -138,8 +138,10 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                         </Label>
                       </div>
                     )) : (
-                        <div className="text-center text-sm text-white/30 font-medium py-16 italic">
-                          {currentUser?.role === 'admin' ? 'No Team Leads found in this workspace.' : 'No Sales Executives found in this workspace.'}
+                        <div className="text-center text-sm text-white/30 font-medium py-16 italic px-4">
+                          {currentUser?.role === 'admin' 
+                            ? 'No Team Leaders available for global delegation.' 
+                            : 'No Sales Executives found among your onboarded recruits.'}
                         </div>
                     )}
                     </div>
@@ -149,7 +151,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
               )}
             />
             <Button type="submit" disabled={isPending || filteredUsers.length === 0} className="w-full h-16 text-lg font-black rounded-2xl herbal-gradient shadow-2xl shadow-[#2D5A27]/40 gold-glow hover:scale-[1.02] transition-transform">
-              {isPending ? 'Processing Delegation...' : 'Confirm Delegation'}
+              {isPending ? 'Processing Assignment...' : 'Confirm Pipeline Delegation'}
             </Button>
           </form>
         </Form>
