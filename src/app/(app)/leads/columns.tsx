@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge';
 
 const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
-const GOOGLE_FORM_URL = 'https://forms.gle/arogya-lead-feedback';
+const GOOGLE_FORM_URL = 'https://forms.gle/HNmnUeYktDCWy3xk6';
 
 const StatusSelector = ({ lead }: { lead: Lead }) => {
   const { toast } = useToast();
