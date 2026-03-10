@@ -31,9 +31,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/context/app-context';
-import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Textarea } from '@/components/ui/textarea';
+import { createLead } from './actions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Product } from '@/types';
@@ -61,7 +59,6 @@ type CreateLeadDialogProps = {
 export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
-  const firestore = useFirestore();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -84,27 +81,24 @@ export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDi
         return;
     }
     startTransition(async () => {
-      try {
-        const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
-        await addDoc(leadsRef, {
-            ...values,
-            assignedToIds: [currentUser.id],
-            teamspaceId: currentTeamspace.id,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-        });
+      const result = await createLead({
+          ...values,
+          teamspaceId: currentTeamspace.id,
+          creatorId: currentUser.id,
+      });
+
+      if (result.success) {
         toast({
           title: 'Lead Created',
           description: `Successfully added "${values.fullName}" to the new queue.`,
         });
         setOpen(false);
         form.reset();
-      } catch (error: any) {
-         console.error("Error creating lead: ", error);
-         toast({
+      } else {
+        toast({
           variant: 'destructive',
           title: 'Error Creating Lead',
-          description: error.message || 'An unexpected error occurred.',
+          description: result.error,
         });
       }
     });
@@ -157,7 +151,7 @@ export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDi
                                                 onCheckedChange={(checked) => {
                                                     return checked
                                                         ? field.onChange([...(field.value || []), product.id])
-                                                        : field.onChange(field.value?.filter(v => v !== product.id))
+                                                        : field.onChange(field.value?.filter((v: string) => v !== product.id))
                                                 }}
                                                 className="rounded-full h-5 w-5 border-2"
                                             />

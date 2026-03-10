@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Deal, UserProfile, DealStage, Contact, Product } from '@/types';
+import type { Deal, UserProfile, DealStage, Contact, Lead } from '@/types';
 import { updateDealStage } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -144,20 +144,34 @@ export const columns: ColumnDef<Deal>[] = [
     id: 'email',
     header: () => <div className="font-black uppercase tracking-widest text-[10px]">Email</div>,
     cell: ({ row, table }) => {
-        const contactId = row.original.contactId;
-        const contacts = (table.options.meta as any)?.contacts || [] as Contact[];
-        const contact = contacts.find((c: Contact) => c.id === contactId);
-        return <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{contact?.email || 'N/A'}</span>
+        const deal = row.original;
+        const meta = table.options.meta as any;
+        const contacts = meta?.contacts || [] as Contact[];
+        const leads = meta?.leads || [] as Lead[];
+        
+        let email = contacts.find((c: Contact) => c.id === deal.contactId)?.email;
+        if (!email && deal.leadId) {
+            email = leads.find((l: Lead) => l.id === deal.leadId)?.email;
+        }
+        
+        return <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{email || 'N/A'}</span>;
     }
   },
   {
     id: 'phone',
     header: () => <div className="font-black uppercase tracking-widest text-[10px]">Phone Number</div>,
     cell: ({ row, table }) => {
-        const contactId = row.original.contactId;
-        const contacts = (table.options.meta as any)?.contacts || [] as Contact[];
-        const contact = contacts.find((c: Contact) => c.id === contactId);
-        return <span className="text-xs font-bold text-foreground">{contact?.phone || 'N/A'}</span>
+        const deal = row.original;
+        const meta = table.options.meta as any;
+        const contacts = meta?.contacts || [] as Contact[];
+        const leads = meta?.leads || [] as Lead[];
+        
+        let phone = contacts.find((c: Contact) => c.id === deal.contactId)?.phone;
+        if (!phone && deal.leadId) {
+            phone = leads.find((l: Lead) => l.id === deal.leadId)?.phone;
+        }
+        
+        return <span className="text-xs font-bold text-foreground">{phone || 'N/A'}</span>;
     }
   },
   {

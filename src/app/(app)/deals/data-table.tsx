@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useRef } from 'react';
-import type { Deal, UserProfile, Contact, Product } from '@/types';
+import type { Deal, UserProfile, Contact, Product, Lead } from '@/types';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -30,6 +30,7 @@ interface DataTableProps<TData, TValue> {
   users: UserProfile[];
   contacts: Contact[];
   products: Product[];
+  leads: Lead[];
   externalSelection?: Deal[];
   onSelectionChange?: (deals: Deal[]) => void;
 }
@@ -40,6 +41,7 @@ export function DataTable<TData, TValue>({
   users,
   contacts,
   products,
+  leads,
   externalSelection,
   onSelectionChange,
 }: DataTableProps<TData, TValue>) {
@@ -66,6 +68,7 @@ export function DataTable<TData, TValue>({
       users,
       contacts,
       products,
+      leads,
     },
   });
 

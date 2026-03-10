@@ -6,7 +6,7 @@ import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
-import type { Deal, UserProfile, DealStage, Contact, Product } from '@/types';
+import type { Deal, UserProfile, DealStage, Contact, Product, Lead } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateDealDialog } from './create-deal-dialog';
 import { Button } from '@/components/ui/button';
@@ -93,10 +93,15 @@ export default function SalesPipelinePage() {
   , [firestore, currentTeamspace, isUserLoading]);
   const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
 
+  const leadsQuery = useMemoFirebase(() =>
+    !isUserLoading && currentTeamspace ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads')) : null
+  , [firestore, currentTeamspace, isUserLoading]);
+  const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
+
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
-  const loading = isUserLoading || isLoadingDeals || isLoadingUsers || isLoadingContacts || isLoadingProducts;
+  const loading = isUserLoading || isLoadingDeals || isLoadingUsers || isLoadingContacts || isLoadingProducts || isLoadingLeads;
 
   const handleSelectionChange = (stage: DealStage, stageDeals: Deal[]) => {
     setSelectedDeals(prev => {
@@ -217,6 +222,7 @@ export default function SalesPipelinePage() {
                                     users={users || []} 
                                     contacts={contacts || []}
                                     products={products || []}
+                                    leads={leads || []}
                                     externalSelection={currentStageSelected}
                                     onSelectionChange={(deals) => handleSelectionChange(stage, deals)}
                                 />

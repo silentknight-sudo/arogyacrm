@@ -82,6 +82,41 @@ async function syncDealForLead(leadId: string, teamspaceId: string) {
   }
 }
 
+const CreateLeadSchema = z.object({
+  fullName: z.string().min(1),
+  phone: z.string().min(1),
+  email: z.string().email().optional().or(z.literal('')),
+  productAsked: z.array(z.string()).default([]),
+  source: z.string().optional(),
+  status: z.enum(['new', 'pending', 'busy', 'done', 'canceled']),
+  attributionFields: z.string().optional(),
+  teamspaceId: z.string().min(1),
+  creatorId: z.string().min(1),
+});
+
+export async function createLead(values: z.infer<typeof CreateLeadSchema>) {
+  try {
+    const data = CreateLeadSchema.parse(values);
+    const leadRef = adminDb.collection('teamspaces').doc(data.teamspaceId).collection('leads').doc();
+    
+    await leadRef.set({
+      ...data,
+      id: leadRef.id,
+      assignedToIds: [data.creatorId],
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await syncDealForLead(leadRef.id, data.teamspaceId);
+
+    revalidatePath('/leads');
+    revalidatePath('/deals');
+    return { success: true, leadId: leadRef.id };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
 export async function scoreLeadWithAI(lead: Lead) {
   try {
     const input: AiLeadScoringAndPrioritizationInput = {
