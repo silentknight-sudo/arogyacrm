@@ -48,7 +48,8 @@ function getAdminApp(): App {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
-    throw new Error('CRITICAL_ENVIRONMENT_ERROR: Admin credentials missing from environment. Verify FIREBASE_PROJECT_ID, CLIENT_EMAIL, and PRIVATE_KEY.');
+    // During build, return a null-like object instead of throwing
+    return null as any;
   }
 
   try {
@@ -60,7 +61,7 @@ function getAdminApp(): App {
     return adminApp;
   } catch (error: any) {
     console.error('FIREBASE_ADMIN_INIT_FAILURE:', error.message);
-    throw new Error(`FIREBASE_ADMIN_INIT_ERROR: ${error.message}`);
+    return null as any;
   }
 }
 
@@ -69,13 +70,26 @@ function getAdminApp(): App {
  * Prevents Next.js from evaluating the SDK during the build phase.
  * Blocks promise-like properties to prevent "Grant Access" loops.
  */
-function createLazyProxy<T extends object>(initializer: () => T): T {
+function createLazyProxy<T extends object>(initializer: () => T, name: string): T {
+  let instance: T | null = null;
   return new Proxy({} as T, {
     get(target, prop, receiver) {
-      if (prop === 'then' || prop === 'toJSON' || prop === 'constructor') {
+      if (prop === 'then' || prop === 'toJSON' || prop === 'constructor' || prop === '$$typeof') {
         return undefined;
       }
-      return Reflect.get(initializer(), prop, receiver);
+      
+      if (!instance) {
+        instance = initializer();
+      }
+
+      if (!instance) {
+        // Return a function that throws only when invoked, keeping the build process alive
+        return (...args: any[]) => {
+          throw new Error(`CRITICAL_ENVIRONMENT_ERROR: ${name} is missing credentials. Verify FIREBASE_PROJECT_ID, CLIENT_EMAIL, and PRIVATE_KEY in your dashboard.`);
+        };
+      }
+
+      return Reflect.get(instance, prop, receiver);
     }
   });
 }
@@ -84,8 +98,15 @@ function createLazyProxy<T extends object>(initializer: () => T): T {
  * SINGLETON ACCESSORS (LAZY)
  * These objects are now Proxies that only initialize Firebase when a property is accessed.
  */
-export const adminDb = createLazyProxy(() => getFirestore(getAdminApp()));
-export const adminAuth = createLazyProxy(() => getAuth(getAdminApp()));
+export const adminDb = createLazyProxy(() => {
+  const app = getAdminApp();
+  return app ? getFirestore(app) : null as any;
+}, 'adminDb');
+
+export const adminAuth = createLazyProxy(() => {
+  const app = getAdminApp();
+  return app ? getAuth(app) : null as any;
+}, 'adminAuth');
 
 export { FieldValue };
 export const serverTimestamp = () => FieldValue.serverTimestamp();
@@ -93,8 +114,8 @@ export const serverTimestamp = () => FieldValue.serverTimestamp();
 export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);
   const msg = error.message || '';
-  if (msg.includes('private key') || msg.includes('PEM') || msg.includes('digest')) {
-    return 'Secure Authentication Error: Private Key formatting is invalid or SDK failed to initialize.';
+  if (msg.includes('ENVIRONMENT_ERROR') || msg.includes('private key') || msg.includes('PEM')) {
+    return 'Configuration Error: Admin credentials are missing or invalid in the hosting environment.';
   }
   return msg || 'A secure server-side operation failed.';
 }
