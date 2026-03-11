@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     serverComponentsExternalPackages: [
       'firebase-admin', 
       '@google-cloud/firestore',
+      '@google-cloud/storage',
       'google-auth-library',
       'protobufjs',
       'google-gax',

@@ -43,7 +43,6 @@ function getAdminApp(): App | null {
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   try {
-    // STRATEGY A: Explicit Service Account (Vercel/Manual)
     if (projectId && clientEmail && rawPrivateKey) {
       const privateKey = formatPrivateKey(rawPrivateKey);
       adminApp = initializeApp({
@@ -53,13 +52,11 @@ function getAdminApp(): App | null {
       return adminApp;
     }
 
-    // STRATEGY B: Application Default Credentials (Firebase App Hosting Fallback)
-    // This will work natively when deployed to Firebase/GCP.
+    // Fallback to ADC (Application Default Credentials) for native Firebase Hosting
     adminApp = initializeApp();
     return adminApp;
   } catch (error: any) {
-    // Fail gracefully during build phase
-    console.warn('ADMIN_INIT_DEFERRED: Service credentials not detected yet. Initialization will retry at runtime.');
+    console.warn('ADMIN_INIT_DEFERRED: Credentials missing or invalid. Deployment builds should defer init.');
     return null;
   }
 }
@@ -67,7 +64,6 @@ function getAdminApp(): App | null {
 /**
  * LAZY PROXY FACTORY
  * Prevents Next.js from evaluating the SDK during the build phase.
- * Only triggers initialization when a database/auth method is actually invoked.
  */
 function createLazyProxy<T extends object>(initializer: () => T | null, name: string): T {
   let instance: T | null = null;
@@ -83,7 +79,7 @@ function createLazyProxy<T extends object>(initializer: () => T | null, name: st
 
       if (!instance) {
         return (...args: any[]) => {
-          throw new Error(`CRITICAL_ENVIRONMENT_ERROR: ${name} credentials missing. Ensure you have set FIREBASE_PROJECT_ID, CLIENT_EMAIL, and PRIVATE_KEY in your dashboard, or that your environment supports Application Default Credentials.`);
+          throw new Error(`CRITICAL_ENVIRONMENT_ERROR: ${name} credentials missing. Ensure you have set FIREBASE_PROJECT_ID, CLIENT_EMAIL, and PRIVATE_KEY.`);
         };
       }
 
