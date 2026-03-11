@@ -10,18 +10,13 @@ function formatPrivateKey(key: string | undefined): string {
   if (!key) return '';
   
   let cleaned = key.trim();
-  
-  // Handle literal \n strings and double-escaped sequences
   cleaned = cleaned.replace(/\\n/g, '\n');
   cleaned = cleaned.replace(/\\\\n/g, '\n');
-  
-  // Remove accidental wrapping quotes
   cleaned = cleaned.replace(/^['"]+|['"]+$/g, '');
 
   const header = '-----BEGIN PRIVATE KEY-----';
   const footer = '-----END PRIVATE KEY-----';
 
-  // Ensure headers are present and properly formatted
   if (!cleaned.includes(header)) {
     cleaned = `${header}\n${cleaned}`;
   }
@@ -34,7 +29,7 @@ function formatPrivateKey(key: string | undefined): string {
 
 let adminApp: App | null = null;
 
-function getAdminApp(): App {
+function getAdminApp(): App | null {
   if (adminApp) return adminApp;
   
   const existingApps = getApps();
@@ -47,30 +42,34 @@ function getAdminApp(): App {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  if (!projectId || !clientEmail || !rawPrivateKey) {
-    // Return null to allow the Lazy Proxy to handle the missing state gracefully during build
-    return null as any;
-  }
-
   try {
-    const privateKey = formatPrivateKey(rawPrivateKey);
-    adminApp = initializeApp({
-      credential: cert({ projectId, clientEmail, privateKey }),
-      projectId,
-    });
+    // STRATEGY A: Explicit Service Account (Vercel/Manual)
+    if (projectId && clientEmail && rawPrivateKey) {
+      const privateKey = formatPrivateKey(rawPrivateKey);
+      adminApp = initializeApp({
+        credential: cert({ projectId, clientEmail, privateKey }),
+        projectId,
+      });
+      return adminApp;
+    }
+
+    // STRATEGY B: Application Default Credentials (Firebase App Hosting Fallback)
+    // This will work natively when deployed to Firebase/GCP.
+    adminApp = initializeApp();
     return adminApp;
   } catch (error: any) {
-    console.error('FIREBASE_ADMIN_INIT_FAILURE:', error.message);
-    return null as any;
+    // Fail gracefully during build phase
+    console.warn('ADMIN_INIT_DEFERRED: Service credentials not detected yet. Initialization will retry at runtime.');
+    return null;
   }
 }
 
 /**
  * LAZY PROXY FACTORY
  * Prevents Next.js from evaluating the SDK during the build phase.
- * Blocks promise-like properties to prevent "Grant Access" loops.
+ * Only triggers initialization when a database/auth method is actually invoked.
  */
-function createLazyProxy<T extends object>(initializer: () => T, name: string): T {
+function createLazyProxy<T extends object>(initializer: () => T | null, name: string): T {
   let instance: T | null = null;
   return new Proxy({} as T, {
     get(target, prop, receiver) {
@@ -84,12 +83,7 @@ function createLazyProxy<T extends object>(initializer: () => T, name: string): 
 
       if (!instance) {
         return (...args: any[]) => {
-          const missing = [];
-          if (!process.env.FIREBASE_PROJECT_ID) missing.push('FIREBASE_PROJECT_ID');
-          if (!process.env.FIREBASE_CLIENT_EMAIL) missing.push('FIREBASE_CLIENT_EMAIL');
-          if (!process.env.FIREBASE_PRIVATE_KEY) missing.push('FIREBASE_PRIVATE_KEY');
-          
-          throw new Error(`CRITICAL_ENVIRONMENT_ERROR: ${name} credentials missing [${missing.join(', ')}]. Verify your environment variables in the hosting dashboard.`);
+          throw new Error(`CRITICAL_ENVIRONMENT_ERROR: ${name} credentials missing. Ensure you have set FIREBASE_PROJECT_ID, CLIENT_EMAIL, and PRIVATE_KEY in your dashboard, or that your environment supports Application Default Credentials.`);
         };
       }
 
@@ -100,12 +94,12 @@ function createLazyProxy<T extends object>(initializer: () => T, name: string): 
 
 export const adminDb = createLazyProxy(() => {
   const app = getAdminApp();
-  return app ? getFirestore(app) : null as any;
+  return app ? getFirestore(app) : null;
 }, 'adminDb');
 
 export const adminAuth = createLazyProxy(() => {
   const app = getAdminApp();
-  return app ? getAuth(app) : null as any;
+  return app ? getAuth(app) : null;
 }, 'adminAuth');
 
 export { FieldValue };
@@ -113,12 +107,5 @@ export const serverTimestamp = () => FieldValue.serverTimestamp();
 
 export function handleAdminSDKError(error: any): string {
   console.error('CRM_ADMIN_SDK_ERROR:', error);
-  const msg = error.message || '';
-  if (msg.includes('ENVIRONMENT_ERROR')) {
-    return msg;
-  }
-  if (msg.includes('private key') || msg.includes('PEM')) {
-    return 'Configuration Error: Invalid private key format. Ensure the entire block is pasted correctly.';
-  }
-  return msg || 'A secure server-side operation failed.';
+  return error.message || 'A secure server-side operation failed.';
 }
