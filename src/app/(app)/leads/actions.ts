@@ -308,7 +308,7 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
     const snapshot = await leadsRef.orderBy('createdAt', 'asc').get();
     
-    const leads = snapshot.docs.map(doc => doc.data() as Lead);
+    const leads = snapshot.docs.map((doc: QueryDocumentSnapshot) => doc.data() as Lead);
     const seenPhones = new Map<string, string>(); // phone -> firstLeadId
     const toDelete: string[] = [];
 
