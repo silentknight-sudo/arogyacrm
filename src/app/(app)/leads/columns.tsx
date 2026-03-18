@@ -25,29 +25,29 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
 /**
- * STRATEGIC PRE-FILL: Construct Google Form URL with Lead Data
- * NOTE: For these to work, you must update the 'entry.ID' placeholders below 
- * with the actual IDs from your Google Form (found via Inspect Element on the form).
+ * STRATEGIC GOOGLE FORM PRE-FILL
+ * Replace the 'entry.XXXXX' strings below with the actual Entry IDs from your Google Form.
+ * To find them: Google Form > Three Dots > Get pre-filled link > Fill sample data > Get link > Copy IDs.
  */
-const getPrefilledGoogleFormUrl = (lead: Lead) => {
+const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform';
   const params = new URLSearchParams();
   
-  // COMMON GOOGLE FORM ENTRY ID PATTERNS:
-  // entry.123456789 -> Full Name
-  // entry.987654321 -> Phone Number
-  // entry.456789123 -> Email
-  
-  params.append('entry.123456789', lead.fullName || ''); 
-  params.append('entry.987654321', lead.phone || '');    
-  params.append('entry.456789123', lead.email || '');    
+  // MAP DATA TO GOOGLE FORM ENTRIES
+  params.append('entry.1000001', currentUser?.displayName || 'Unknown Specialist'); // Sales Person Name
+  params.append('entry.1000002', lead.fullName || ''); // Name
+  params.append('entry.1000003', lead.email || '');    // Email
+  params.append('entry.1000004', lead.demographicData?.country || ''); // Address (Fallback to country)
+  params.append('entry.1000005', lead.phone || '');    // Phone number
+  params.append('entry.1000006', lead.productAsked?.join(', ') || 'No products selected'); // Product details
+  params.append('entry.1000007', lead.status || '');   // Deal Status
   
   return `${baseUrl}?usp=pp_url&${params.toString()}`;
 };
 
 const StatusSelector = ({ lead }: { lead: Lead }) => {
   const { toast } = useToast();
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, currentUser } = useApp();
   const [isPending, startTransition] = useTransition();
 
   const handleStatusChange = (newStatus: LeadStatus) => {
@@ -65,10 +65,10 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
           description: (
             <div className="flex flex-col gap-3 pt-2">
               <p className="font-medium">Lead transitioned to "{newStatus}".</p>
-              <Button variant="default" size="sm" asChild className="herbal-gradient w-fit rounded-xl font-bold">
-                <a href={getPrefilledGoogleFormUrl(lead)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <Button variant="default" size="sm" asChild className="herbal-gradient w-fit rounded-xl font-bold shadow-lg">
+                <a href={getPrefilledGoogleFormUrl(lead, currentUser)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <ClipboardList className="h-4 w-4" />
-                  Finalize in Google Form
+                  Fill Feedback Form
                 </a>
               </Button>
             </div>
@@ -104,12 +104,12 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-full" asChild>
-            <a href={getPrefilledGoogleFormUrl(lead)} target="_blank" rel="noopener noreferrer">
-              <ClipboardList className="h-4 w-4" />
+            <a href={getPrefilledGoogleFormUrl(lead, currentUser)} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4" />
             </a>
           </Button>
         </TooltipTrigger>
-        <TooltipContent className="rounded-xl font-bold">Open Pre-filled Google Form</TooltipContent>
+        <TooltipContent className="rounded-xl font-bold">Open Pre-filled Form</TooltipContent>
       </Tooltip>
     </div>
   );
@@ -145,13 +145,13 @@ const ProductSelector = ({ lead, products }: { lead: Lead, products: Product[] }
                 <Button variant="ghost" size="sm" className="h-8 flex gap-2 items-center text-muted-foreground hover:text-primary rounded-lg border-primary/5">
                     <Package className="h-3 w-3" />
                     <span className="text-[10px] font-black uppercase tracking-widest">
-                        {selectedIds.length === 0 ? 'Select Products' : `${selectedIds.length} Products`}
+                        {selectedIds.length === 0 ? 'Add Products' : `${selectedIds.length} Products`}
                     </span>
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64 p-0 rounded-2xl border-none shadow-2xl bg-card">
                 <div className="p-3 border-b border-muted/50 bg-muted/20">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Lead Interest Catalog</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Strategic Catalog</p>
                 </div>
                 <ScrollArea className="h-64">
                     <div className="p-2 space-y-1">
