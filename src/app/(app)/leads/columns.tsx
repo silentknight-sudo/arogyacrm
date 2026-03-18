@@ -26,8 +26,15 @@ const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
 /**
  * STRATEGIC GOOGLE FORM PRE-FILL
- * Replace 'entry.XXXXX' with actual IDs from your Google Form.
- * To find them: Google Form > Three Dots > Get pre-filled link > Fill sample data > Get link > Copy IDs.
+ * Mapped to User's Specific Fields:
+ * - Sales Person Name (entry.1000001)
+ * - Name (entry.1000002)
+ * - Email (entry.1000003)
+ * - Address (entry.1000004)
+ * - Phone number (entry.1000005)
+ * - Response (entry.1000006)
+ * - Product details (entry.1000007)
+ * - Deal Status (entry.1000008)
  */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform';
@@ -37,7 +44,7 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) 
   params.append('entry.1000001', currentUser?.displayName || 'Unknown Specialist'); // Sales Person Name
   params.append('entry.1000002', lead.fullName || ''); // Name
   params.append('entry.1000003', lead.email || '');    // Email
-  params.append('entry.1000004', lead.demographicData?.country || 'India'); // Address
+  params.append('entry.1000004', lead.demographicData?.country || 'India'); // Address (using country as proxy)
   params.append('entry.1000005', lead.phone || '');    // Phone number
   params.append('entry.1000006', 'Prospect inquiry follow-up'); // Response (Generic)
   params.append('entry.1000007', lead.productAsked?.join(', ') || 'No products selected'); // Product details

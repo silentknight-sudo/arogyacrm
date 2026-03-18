@@ -312,7 +312,7 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
     const seenPhones = new Map<string, string>(); // phone -> firstLeadId
     const toDelete: string[] = [];
 
-    leads.forEach(lead => {
+    leads.forEach((lead: Lead) => {
       const phone = lead.phone?.trim();
       if (!phone) return;
 
