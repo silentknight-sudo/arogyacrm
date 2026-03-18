@@ -15,6 +15,7 @@ import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { BulkAssignLeadsDialog } from './bulk-assign-leads-dialog';
+import { DeduplicateLeadsDialog } from './deduplicate-leads-dialog';
 import {
   Select,
   SelectContent,
@@ -92,7 +93,7 @@ export default function LeadsPage() {
     setSelectedLeads(leadsToSelect);
   };
 
-  const canManageBulk = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   return (
     <div className="space-y-8 pb-16 pt-4">
@@ -106,13 +107,16 @@ export default function LeadsPage() {
                 <p className="text-2xl text-muted-foreground font-semibold">Strategic lead management.</p>
             </div>
              <div className="flex items-center gap-4">
-              {canManageBulk && (
-                <UploadLeadsDialog users={users || []} isLoading={loading}>
-                  <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-8 py-7 font-black tracking-tight text-base shadow-sm">
-                    <Upload className="mr-3 h-5 w-5" />
-                    Bulk Import
-                  </Button>
-                </UploadLeadsDialog>
+              {isAdminOrTL && (
+                <>
+                  <DeduplicateLeadsDialog />
+                  <UploadLeadsDialog users={users || []} isLoading={loading}>
+                    <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-8 py-7 font-black tracking-tight text-base shadow-sm">
+                      <Upload className="mr-3 h-5 w-5" />
+                      Bulk Import
+                    </Button>
+                  </UploadLeadsDialog>
+                </>
               )}
               <CreateLeadDialog products={products || []} isLoading={loading}>
                   <Button className="rounded-2xl herbal-gradient shadow-2xl shadow-primary/30 px-10 py-7 text-lg font-black gold-glow scale-105 hover:scale-110 active:scale-95 transition-all">
@@ -139,7 +143,7 @@ export default function LeadsPage() {
                 </div>
             </div>
 
-            {canManageBulk && (
+            {isAdminOrTL && (
                 <div className="flex items-center gap-4 bg-muted/20 p-2 rounded-2xl border border-primary/5">
                     <div className="flex items-center gap-2 px-3 border-r border-primary/10 mr-2 h-10">
                         <UsersIcon className="h-4 w-4 text-primary" />

@@ -9,7 +9,6 @@ import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 /**
  * STRATEGIC SYNC: Automated Deal Conversion Logic
- * Ensures every active lead is mirrored as a Deal in the Sales Pipeline.
  */
 async function syncDealForLead(leadId: string, teamspaceId: string) {
   try {
@@ -295,6 +294,55 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     revalidatePath('/leads');
     revalidatePath('/deals');
     return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
+/**
+ * INTELLIGENT DEDUPLICATION: Purge duplicate leads by phone
+ * Preserves the oldest record and removes orphans.
+ */
+export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ success: boolean; removedCount?: number; error?: string }> {
+  try {
+    const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
+    const snapshot = await leadsRef.orderBy('createdAt', 'asc').get();
+    
+    const leads = snapshot.docs.map(doc => doc.data() as Lead);
+    const seenPhones = new Map<string, string>(); // phone -> firstLeadId
+    const toDelete: string[] = [];
+
+    leads.forEach(lead => {
+      const phone = lead.phone?.trim();
+      if (!phone) return;
+
+      if (seenPhones.has(phone)) {
+        toDelete.push(lead.id);
+      } else {
+        seenPhones.set(phone, lead.id);
+      }
+    });
+
+    if (toDelete.length === 0) {
+      return { success: true, removedCount: 0 };
+    }
+
+    // Batch delete
+    const chunks = [];
+    for (let i = 0; i < toDelete.length; i += 500) {
+      chunks.push(toDelete.slice(i, i + 500));
+    }
+
+    for (const chunk of chunks) {
+      const batch = adminDb.batch();
+      chunk.forEach(id => {
+        batch.delete(leadsRef.doc(id));
+      });
+      await batch.commit();
+    }
+
+    revalidatePath('/leads');
+    return { success: true, removedCount: toDelete.length };
   } catch (error: any) {
     return { success: false, error: handleAdminSDKError(error) };
   }

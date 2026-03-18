@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,7 @@ type CreateLeadDialogProps = {
 
 export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDialogProps) {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -69,11 +71,30 @@ export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDi
       phone: '',
       email: '',
       productAsked: [],
-      source: '',
+      source: 'Website',
       status: 'new',
       attributionFields: '',
     },
   });
+
+  // STRATEGIC PRE-FILL: Listen for URL parameters
+  useEffect(() => {
+    const fullName = searchParams.get('fullName');
+    const phone = searchParams.get('phone');
+    const email = searchParams.get('email');
+    const source = searchParams.get('source');
+
+    if (fullName || phone || email) {
+      form.reset({
+        ...form.getValues(),
+        fullName: fullName || '',
+        phone: phone || '',
+        email: email || '',
+        source: source || 'Website',
+      });
+      setOpen(true); // Auto-open for magic links
+    }
+  }, [searchParams, form]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
@@ -176,7 +197,7 @@ export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDi
                     <FormField control={form.control} name="source" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Lead Source</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select source" /></SelectTrigger></FormControl>
                                 <SelectContent>{leadSources.map(source => (<SelectItem key={source} value={source}>{source}</SelectItem>))}</SelectContent>
                             </Select>
@@ -186,7 +207,7 @@ export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDi
                     <FormField control={form.control} name="status" render={({ field }) => (
                         <FormItem>
                         <FormLabel>Initial Stage</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                             <SelectTrigger className="rounded-xl uppercase font-black text-[10px] tracking-widest">
                                 <SelectValue />
