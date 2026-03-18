@@ -52,7 +52,7 @@ function getAdminApp(): App | null {
       return adminApp;
     }
 
-    // Fallback to ADC (Application Default Credentials) for native Firebase Hosting
+    // Fallback to ADC (Application Default Credentials) for native Firebase environments
     adminApp = initializeApp();
     return adminApp;
   } catch (error: any) {

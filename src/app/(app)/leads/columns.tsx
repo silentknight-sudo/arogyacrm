@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, ExternalLink, Loader2, Package } from 'lucide-react';
+import { ArrowUpDown, ExternalLink, Loader2, Package, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -26,18 +26,23 @@ const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
 /**
  * STRATEGIC PRE-FILL: Construct Google Form URL with Lead Data
- * NOTE: User should replace entry IDs with their specific form field IDs.
+ * NOTE: For these to work, you must update the 'entry.ID' placeholders below 
+ * with the actual IDs from your Google Form (found via Inspect Element on the form).
  */
 const getPrefilledGoogleFormUrl = (lead: Lead) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform';
   const params = new URLSearchParams();
   
-  // These entry IDs are placeholders. User must obtain their actual IDs from Google Form.
+  // COMMON GOOGLE FORM ENTRY ID PATTERNS:
+  // entry.123456789 -> Full Name
+  // entry.987654321 -> Phone Number
+  // entry.456789123 -> Email
+  
   params.append('entry.123456789', lead.fullName || ''); 
   params.append('entry.987654321', lead.phone || '');    
   params.append('entry.456789123', lead.email || '');    
   
-  return `${baseUrl}?${params.toString()}`;
+  return `${baseUrl}?usp=pp_url&${params.toString()}`;
 };
 
 const StatusSelector = ({ lead }: { lead: Lead }) => {
@@ -58,12 +63,12 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
         toast({
           title: 'Stage Updated',
           description: (
-            <div className="flex flex-col gap-2">
-              <p>Lead transitioned to "{newStatus}".</p>
-              <Button variant="outline" size="sm" asChild className="w-fit">
+            <div className="flex flex-col gap-3 pt-2">
+              <p className="font-medium">Lead transitioned to "{newStatus}".</p>
+              <Button variant="default" size="sm" asChild className="herbal-gradient w-fit rounded-xl font-bold">
                 <a href={getPrefilledGoogleFormUrl(lead)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                  <ExternalLink className="h-3 w-3" />
-                  Fill Feedback Form
+                  <ClipboardList className="h-4 w-4" />
+                  Finalize in Google Form
                 </a>
               </Button>
             </div>
@@ -86,7 +91,7 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
         defaultValue={lead.status} 
         onValueChange={(v) => handleStatusChange(v as LeadStatus)}
       >
-        <SelectTrigger className="h-8 w-[130px] rounded-lg text-[10px] font-black uppercase tracking-widest">
+        <SelectTrigger className="h-8 w-[130px] rounded-lg text-[10px] font-black uppercase tracking-widest bg-muted/30 border-none">
           {isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
           <SelectValue />
         </SelectTrigger>
@@ -96,18 +101,16 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
           ))}
         </SelectContent>
       </Select>
-      {lead.status !== 'new' && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" asChild>
-              <a href={getPrefilledGoogleFormUrl(lead)} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Fill Google Form (Pre-filled)</TooltipContent>
-        </Tooltip>
-      )}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-full" asChild>
+            <a href={getPrefilledGoogleFormUrl(lead)} target="_blank" rel="noopener noreferrer">
+              <ClipboardList className="h-4 w-4" />
+            </a>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent className="rounded-xl font-bold">Open Pre-filled Google Form</TooltipContent>
+      </Tooltip>
     </div>
   );
 };
