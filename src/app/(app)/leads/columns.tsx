@@ -24,7 +24,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
-const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform?usp=header';
+/**
+ * STRATEGIC PRE-FILL: Construct Google Form URL with Lead Data
+ * NOTE: User should replace entry IDs with their specific form field IDs.
+ */
+const getPrefilledGoogleFormUrl = (lead: Lead) => {
+  const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform';
+  const params = new URLSearchParams();
+  
+  // These entry IDs are placeholders. User must obtain their actual IDs from Google Form.
+  params.append('entry.123456789', lead.fullName || ''); 
+  params.append('entry.987654321', lead.phone || '');    
+  params.append('entry.456789123', lead.email || '');    
+  
+  return `${baseUrl}?${params.toString()}`;
+};
 
 const StatusSelector = ({ lead }: { lead: Lead }) => {
   const { toast } = useToast();
@@ -47,7 +61,7 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
             <div className="flex flex-col gap-2">
               <p>Lead transitioned to "{newStatus}".</p>
               <Button variant="outline" size="sm" asChild className="w-fit">
-                <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href={getPrefilledGoogleFormUrl(lead)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <ExternalLink className="h-3 w-3" />
                   Fill Feedback Form
                 </a>
@@ -86,12 +100,12 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" asChild>
-              <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer">
+              <a href={getPrefilledGoogleFormUrl(lead)} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
               </a>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Fill Google Form</TooltipContent>
+          <TooltipContent>Fill Google Form (Pre-filled)</TooltipContent>
         </Tooltip>
       )}
     </div>

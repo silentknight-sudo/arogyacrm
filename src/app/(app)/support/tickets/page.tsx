@@ -32,22 +32,12 @@ export default function TicketsPage() {
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     
-    if (currentUser.role === 'admin') {
-        const memberIds = currentTeamspace?.memberIds || [];
-        return memberIds.length > 0
-            ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) 
-            : null;
-    }
-    
-    if (currentUser.role === 'sales_team_lead') {
-        return query(
-          collection(firestore, 'users'), 
-          where('createdBy', '==', currentUser.id)
-        );
-    }
-    
-    return null;
-  }, [firestore, currentTeamspace?.id, currentTeamspace?.memberIds, currentUser, isUserLoading]);
+    // Fetch all users in this teamspace for ticket assignment
+    const memberIds = currentTeamspace?.memberIds || [];
+    if (memberIds.length === 0) return null;
+
+    return query(collection(firestore, 'users'), where(documentId(), 'in', memberIds));
+  }, [firestore, currentTeamspace, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 

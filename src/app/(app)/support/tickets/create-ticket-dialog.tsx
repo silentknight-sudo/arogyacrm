@@ -49,12 +49,12 @@ const formSchema = z.object({
     assignedToId: z.string().min(1, 'Must be assigned to a specialist.'),
 });
 
-type CreateTicketDialogProps = {
+interface CreateTicketDialogProps {
   children: React.ReactNode;
   contacts: Contact[];
   users: UserProfile[];
   isLoading: boolean;
-};
+}
 
 export function CreateTicketDialog({ children, contacts, users, isLoading }: CreateTicketDialogProps) {
   const { toast } = useToast();
