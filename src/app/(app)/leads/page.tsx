@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -118,12 +118,14 @@ export default function LeadsPage() {
                   </UploadLeadsDialog>
                 </>
               )}
-              <CreateLeadDialog products={products || []} isLoading={loading}>
-                  <Button className="rounded-2xl herbal-gradient shadow-2xl shadow-primary/30 px-10 py-7 text-lg font-black gold-glow scale-105 hover:scale-110 active:scale-95 transition-all">
-                      <PlusCircle className="mr-3 h-6 w-6" />
-                      Add Prospect
-                  </Button>
-              </CreateLeadDialog>
+              <Suspense fallback={<Button className="rounded-2xl herbal-gradient px-10 py-7 text-lg font-black opacity-50" disabled>Loading...</Button>}>
+                <CreateLeadDialog products={products || []} isLoading={loading}>
+                    <Button className="rounded-2xl herbal-gradient shadow-2xl shadow-primary/30 px-10 py-7 text-lg font-black gold-glow scale-105 hover:scale-110 active:scale-95 transition-all">
+                        <PlusCircle className="mr-3 h-6 w-6" />
+                        Add Prospect
+                    </Button>
+                </CreateLeadDialog>
+              </Suspense>
             </div>
         </div>
 

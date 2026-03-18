@@ -277,7 +277,7 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     }
 
     const batch = adminDb.batch();
-    leadIds.forEach(id => {
+    leadIds.forEach((id: string) => {
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       batch.update(ref, {
         assignedToIds: newAssignedToIds,
@@ -335,7 +335,7 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
 
     for (const chunk of chunks) {
       const batch = adminDb.batch();
-      chunk.forEach(id => {
+      chunk.forEach((id: string) => {
         batch.delete(leadsRef.doc(id));
       });
       await batch.commit();
