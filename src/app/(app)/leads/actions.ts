@@ -10,7 +10,7 @@ import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 /**
  * STRATEGIC SYNC: Automated Deal Conversion Logic
  */
-async function syncDealForLead(leadId: string, teamspaceId: string) {
+export async function syncDealForLead(leadId: string, teamspaceId: string) {
   try {
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
     const leadDoc = await leadRef.get();
@@ -299,6 +299,52 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
   }
 }
 
+const SelfAssignSchema = z.object({
+  leadIds: z.array(z.string()).min(1),
+  teamspaceId: z.string().min(1),
+  currentUserId: z.string().min(1),
+});
+
+export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
+: Promise<{ success: boolean; error?: string }> {
+  try {
+    const { leadIds, teamspaceId, currentUserId } = SelfAssignSchema.parse(values);
+
+    const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
+    if (!currentUserDoc.exists) throw new Error('User context not found.');
+    
+    const currentUserData = currentUserDoc.data();
+    const role = currentUserData?.role;
+
+    // Only Admins or Team Leads can reclaim leads to their desk
+    if (role !== 'admin' && role !== 'sales_team_lead') {
+        throw new Error('Unauthorized: Executive governance required to reclaim prospects.');
+    }
+
+    const batch = adminDb.batch();
+    leadIds.forEach((id: string) => {
+      const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
+      batch.update(ref, {
+        assignedToIds: [currentUserId], // RECLAIM: Set only to current user (TL/Admin)
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
+
+    // Ensure deals are synchronized with new ownership
+    for (const id of leadIds) {
+      await syncDealForLead(id, teamspaceId);
+    }
+
+    revalidatePath('/leads');
+    revalidatePath('/deals');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
 /**
  * INTELLIGENT DEDUPLICATION: Purge duplicate leads by phone
  * Preserves the oldest record and removes orphans.
@@ -308,7 +354,6 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
     const snapshot = await leadsRef.orderBy('createdAt', 'asc').get();
     
-    // EXPLICIT TYPES FOR LOOP PARAMETERS TO FIX VERCEL BUILD
     const leads = snapshot.docs.map((doc: QueryDocumentSnapshot) => doc.data() as Lead);
     const seenPhones = new Map<string, string>(); // phone -> firstLeadId
     const toDelete: string[] = [];
@@ -348,5 +393,3 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
     return { success: false, error: handleAdminSDKError(error) };
   }
 }
-
-export { syncDealForLead };

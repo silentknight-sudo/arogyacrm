@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, Suspense, useTransition } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -10,12 +10,14 @@ import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Target, Users as UsersIcon, Filter } from 'lucide-react';
+import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2 } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { BulkAssignLeadsDialog } from './bulk-assign-leads-dialog';
 import { DeduplicateLeadsDialog } from './deduplicate-leads-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { selfAssignLeads } from './actions';
 import {
   Select,
   SelectContent,
@@ -28,12 +30,14 @@ const statusFilters: (LeadStatus | 'all')[] = ['all', 'new', 'pending', 'busy', 
 
 export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
+  const { toast } = useToast();
   const firestore = useFirestore();
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
+  const [isReclaiming, startReclaim] = useTransition();
 
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
@@ -94,7 +98,6 @@ export default function LeadsPage() {
     if (selectCount.includes('-')) {
       const parts = selectCount.split('-').map(p => parseInt(p.trim()));
       if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        // User enters "2-5", meaning 2nd lead to 5th lead inclusive (Indices 1 to 5)
         const start = Math.min(parts[0], parts[1]);
         const end = Math.max(parts[0], parts[1]);
         startIndex = Math.max(1, start) - 1;
@@ -112,6 +115,32 @@ export default function LeadsPage() {
       const leadsToSelect = leads.slice(startIndex, endIndex);
       setSelectedLeads(leadsToSelect);
     }
+  };
+
+  const handleSelfAssign = () => {
+    if (!currentUser || !currentTeamspace?.id || selectedLeads.length === 0) return;
+    
+    startReclaim(async () => {
+      const result = await selfAssignLeads({
+        leadIds: selectedLeads.map(l => l.id),
+        teamspaceId: currentTeamspace.id,
+        currentUserId: currentUser.id,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'Strategic Reclaim Success',
+          description: `${selectedLeads.length} prospects have been successfully reclaimed to your personal desk.`,
+        });
+        setSelectedLeads([]);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Reclaim Failed',
+          description: result.error,
+        });
+      }
+    });
   };
 
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
@@ -202,12 +231,27 @@ export default function LeadsPage() {
                             Select
                         </Button>
                         {selectedLeads.length > 0 && (
-                            <Button 
-                                className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10 ml-4"
-                                onClick={() => setBulkAssignOpen(true)}
-                            >
-                                Assign {selectedLeads.length} Selected
-                            </Button>
+                            <div className="flex gap-2 ml-4">
+                                <Button 
+                                    className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10"
+                                    onClick={() => setBulkAssignOpen(true)}
+                                >
+                                    Delegate {selectedLeads.length} Selected
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    className="rounded-xl border-primary/20 bg-background hover:bg-primary/5 px-6 font-bold h-10 text-primary flex items-center gap-2"
+                                    onClick={handleSelfAssign}
+                                    disabled={isReclaiming}
+                                >
+                                    {isReclaiming ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <UserCheck className="h-4 w-4" />
+                                    )}
+                                    Reclaim {selectedLeads.length}
+                                </Button>
+                            </div>
                         )}
                     </div>
                 </div>
