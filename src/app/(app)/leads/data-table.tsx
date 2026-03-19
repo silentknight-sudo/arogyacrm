@@ -57,6 +57,8 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
+    // PREVENT PAGINATION RESET ON DATA UPDATES
+    autoResetPageIndex: false,
     state: {
       sorting,
       columnFilters,

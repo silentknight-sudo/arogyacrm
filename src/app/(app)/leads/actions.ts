@@ -308,6 +308,7 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
     const snapshot = await leadsRef.orderBy('createdAt', 'asc').get();
     
+    // EXPLICIT TYPES FOR LOOP PARAMETERS TO FIX VERCEL BUILD
     const leads = snapshot.docs.map((doc: QueryDocumentSnapshot) => doc.data() as Lead);
     const seenPhones = new Map<string, string>(); // phone -> firstLeadId
     const toDelete: string[] = [];
