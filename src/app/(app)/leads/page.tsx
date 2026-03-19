@@ -10,7 +10,7 @@ import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2 } from 'lucide-react';
+import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -143,6 +143,50 @@ export default function LeadsPage() {
     });
   };
 
+  const handleExport = () => {
+    const dataToExport = selectedLeads.length > 0 ? selectedLeads : leads || [];
+    if (dataToExport.length === 0) {
+      toast({ variant: 'destructive', title: 'Export Failed', description: 'No prospects found to export.' });
+      return;
+    }
+
+    const headers = ['Full Name', 'Email', 'Phone', 'Status', 'Source', 'Product Interests', 'Assigned To', 'Created Date'];
+    
+    const rows = dataToExport.map(lead => {
+      const assignedNames = lead.assignedToIds?.map(id => users?.find(u => u.id === id)?.displayName).filter(Boolean).join('; ') || 'Unassigned';
+      const productNames = lead.productAsked?.map(id => products?.find(p => p.id === id)?.name).filter(Boolean).join('; ') || 'None';
+      
+      const escape = (val: string | undefined | null) => `"${(val || '').toString().replace(/"/g, '""')}"`;
+
+      return [
+        escape(lead.fullName),
+        escape(lead.email),
+        escape(lead.phone),
+        escape(lead.status),
+        escape(lead.source),
+        escape(productNames),
+        escape(assignedNames),
+        escape(lead.createdAt)
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `arogya_prospects_${statusFilter}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({ 
+      title: 'Export Successful', 
+      description: `${dataToExport.length} prospects prepared for Google Sheets integration.` 
+    });
+  };
+
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   return (
@@ -159,6 +203,10 @@ export default function LeadsPage() {
              <div className="flex items-center gap-4">
               {isAdminOrTL && (
                 <>
+                  <Button variant="outline" onClick={handleExport} className="rounded-2xl border-primary/20 hover:bg-primary/5 px-8 py-7 font-black tracking-tight text-base shadow-sm">
+                    <Download className="mr-3 h-5 w-5" />
+                    Export CSV
+                  </Button>
                   <DeduplicateLeadsDialog />
                   <UploadLeadsDialog users={users || []} isLoading={loading}>
                     <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-8 py-7 font-black tracking-tight text-base shadow-sm">
@@ -217,7 +265,7 @@ export default function LeadsPage() {
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Range / Qty:</span>
                         <Input 
                             type="text" 
-                            placeholder="e.g. 1-10 or 5" 
+                            placeholder="e.g. 1-10" 
                             value={selectCount}
                             onChange={(e) => setSelectCount(e.target.value)}
                             className="w-32 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
