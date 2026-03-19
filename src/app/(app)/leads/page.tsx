@@ -86,11 +86,32 @@ export default function LeadsPage() {
   const loading = isUserLoading || isLoadingLeads || isLoadingUsers || isLoadingProducts;
 
   const handleSelectNLeads = () => {
-    const count = parseInt(selectCount);
-    if (isNaN(count) || count <= 0 || !leads) return;
-    
-    const leadsToSelect = leads.slice(0, count);
-    setSelectedLeads(leadsToSelect);
+    if (!leads || !selectCount) return;
+
+    let startIndex = 0;
+    let endIndex = 0;
+
+    if (selectCount.includes('-')) {
+      const parts = selectCount.split('-').map(p => parseInt(p.trim()));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        // User enters "2-5", meaning 2nd lead to 5th lead inclusive (Indices 1 to 5)
+        const start = Math.min(parts[0], parts[1]);
+        const end = Math.max(parts[0], parts[1]);
+        startIndex = Math.max(1, start) - 1;
+        endIndex = Math.min(leads.length, end);
+      }
+    } else {
+      const count = parseInt(selectCount);
+      if (!isNaN(count) && count > 0) {
+        startIndex = 0;
+        endIndex = Math.min(leads.length, count);
+      }
+    }
+
+    if (endIndex > startIndex) {
+      const leadsToSelect = leads.slice(startIndex, endIndex);
+      setSelectedLeads(leadsToSelect);
+    }
   };
 
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
@@ -164,13 +185,13 @@ export default function LeadsPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Quantity:</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Range / Qty:</span>
                         <Input 
-                            type="number" 
-                            placeholder="e.g. 5" 
+                            type="text" 
+                            placeholder="e.g. 1-10 or 5" 
                             value={selectCount}
                             onChange={(e) => setSelectCount(e.target.value)}
-                            className="w-20 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
+                            className="w-32 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
                         />
                         <Button 
                             variant="secondary" 
@@ -178,7 +199,7 @@ export default function LeadsPage() {
                             onClick={handleSelectNLeads}
                             className="rounded-xl font-bold px-6 h-10"
                         >
-                            Select Top
+                            Select
                         </Button>
                         {selectedLeads.length > 0 && (
                             <Button 

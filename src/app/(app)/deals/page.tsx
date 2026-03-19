@@ -111,11 +111,32 @@ export default function SalesPipelinePage() {
   };
 
   const handleSelectN = (stage: DealStage) => {
-    const count = parseInt(selectCount);
-    if (isNaN(count) || count <= 0) return;
-    
-    const stageDeals = stagedData[stage].slice(0, count);
-    handleSelectionChange(stage, stageDeals);
+    const stageDeals = stagedData[stage];
+    if (!stageDeals || !selectCount) return;
+
+    let startIndex = 0;
+    let endIndex = 0;
+
+    if (selectCount.includes('-')) {
+      const parts = selectCount.split('-').map(p => parseInt(p.trim()));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        const start = Math.min(parts[0], parts[1]);
+        const end = Math.max(parts[0], parts[1]);
+        startIndex = Math.max(1, start) - 1;
+        endIndex = Math.min(stageDeals.length, end);
+      }
+    } else {
+      const count = parseInt(selectCount);
+      if (!isNaN(count) && count > 0) {
+        startIndex = 0;
+        endIndex = Math.min(stageDeals.length, count);
+      }
+    }
+
+    if (endIndex > startIndex) {
+      const selected = stageDeals.slice(startIndex, endIndex);
+      handleSelectionChange(stage, selected);
+    }
   };
 
   const canManageBulk = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
@@ -161,13 +182,13 @@ export default function SalesPipelinePage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Quantity:</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Range / Qty:</span>
                         <Input 
-                            type="number" 
-                            placeholder="Qty" 
+                            type="text" 
+                            placeholder="e.g. 1-10" 
                             value={selectCount}
                             onChange={(e) => setSelectCount(e.target.value)}
-                            className="w-20 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
+                            className="w-24 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
                         />
                         <div className="flex gap-1">
                             {stages.map(s => (
