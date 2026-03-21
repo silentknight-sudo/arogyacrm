@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -12,13 +11,13 @@ export function LeadAlertListener() {
   const firestore = useFirestore();
   const [activeAlert, setActiveAlert] = useState<string | null>(null);
   const notifiedIds = useRef<Set<string>>(new Set());
-  const sessionStartTime = useRef(new Date());
+  // Use a slight buffer (5 seconds) to ensure we don't miss assignments happening during page load
+  const sessionStartTime = useRef(Date.now() - 5000);
   
-  // Use a reliable public notification sound URL
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Initialize audio object
+    // High-quality notification sound for enterprise priority
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     audioRef.current.volume = 0.5;
   }, []);
@@ -28,7 +27,7 @@ export function LeadAlertListener() {
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // Listen for leads assigned to user, ordered by creation
+    // STRATEGIC QUERY: Listen for leads assigned to user
     const q = query(
       leadsRef, 
       where('assignedToIds', 'array-contains', currentUser.id),
@@ -37,23 +36,30 @@ export function LeadAlertListener() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      // Skip initial load of existing documents to prevent alert spam
+      if (snapshot.metadata.hasPendingWrites) return;
+
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const data = change.doc.data();
           const id = change.doc.id;
           
-          // Determine timestamp safely
-          const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+          // Determine timestamp safely for comparison
+          const createdAtMillis = data.createdAt?.toMillis 
+            ? data.createdAt.toMillis() 
+            : new Date(data.createdAt).getTime();
           
-          // Only alert for assignments that happened after the session started
-          if (createdAt > sessionStartTime.current && !notifiedIds.current.has(id)) {
+          // Trigger alert only if lead was created after session start and hasn't been notified yet
+          if (createdAtMillis > sessionStartTime.current && !notifiedIds.current.has(id)) {
             notifiedIds.current.add(id);
             setActiveAlert(`Strategic Priority: New Prospect Assigned - ${data.fullName}`);
             
-            // Play sound effect
-            audioRef.current?.play().catch(e => console.warn("Audio playback blocked by browser policy until user interacts."));
+            // Execute sound notification with browser policy handling
+            audioRef.current?.play().catch(() => {
+                // Silent catch: Browser blocked autoplay until user interaction
+            });
             
-            // Auto-hide after 10 seconds
+            // Auto-hide alert after 10 seconds of visibility
             const timer = setTimeout(() => {
               setActiveAlert(null);
             }, 10000);
@@ -63,6 +69,7 @@ export function LeadAlertListener() {
         }
       });
     }, (error) => {
+        // Log errors only if they aren't standard permission denials during sign-out
         if (error.code !== 'permission-denied') {
             console.error("Alert Engine Handshake Failure:", error);
         }

@@ -3,6 +3,7 @@ import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { syncDealForLead } from './actions';
+import type { RawLead } from '@/types';
 
 const UploadLeadsSchema = z.object({
   rawLeads: z.array(z.any()),
@@ -24,7 +25,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     const createdLeadIds: string[] = [];
     const batch = adminDb.batch();
 
-    for (const rawLead of rawLeads) {
+    for (const rawLead of (rawLeads as RawLead[])) {
       const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
       const id = leadRef.id;
       createdLeadIds.push(id);
