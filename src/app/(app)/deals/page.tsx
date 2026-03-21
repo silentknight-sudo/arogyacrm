@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, documentId } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import type { Deal, UserProfile, DealStage, Contact, Product, Lead } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,7 +33,7 @@ export default function SalesPipelinePage() {
 
   /**
    * HIERARCHICAL QUERY:
-   * Admin: All deals
+   * Admin: All deals in teamspace
    * Team Lead: Deals where teamLeadId == currentUser.id
    * Executive: Deals where ownerId == currentUser.id
    */
@@ -75,27 +75,47 @@ export default function SalesPipelinePage() {
     return map;
   }, [filteredDeals]);
 
+  /**
+   * SCOPED USER QUERY: Resolves names for assigned specialists
+   */
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+    
     if (currentUser.role === 'admin') {
+        const memberIds = currentTeamspace.memberIds || [];
+        return memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) : null;
+    }
+    
+    if (currentUser.role === 'sales_team_lead') {
+        // TL sees themselves + members they created
         return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
     }
-    if (currentUser.role === 'sales_team_lead') {
-        return query(collection(firestore, 'users'), where('createdBy', '==', currentUser.id));
-    }
-    return null;
-  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    
+    return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
+  }, [firestore, currentTeamspace?.id, currentTeamspace?.memberIds, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
+  /**
+   * SCOPED METADATA: Required for Lead/Contact name resolution in table
+   */
   const contactsQuery = useMemoFirebase(() =>
     !isUserLoading && currentTeamspace ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'contacts')) : null
   , [firestore, currentTeamspace, isUserLoading]);
   const { data: contacts, isLoading: isLoadingContacts } = useCollection<Contact>(contactsQuery);
 
-  const leadsQuery = useMemoFirebase(() =>
-    !isUserLoading && currentTeamspace ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads')) : null
-  , [firestore, currentTeamspace, isUserLoading]);
+  const leadsQuery = useMemoFirebase(() => {
+    if (isUserLoading || !currentTeamspace || !currentUser) return null;
+    const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
+    
+    // Admins and TLs can see all leads in teamspace
+    if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
+        return query(leadsRef);
+    }
+    
+    // Executives only see their assigned leads (to resolve deal names)
+    return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
+  }, [firestore, currentTeamspace, currentUser, isUserLoading]);
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);

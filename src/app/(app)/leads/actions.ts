@@ -1,4 +1,3 @@
-
 'use server';
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
@@ -10,6 +9,7 @@ import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 /**
  * STRATEGIC SYNC: Automated Deal Conversion Logic
+ * Maps lead statuses directly to deal stages for pipeline accuracy.
  */
 export async function syncDealForLead(leadId: string, teamspaceId: string) {
   try {
@@ -17,7 +17,17 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
     const leadDoc = await leadRef.get();
     const lead = leadDoc.data() as Lead;
     
-    if (!lead || lead.status === 'canceled') return;
+    if (!lead || lead.status === 'canceled') {
+        // Cleanup orphaned automated deals if status is canceled
+        const dealsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals');
+        const existingDealQuery = await dealsRef.where('leadId', '==', leadId).get();
+        if (!existingDealQuery.empty) {
+            const batch = adminDb.batch();
+            existingDealQuery.docs.forEach((doc: QueryDocumentSnapshot) => batch.delete(doc.ref));
+            await batch.commit();
+        }
+        return;
+    }
 
     const dealsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals');
     const existingDealQuery = await dealsRef.where('leadId', '==', leadId).limit(1).get();
@@ -35,13 +45,23 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
       }
     }
 
+    // Mapping logic: LeadStatus -> DealStage
+    const stageMap: Record<LeadStatus, DealStage> = {
+        'new': 'new',
+        'pending': 'pending',
+        'busy': 'busy',
+        'done': 'done',
+        'canceled': 'cancel',
+        'Converted': 'done'
+    };
+
     const dealData: Partial<Deal> = {
       leadId: leadId,
-      name: `Automated: ${lead.fullName}`,
+      name: `Prospect: ${lead.fullName}`,
       ownerId: ownerId,
       teamLeadId: teamLeadId,
-      stage: (lead.status === 'new' ? 'new' : 'pending') as DealStage,
-      type: 'Automated Conversion',
+      stage: stageMap[lead.status] || 'pending',
+      type: 'Automated Revenue Flow',
       closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: FieldValue.serverTimestamp(),
       contactId: '', 
