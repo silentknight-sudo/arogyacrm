@@ -43,6 +43,11 @@ export default function LeadsPage() {
   const [isReclaiming, startReclaim] = useTransition();
 
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  
+  // ROLE-BASED UI: Sales Executives only see 'All' and 'New'
+  const displayFilters = currentUser?.role === 'sales_executive' 
+    ? (['all', 'new'] as (LeadStatus | 'all')[])
+    : ALL_STATUS_FILTERS;
 
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
@@ -234,7 +239,7 @@ export default function LeadsPage() {
             <div className="flex items-center gap-3">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <div className="flex gap-2">
-                    {ALL_STATUS_FILTERS.map((f) => (
+                    {displayFilters.map((f) => (
                         <Badge 
                             key={f} 
                             onClick={() => setStatusFilter(f)}
