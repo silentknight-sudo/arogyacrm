@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, Suspense, useTransition } from 'react';
+import { useState, useMemo, Suspense, useTransition, useEffect } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -29,7 +29,7 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-const statusFilters: (LeadStatus | 'all')[] = ['all', 'new', 'pending', 'busy', 'done', 'canceled'];
+const ALL_STATUS_FILTERS: (LeadStatus | 'all')[] = ['all', 'new', 'pending', 'busy', 'done', 'canceled'];
 
 export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
@@ -42,6 +42,20 @@ export default function LeadsPage() {
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [isReclaiming, startReclaim] = useTransition();
 
+  const isExecutive = currentUser?.role === 'sales_executive';
+
+  // ROLE-BASED FILTER LOCK: Executives only see 'new' leads
+  useEffect(() => {
+    if (isExecutive && statusFilter !== 'new') {
+      setStatusFilter('new');
+    }
+  }, [isExecutive, statusFilter]);
+
+  const activeStatusFilters = useMemo(() => {
+    if (isExecutive) return ['new'] as (LeadStatus | 'all')[];
+    return ALL_STATUS_FILTERS;
+  }, [isExecutive]);
+
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
@@ -50,12 +64,15 @@ export default function LeadsPage() {
       ? query(leadsRef) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
 
-    if (statusFilter !== 'all') {
-      q = query(q, where('status', '==', statusFilter));
+    // Force 'new' for executives regardless of UI state
+    const effectiveStatus = isExecutive ? 'new' : statusFilter;
+
+    if (effectiveStatus !== 'all') {
+      q = query(q, where('status', '==', effectiveStatus));
     }
     
     return q;
-  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, statusFilter]);
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, statusFilter, isExecutive]);
 
   const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
@@ -234,7 +251,7 @@ export default function LeadsPage() {
             <div className="flex items-center gap-3">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <div className="flex gap-2">
-                    {statusFilters.map((f) => (
+                    {activeStatusFilters.map((f) => (
                         <Badge 
                             key={f} 
                             onClick={() => setStatusFilter(f)}

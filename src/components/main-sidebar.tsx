@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -23,7 +24,7 @@ export function MainSidebar({ className }: { className?: string }) {
     { title: "INSIGHTS", items: [{ href: '/dashboard', label: 'Overview', icon: LayoutDashboard }] },
     { title: 'PIPELINE', items: [
         { href: '/leads', label: 'Prospects', icon: Users },
-        { href: '/deals', label: 'Deals', icon: Handshake },
+        ...(currentUser?.role !== 'sales_executive' ? [{ href: '/deals', label: 'Deals', icon: Handshake }] : []),
     ]},
   ];
 

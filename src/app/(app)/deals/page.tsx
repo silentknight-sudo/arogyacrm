@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -20,25 +21,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useRouter } from 'next/navigation';
 
 const stages: DealStage[] = ['new', 'pending', 'not connect', 'busy', 'done', 'cancel'];
 
 export default function SalesPipelinePage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const firestore = useFirestore();
+  const router = useRouter();
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [selectedDeals, setSelectedDeals] = useState<Deal[]>([]);
 
+  // ROLE PROTECTION: Executives are restricted from the Sales Pipeline
+  useEffect(() => {
+    if (!isUserLoading && currentUser?.role === 'sales_executive') {
+      router.replace('/dashboard');
+    }
+  }, [currentUser, isUserLoading, router]);
+
   /**
    * HIERARCHICAL QUERY:
    * Admin: All deals in teamspace
    * Team Lead: Deals where teamLeadId == currentUser.id
-   * Executive: Deals where ownerId == currentUser.id
+   * Executive: Restricted (Handled by useEffect redirect)
    */
   const dealsQuery = useMemoFirebase(() => {
-    if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+    if (isUserLoading || !currentUser || !currentTeamspace?.id || currentUser.role === 'sales_executive') return null;
     const dealsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'deals');
     
     if (currentUser.role === 'admin') {
@@ -87,7 +97,6 @@ export default function SalesPipelinePage() {
     }
     
     if (currentUser.role === 'sales_team_lead') {
-        // TL sees themselves + members they created
         return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
     }
     
@@ -108,12 +117,10 @@ export default function SalesPipelinePage() {
     if (isUserLoading || !currentTeamspace || !currentUser) return null;
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // Admins and TLs can see all leads in teamspace
     if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
         return query(leadsRef);
     }
     
-    // Executives only see their assigned leads (to resolve deal names)
     return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
   }, [firestore, currentTeamspace, currentUser, isUserLoading]);
   const { data: leads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
@@ -160,6 +167,8 @@ export default function SalesPipelinePage() {
   };
 
   const canManageBulk = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+
+  if (!isUserLoading && currentUser?.role === 'sales_executive') return null;
 
   return (
     <div className="space-y-8 pb-16 pt-4">
