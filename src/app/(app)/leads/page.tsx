@@ -44,7 +44,6 @@ export default function LeadsPage() {
 
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
   
-  // ROLE-BASED UI: Sales Executives only see 'All' and 'New'
   const displayFilters = currentUser?.role === 'sales_executive' 
     ? (['all', 'new'] as (LeadStatus | 'all')[])
     : ALL_STATUS_FILTERS;

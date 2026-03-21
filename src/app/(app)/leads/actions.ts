@@ -19,7 +19,6 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
     const lead = leadDoc.data() as Lead;
     
     if (!lead || lead.status === 'canceled') {
-        // Cleanup orphaned automated deals if status is canceled
         const dealsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals');
         const existingDealQuery = await dealsRef.where('leadId', '==', leadId).get();
         if (!existingDealQuery.empty) {
@@ -46,7 +45,6 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
       }
     }
 
-    // Mapping logic: LeadStatus -> DealStage
     const stageMap: Record<LeadStatus, DealStage> = {
         'new': 'new',
         'pending': 'pending',
@@ -338,7 +336,6 @@ export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
     const currentUserData = currentUserDoc.data();
     const role = currentUserData?.role;
 
-    // Only Admins or Team Leads can reclaim leads to their desk
     if (role !== 'admin' && role !== 'sales_team_lead') {
         throw new Error('Unauthorized: Executive governance required to reclaim prospects.');
     }
@@ -347,14 +344,13 @@ export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
     leadIds.forEach((id: string) => {
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       batch.update(ref, {
-        assignedToIds: [currentUserId], // RECLAIM: Set only to current user (TL/Admin)
+        assignedToIds: [currentUserId],
         updatedAt: FieldValue.serverTimestamp(),
       });
     });
 
     await batch.commit();
 
-    // Ensure deals are synchronized with new ownership
     for (const id of leadIds) {
       await syncDealForLead(id, teamspaceId);
     }
@@ -367,17 +363,13 @@ export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
   }
 }
 
-/**
- * INTELLIGENT DEDUPLICATION: Purge duplicate leads by phone
- * Preserves the oldest record and removes orphans.
- */
 export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ success: boolean; removedCount?: number; error?: string }> {
   try {
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
     const snapshot = await leadsRef.orderBy('createdAt', 'asc').get();
     
     const leads = snapshot.docs.map((doc: QueryDocumentSnapshot) => doc.data() as Lead);
-    const seenPhones = new Map<string, string>(); // phone -> firstLeadId
+    const seenPhones = new Map<string, string>(); 
     const toDelete: string[] = [];
 
     leads.forEach((lead: Lead) => {
@@ -395,7 +387,6 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
       return { success: true, removedCount: 0 };
     }
 
-    // Batch delete
     const chunks = [];
     for (let i = 0; i < toDelete.length; i += 500) {
       chunks.push(toDelete.slice(i, i + 500));

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useTransition } from 'react';
@@ -32,7 +33,6 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) 
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform';
   const params = new URLSearchParams();
   
-  // MAPPED TO YOUR SPECIFIC FIELDS
   params.append('entry.1000001', currentUser?.displayName || 'Specialist'); // Sales Person Name
   params.append('entry.1000002', lead.fullName || '');                      // Name
   params.append('entry.1000003', lead.email || '');                         // Email

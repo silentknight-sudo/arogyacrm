@@ -5,8 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, onSnapshot, limit, orderBy } from 'firebase/firestore';
-import { AlertCircle, X, BellRing } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { X, BellRing } from 'lucide-react';
 
 export function LeadAlertListener() {
   const { currentUser, currentTeamspace } = useApp();
@@ -14,6 +13,15 @@ export function LeadAlertListener() {
   const [activeAlert, setActiveAlert] = useState<string | null>(null);
   const notifiedIds = useRef<Set<string>>(new Set());
   const sessionStartTime = useRef(new Date());
+  
+  // Use a reliable public notification sound URL
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Initialize audio object
+    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audioRef.current.volume = 0.5;
+  }, []);
 
   useEffect(() => {
     if (!currentUser || !currentTeamspace?.id) return;
@@ -42,7 +50,10 @@ export function LeadAlertListener() {
             notifiedIds.current.add(id);
             setActiveAlert(`Strategic Priority: New Prospect Assigned - ${data.fullName}`);
             
-            // Auto-hide after 10 seconds to keep UI clean
+            // Play sound effect
+            audioRef.current?.play().catch(e => console.warn("Audio playback blocked by browser policy until user interacts."));
+            
+            // Auto-hide after 10 seconds
             const timer = setTimeout(() => {
               setActiveAlert(null);
             }, 10000);
@@ -52,7 +63,6 @@ export function LeadAlertListener() {
         }
       });
     }, (error) => {
-        // Suppress initial permission errors during auth handshake
         if (error.code !== 'permission-denied') {
             console.error("Alert Engine Handshake Failure:", error);
         }
