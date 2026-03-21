@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, Suspense, useTransition } from 'react';
@@ -25,6 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
+export const dynamic = 'force-dynamic';
 
 const statusFilters: (LeadStatus | 'all')[] = ['all', 'new', 'pending', 'busy', 'done', 'canceled'];
 

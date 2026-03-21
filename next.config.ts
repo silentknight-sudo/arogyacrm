@@ -1,18 +1,17 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  experimental: {
-    serverComponentsExternalPackages: [
-      'firebase-admin', 
-      '@google-cloud/firestore',
-      '@google-cloud/storage',
-      'google-auth-library',
-      'protobufjs',
-      'google-gax',
-      '@genkit-ai/google-genai'
-    ],
-  },
+  serverExternalPackages: [
+    'firebase-admin', 
+    '@google-cloud/firestore',
+    '@google-cloud/storage',
+    'google-auth-library',
+    'protobufjs',
+    'google-gax',
+    '@genkit-ai/google-genai'
+  ],
   typescript: {
     ignoreBuildErrors: false,
   },
