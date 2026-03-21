@@ -1,3 +1,4 @@
+
 'use server';
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
@@ -51,6 +52,18 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     }
     
     await batch.commit();
+
+    /**
+     * PERSISTENT NOTIFICATION: Inform the user of their new leads
+     */
+    await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
+        title: `you got ${rawLeads.length} new leads`,
+        description: `Successfully imported and assigned ${rawLeads.length} prospects to your professional desk.`,
+        type: 'lead_assigned',
+        timestamp: new Date().toISOString(),
+        read: false,
+        link: '/leads'
+    });
 
     /**
      * AUTOMATIC CONVERSION: Initiate deals for all imported leads

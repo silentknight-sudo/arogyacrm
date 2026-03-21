@@ -126,6 +126,16 @@ export async function createLead(values: z.infer<typeof CreateLeadSchema>) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    // Notify the creator of their assignment
+    await adminDb.collection('users').doc(data.creatorId).collection('notifications').add({
+        title: 'you got 1 new leads',
+        description: `New strategic prospect "${data.fullName}" has been added to your queue.`,
+        type: 'lead_assigned',
+        timestamp: new Date().toISOString(),
+        read: false,
+        link: '/leads'
+    });
+
     await syncDealForLead(leadRef.id, data.teamspaceId);
 
     revalidatePath('/leads');
@@ -247,11 +257,11 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // NOTIFICATION DELIVERY: Ensure notifications go to all assigned specialists
+    // NOTIFICATION DELIVERY: Standardized Alert Message
     for (const userId of newAssignedToIds) {
         await adminDb.collection('users').doc(userId).collection('notifications').add({
-            title: 'Lead Assigned',
-            description: `A new strategic prospect "${leadDoc.data()?.fullName || 'Prospect'}" has been assigned to your workspace.`,
+            title: 'you got 1 new leads',
+            description: `Prospect "${leadDoc.data()?.fullName || 'Prospect'}" has been assigned to your professional desk.`,
             type: 'lead_assigned',
             timestamp: new Date().toISOString(),
             read: false,
@@ -319,10 +329,10 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
 
     await batch.commit();
 
-    // CONSOLIDATED NOTIFICATION DELIVERY
+    // CONSOLIDATED NOTIFICATION DELIVERY: Standardized Alert Message
     for (const userId of newAssignedToIds) {
         await adminDb.collection('users').doc(userId).collection('notifications').add({
-            title: 'Bulk Pipeline Delegation',
+            title: `you got ${leadIds.length} new leads`,
             description: `${leadIds.length} strategic prospects have been reassigned to your professional desk.`,
             type: 'lead_assigned',
             timestamp: new Date().toISOString(),
@@ -376,9 +386,9 @@ export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
 
     await batch.commit();
 
-    // NOTIFICATION FOR SELF-RECLAIM
+    // NOTIFICATION FOR SELF-RECLAIM: Standardized Alert Message
     await adminDb.collection('users').doc(currentUserId).collection('notifications').add({
-        title: 'Prospects Reclaimed',
+        title: `you got ${leadIds.length} new leads`,
         description: `Successfully reclaimed ${leadIds.length} strategic prospects to your personal desk.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
