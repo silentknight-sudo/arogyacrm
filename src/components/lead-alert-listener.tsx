@@ -11,9 +11,9 @@ export function LeadAlertListener() {
   const firestore = useFirestore();
   const [activeAlert, setActiveAlert] = useState<string | null>(null);
   const notifiedIds = useRef<Set<string>>(new Set());
+  
   // Use a slight buffer (5 seconds) to ensure we don't miss assignments happening during page load
   const sessionStartTime = useRef(Date.now() - 5000);
-  
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -27,16 +27,19 @@ export function LeadAlertListener() {
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // STRATEGIC QUERY: Listen for leads assigned to user
+    /**
+     * STRATEGIC QUERY: Real-time monitoring of assignments.
+     * Requires composite index: assignedToIds (ARRAY) + createdAt (DESC)
+     */
     const q = query(
       leadsRef, 
       where('assignedToIds', 'array-contains', currentUser.id),
       orderBy('createdAt', 'desc'),
-      limit(5)
+      limit(10)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Skip initial load of existing documents to prevent alert spam
+      // Logic only for server-confirmed additions to prevent local write echoes
       if (snapshot.metadata.hasPendingWrites) return;
 
       snapshot.docChanges().forEach((change) => {
@@ -44,22 +47,22 @@ export function LeadAlertListener() {
           const data = change.doc.data();
           const id = change.doc.id;
           
-          // Determine timestamp safely for comparison
+          // Determine numeric timestamp for robust comparison
           const createdAtMillis = data.createdAt?.toMillis 
             ? data.createdAt.toMillis() 
-            : new Date(data.createdAt).getTime();
+            : data.createdAt ? new Date(data.createdAt).getTime() : 0;
           
           // Trigger alert only if lead was created after session start and hasn't been notified yet
           if (createdAtMillis > sessionStartTime.current && !notifiedIds.current.has(id)) {
             notifiedIds.current.add(id);
             setActiveAlert(`Strategic Priority: New Prospect Assigned - ${data.fullName}`);
             
-            // Execute sound notification with browser policy handling
+            // Execute sound notification with silence catch for browser policy handling
             audioRef.current?.play().catch(() => {
-                // Silent catch: Browser blocked autoplay until user interaction
+                // Silent catch: Browser blocked autoplay (standard enterprise behavior)
             });
             
-            // Auto-hide alert after 10 seconds of visibility
+            // Auto-dismiss alert after 10 seconds
             const timer = setTimeout(() => {
               setActiveAlert(null);
             }, 10000);
@@ -69,9 +72,9 @@ export function LeadAlertListener() {
         }
       });
     }, (error) => {
-        // Log errors only if they aren't standard permission denials during sign-out
+        // Suppress standard permission denials during transitionary auth states
         if (error.code !== 'permission-denied') {
-            console.error("Alert Engine Handshake Failure:", error);
+            console.error("ALERT_ENGINE_ERROR:", error);
         }
     });
 
@@ -86,7 +89,7 @@ export function LeadAlertListener() {
         <div className="bg-white/20 p-3 rounded-xl animate-bounce">
           <BellRing className="h-6 w-6 text-white" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 text-white">
           <p className="font-black uppercase tracking-[0.2em] text-[10px] opacity-70 mb-0.5">High Intensity Assignment</p>
           <p className="font-bold text-lg leading-tight tracking-tight">{activeAlert}</p>
         </div>
@@ -94,7 +97,7 @@ export function LeadAlertListener() {
           onClick={() => setActiveAlert(null)}
           className="p-2 hover:bg-white/10 rounded-full transition-all active:scale-90"
         >
-          <X className="h-6 w-6" />
+          <X className="h-6 w-6 text-white" />
         </button>
       </div>
     </div>

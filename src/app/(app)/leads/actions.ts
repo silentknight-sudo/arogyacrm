@@ -120,6 +120,7 @@ export async function createLead(values: z.infer<typeof CreateLeadSchema>) {
       ...data,
       id: leadRef.id,
       assignedToIds: [data.creatorId],
+      reassigned: false,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -242,6 +243,7 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
 
     await leadRef.update({
       assignedToIds: newAssignedToIds,
+      reassigned: true,
       updatedAt: FieldValue.serverTimestamp(),
     });
 
@@ -300,6 +302,7 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       batch.update(ref, {
         assignedToIds: newAssignedToIds,
+        reassigned: true,
         updatedAt: FieldValue.serverTimestamp(),
       });
     });
@@ -344,6 +347,7 @@ export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       batch.update(ref, {
         assignedToIds: [currentUserId],
+        reassigned: true,
         updatedAt: FieldValue.serverTimestamp(),
       });
     });

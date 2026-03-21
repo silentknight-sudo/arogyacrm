@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useTransition } from 'react';
@@ -22,6 +21,7 @@ import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
@@ -246,9 +246,16 @@ export const columns: ColumnDef<Lead>[] = [
       );
     },
     cell: ({ row }) => (
-      <span className="font-black text-primary tracking-tight text-sm">
-          {row.getValue('fullName')}
-      </span>
+      <div className="flex flex-col gap-1">
+        <span className="font-black text-primary tracking-tight text-sm">
+            {row.getValue('fullName')}
+        </span>
+        {row.original.reassigned && (
+          <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20 text-accent-foreground px-1.5 h-4 rounded-md">
+            Reassigned
+          </Badge>
+        )}
+      </div>
     ),
   },
   {

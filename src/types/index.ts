@@ -55,6 +55,7 @@ export type Lead = {
   };
   notes?: string;
   attributionFields?: string;
+  reassigned?: boolean;
   createdAt: any;
   updatedAt: any;
 };
