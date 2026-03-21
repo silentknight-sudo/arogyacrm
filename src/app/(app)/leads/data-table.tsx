@@ -57,7 +57,6 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
-    // PREVENT PAGINATION RESET ON DATA UPDATES
     autoResetPageIndex: false,
     state: {
       sorting,
@@ -103,15 +102,27 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center py-4 gap-2">
-        <Input
-          placeholder="Filter by lead name..."
-          value={(table.getColumn('fullName')?.getFilterValue() as string) ?? ''}
-          onChange={(event) =>
-            table.getColumn('fullName')?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm rounded-xl border-none bg-muted/20 px-4 focus-visible:ring-primary/20"
-        />
+      <div className="flex flex-col sm:flex-row items-center py-4 gap-4">
+        <div className="flex-1 w-full sm:max-w-sm">
+          <Input
+            placeholder="Search by lead name..."
+            value={(table.getColumn('fullName')?.getFilterValue() as string) ?? ''}
+            onChange={(event) =>
+              table.getColumn('fullName')?.setFilterValue(event.target.value)
+            }
+            className="rounded-xl border-none bg-muted/20 px-4 focus-visible:ring-primary/20 h-11"
+          />
+        </div>
+        <div className="flex-1 w-full sm:max-w-sm">
+          <Input
+            placeholder="Search by phone number..."
+            value={(table.getColumn('phone')?.getFilterValue() as string) ?? ''}
+            onChange={(event) =>
+              table.getColumn('phone')?.setFilterValue(event.target.value)
+            }
+            className="rounded-xl border-none bg-muted/20 px-4 focus-visible:ring-primary/20 h-11"
+          />
+        </div>
       </div>
       <div className="rounded-[2rem] border-none bg-background shadow-inner overflow-hidden">
         <UiTable>
