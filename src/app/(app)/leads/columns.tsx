@@ -26,30 +26,21 @@ const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
 /**
  * STRATEGIC GOOGLE FORM PRE-FILL
- * Mapped to your specific form fields:
- * - Sales Person Name (entry.1000001)
- * - Name (entry.1000002)
- * - Email (entry.1000003)
- * - Address (entry.1000004)
- * - Phone number (entry.1000005)
- * - Response (entry.1000006)
- * - Product details (entry.1000007)
- * - Deal Status (entry.1000008)
+ * Note: Replace entry.IDs with actual IDs from your form "Get pre-filled link" tool.
  */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform';
   const params = new URLSearchParams();
   
-  // MAP DATA TO YOUR SPECIFIC GOOGLE FORM FIELDS
-  // Note: Replace entry.IDs with actual IDs from your form "Get pre-filled link" tool.
-  params.append('entry.1000001', currentUser?.displayName || 'Unknown Specialist'); // Sales Person
-  params.append('entry.1000002', lead.fullName || ''); // Name
-  params.append('entry.1000003', lead.email || '');    // Email
+  // MAPPED TO YOUR SPECIFIC FIELDS
+  params.append('entry.1000001', currentUser?.displayName || 'Specialist'); // Sales Person Name
+  params.append('entry.1000002', lead.fullName || '');                      // Name
+  params.append('entry.1000003', lead.email || '');                         // Email
   params.append('entry.1000004', lead.demographicData?.country || 'India'); // Address
-  params.append('entry.1000005', lead.phone || '');    // Phone
-  params.append('entry.1000006', 'Automatic prospect follow-up'); // Response
-  params.append('entry.1000007', lead.productAsked?.join(', ') || 'General Wellness'); // Product Details
-  params.append('entry.1000008', lead.status || 'new'); // Deal Status
+  params.append('entry.1000005', lead.phone || '');                         // Phone number
+  params.append('entry.1000006', 'Automatic feedback session');             // Response
+  params.append('entry.1000007', lead.productAsked?.join(', ') || 'N/A');   // Product details
+  params.append('entry.1000008', lead.status || 'new');                     // Deal Status
   
   return `${baseUrl}?usp=pp_url&${params.toString()}`;
 };
