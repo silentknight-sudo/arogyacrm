@@ -1,3 +1,4 @@
+
 'use server';
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
@@ -246,9 +247,8 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // NOTIFICATION DELIVERY
+    // NOTIFICATION DELIVERY: Ensure notifications go to all assigned specialists
     for (const userId of newAssignedToIds) {
-        if (userId === currentUserId) continue;
         await adminDb.collection('users').doc(userId).collection('notifications').add({
             title: 'Lead Assigned',
             description: `A new strategic prospect "${leadDoc.data()?.fullName || 'Prospect'}" has been assigned to your workspace.`,
@@ -321,10 +321,9 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
 
     // CONSOLIDATED NOTIFICATION DELIVERY
     for (const userId of newAssignedToIds) {
-        if (userId === currentUserId) continue;
         await adminDb.collection('users').doc(userId).collection('notifications').add({
             title: 'Bulk Pipeline Delegation',
-            description: `${leadIds.length} strategic prospects have been reassigned to your professional desk by ${currentUserData?.displayName}.`,
+            description: `${leadIds.length} strategic prospects have been reassigned to your professional desk.`,
             type: 'lead_assigned',
             timestamp: new Date().toISOString(),
             read: false,
@@ -376,6 +375,16 @@ export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
     });
 
     await batch.commit();
+
+    // NOTIFICATION FOR SELF-RECLAIM
+    await adminDb.collection('users').doc(currentUserId).collection('notifications').add({
+        title: 'Prospects Reclaimed',
+        description: `Successfully reclaimed ${leadIds.length} strategic prospects to your personal desk.`,
+        type: 'lead_assigned',
+        timestamp: new Date().toISOString(),
+        read: false,
+        link: '/leads'
+    });
 
     for (const id of leadIds) {
       await syncDealForLead(id, teamspaceId);
