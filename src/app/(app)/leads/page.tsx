@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo, Suspense, useTransition, useEffect } from 'react';
+import { useState, useMemo, Suspense, useTransition } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -41,19 +42,7 @@ export default function LeadsPage() {
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [isReclaiming, startReclaim] = useTransition();
 
-  const isExecutive = currentUser?.role === 'sales_executive';
-
-  // ROLE-BASED FILTER LOCK: Executives only see 'new' leads
-  useEffect(() => {
-    if (isExecutive && statusFilter !== 'new') {
-      setStatusFilter('new');
-    }
-  }, [isExecutive, statusFilter]);
-
-  const activeStatusFilters = useMemo(() => {
-    if (isExecutive) return ['new'] as (LeadStatus | 'all')[];
-    return ALL_STATUS_FILTERS;
-  }, [isExecutive]);
+  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
@@ -63,15 +52,12 @@ export default function LeadsPage() {
       ? query(leadsRef) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
 
-    // Force 'new' for executives regardless of UI state
-    const effectiveStatus = isExecutive ? 'new' : statusFilter;
-
-    if (effectiveStatus !== 'all') {
-      q = query(q, where('status', '==', effectiveStatus));
+    if (statusFilter !== 'all') {
+      q = query(q, where('status', '==', statusFilter));
     }
     
     return q;
-  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, statusFilter, isExecutive]);
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, statusFilter]);
 
   const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
@@ -175,7 +161,7 @@ export default function LeadsPage() {
       const assignedNames = lead.assignedToIds?.map(id => users?.find(u => u.id === id)?.displayName).filter(Boolean).join('; ') || 'Unassigned';
       const productNames = lead.productAsked?.map(id => products?.find(p => p.id === id)?.name).filter(Boolean).join('; ') || 'None';
       
-      const escape = (val: string | undefined | null) => `"${(val || '').toString().replace(/"/g, '""')}"`;
+      const escape = (val: any) => `"${(val || '').toString().replace(/"/g, '""')}"`;
 
       return [
         escape(lead.fullName),
@@ -205,8 +191,6 @@ export default function LeadsPage() {
       description: `${dataToExport.length} prospects prepared for Google Sheets integration.` 
     });
   };
-
-  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   return (
     <div className="space-y-8 pb-16 pt-4">
@@ -250,7 +234,7 @@ export default function LeadsPage() {
             <div className="flex items-center gap-3">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <div className="flex gap-2">
-                    {activeStatusFilters.map((f) => (
+                    {ALL_STATUS_FILTERS.map((f) => (
                         <Badge 
                             key={f} 
                             onClick={() => setStatusFilter(f)}
