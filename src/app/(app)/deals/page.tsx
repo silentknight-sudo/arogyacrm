@@ -33,13 +33,18 @@ export default function SalesPipelinePage() {
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [selectedDeals, setSelectedDeals] = useState<Deal[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ROLE PROTECTION: Executives are restricted from the Sales Pipeline
   useEffect(() => {
-    if (!isUserLoading && currentUser?.role === 'sales_executive') {
+    if (mounted && !isUserLoading && currentUser?.role === 'sales_executive') {
       router.replace('/dashboard');
     }
-  }, [currentUser, isUserLoading, router]);
+  }, [currentUser, isUserLoading, router, mounted]);
 
   /**
    * HIERARCHICAL QUERY:
@@ -128,7 +133,7 @@ export default function SalesPipelinePage() {
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
-  const loading = isUserLoading || isLoadingDeals || isLoadingUsers || isLoadingContacts || isLoadingProducts || isLoadingLeads;
+  const loading = isUserLoading || isLoadingDeals || isLoadingUsers || isLoadingContacts || isLoadingProducts || isLoadingLeads || !mounted;
 
   const handleSelectionChange = (stage: DealStage, stageDeals: Deal[]) => {
     setSelectedDeals(prev => {
@@ -168,7 +173,7 @@ export default function SalesPipelinePage() {
 
   const canManageBulk = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
-  if (!isUserLoading && currentUser?.role === 'sales_executive') return null;
+  if (!mounted || (currentUser?.role === 'sales_executive')) return null;
 
   return (
     <div className="space-y-8 pb-16 pt-4">

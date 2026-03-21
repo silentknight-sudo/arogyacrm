@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MainSidebar } from '@/components/main-sidebar';
 import { MainHeader } from '@/components/main-header';
@@ -16,19 +16,21 @@ export default function AppLayout({
 }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isUserLoading && !user) {
       router.replace('/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, mounted]);
 
-  // To prevent the "Rendered more hooks" error, we must always render the
-  // children components to maintain a consistent component structure across renders.
-  // The `useEffect` above will handle redirecting unauthenticated users.
-  // While the user state is loading, the children components will receive
-  // `isUserLoading: true` from the `useApp` context and will correctly
-  // render their own loading states (e.g., skeletons), preventing a crash.
+  // Prevent context violations during SSR and initial hydration
+  if (!mounted) return null;
+
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[256px_1fr]">
       <LeadAlertListener />

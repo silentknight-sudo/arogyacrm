@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, Suspense, useTransition } from 'react';
+import { useState, useMemo, Suspense, useTransition, useEffect } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -27,8 +27,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export const dynamic = 'force-dynamic';
-
 const ALL_STATUS_FILTERS: (LeadStatus | 'all')[] = ['all', 'new', 'pending', 'busy', 'done', 'canceled'];
 
 export default function LeadsPage() {
@@ -41,6 +39,11 @@ export default function LeadsPage() {
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [isReclaiming, startReclaim] = useTransition();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
   
@@ -96,7 +99,7 @@ export default function LeadsPage() {
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
-  const loading = isUserLoading || isLoadingLeads || isLoadingUsers || isLoadingProducts;
+  const loading = isUserLoading || isLoadingLeads || isLoadingUsers || isLoadingProducts || !mounted;
 
   const handleSelectNLeads = () => {
     if (!leads || !selectCount) return;
@@ -195,6 +198,8 @@ export default function LeadsPage() {
       description: `${dataToExport.length} prospects prepared for Google Sheets integration.` 
     });
   };
+
+  if (!mounted) return null;
 
   return (
     <div className="space-y-8 pb-16 pt-4">
