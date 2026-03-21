@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, onSnapshot, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, limit, orderBy, Timestamp } from 'firebase/firestore';
 import { X, BellRing } from 'lucide-react';
 
 export function LeadAlertListener() {
@@ -12,10 +12,13 @@ export function LeadAlertListener() {
   const [activeAlert, setActiveAlert] = useState<string | null>(null);
   const notifiedIds = useRef<Set<string>>(new Set());
   
-  const sessionStartTime = useRef(Date.now() - 5000);
+  // sessionStartTime ensures we don't alert for historical data on initial load.
+  // Using a 10-second buffer to handle potential client/server clock drift.
+  const sessionStartTime = useRef(Date.now() - 10000);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    // Initialize notification sound
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     audioRef.current.volume = 0.5;
   }, []);
@@ -25,31 +28,46 @@ export function LeadAlertListener() {
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
+    // We order by updatedAt to catch both new creations and reassignment updates.
+    // Reassigned leads will move to the top of this query result.
     const q = query(
       leadsRef, 
       where('assignedToIds', 'array-contains', currentUser.id),
-      orderBy('createdAt', 'desc'),
+      orderBy('updatedAt', 'desc'),
       limit(10)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      // Skip updates triggered by local user actions to prevent duplicate alerts
       if (snapshot.metadata.hasPendingWrites) return;
 
       snapshot.docChanges().forEach((change) => {
+        // In Firestore, 'added' means the document newly matches the query filters.
+        // This is perfect for detecting when a lead is newly assigned to the user.
         if (change.type === 'added') {
           const data = change.doc.data();
           const id = change.doc.id;
           
-          const createdAtMillis = data.createdAt?.toMillis 
-            ? data.createdAt.toMillis() 
-            : data.createdAt ? new Date(data.createdAt).getTime() : 0;
-          
-          if (createdAtMillis > sessionStartTime.current && !notifiedIds.current.has(id)) {
+          // Determine the most accurate timestamp available
+          let timestampMillis = 0;
+          if (data.updatedAt instanceof Timestamp) {
+            timestampMillis = data.updatedAt.toMillis();
+          } else if (data.updatedAt) {
+            timestampMillis = new Date(data.updatedAt).getTime();
+          } else if (data.createdAt instanceof Timestamp) {
+            timestampMillis = data.createdAt.toMillis();
+          } else if (data.createdAt) {
+            timestampMillis = new Date(data.createdAt).getTime();
+          }
+
+          // Trigger alert if the assignment happened during this session
+          if (timestampMillis > sessionStartTime.current && !notifiedIds.current.has(id)) {
             notifiedIds.current.add(id);
+            
             const alertMsg = `Strategic Priority: New Prospect Assigned - ${data.fullName}`;
             setActiveAlert(alertMsg);
             
-            // Add to persistent notification system
+            // Log to global header notification list
             addNotification({
               title: 'New Prospect Assigned',
               description: `You have been assigned to ${data.fullName}. Take strategic action now.`,
@@ -57,17 +75,19 @@ export function LeadAlertListener() {
               link: '/leads'
             });
             
-            audioRef.current?.play().catch(() => {});
+            // Audio-visual execution
+            audioRef.current?.play().catch((err) => console.warn('Notification audio blocked:', err));
             
             const timer = setTimeout(() => {
               setActiveAlert(null);
-            }, 10000);
+            }, 8000);
             
             return () => clearTimeout(timer);
           }
         }
       });
     }, (error) => {
+        // Log errors except for expected transient permission denials during auth transitions
         if (error.code !== 'permission-denied') {
             console.error("ALERT_ENGINE_ERROR:", error);
         }
