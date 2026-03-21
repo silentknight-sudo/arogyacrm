@@ -25,22 +25,18 @@ import { Badge } from '@/components/ui/badge';
 
 const statuses: LeadStatus[] = ['new', 'pending', 'busy', 'done', 'canceled'];
 
-/**
- * STRATEGIC GOOGLE FORM PRE-FILL
- * Note: Replace entry.IDs with actual IDs from your form "Get pre-filled link" tool.
- */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform';
   const params = new URLSearchParams();
   
-  params.append('entry.1000001', currentUser?.displayName || 'Specialist'); // Sales Person Name
-  params.append('entry.1000002', lead.fullName || '');                      // Name
-  params.append('entry.1000003', lead.email || '');                         // Email
-  params.append('entry.1000004', lead.demographicData?.country || 'India'); // Address
-  params.append('entry.1000005', lead.phone || '');                         // Phone number
-  params.append('entry.1000006', 'Automatic feedback session');             // Response
-  params.append('entry.1000007', lead.productAsked?.join(', ') || 'N/A');   // Product details
-  params.append('entry.1000008', lead.status || 'new');                     // Deal Status
+  params.append('entry.1000001', currentUser?.displayName || 'Specialist');
+  params.append('entry.1000002', lead.fullName || '');
+  params.append('entry.1000003', lead.email || '');
+  params.append('entry.1000004', lead.demographicData?.country || 'India');
+  params.append('entry.1000005', lead.phone || '');
+  params.append('entry.1000006', 'Automatic feedback session');
+  params.append('entry.1000007', lead.productAsked?.join(', ') || 'N/A');
+  params.append('entry.1000008', lead.status || 'new');
   
   return `${baseUrl}?usp=pp_url&${params.toString()}`;
 };
