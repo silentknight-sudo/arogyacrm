@@ -55,6 +55,10 @@ service cloud.firestore {
       );
       
       allow write: if isAdmin();
+
+      match /notifications/{notificationId} {
+        allow read, write: if isSignedIn() && userId == request.auth.uid;
+      }
     }
 
     match /products/{productId} {
@@ -81,10 +85,6 @@ service cloud.firestore {
       }
 
       match /deals/{dealId} {
-        // HIERARCHICAL VISIBILITY:
-        // Admin: Read everything (via collection group or member check)
-        // Team Lead: Read if they are the teamLeadId
-        // Executive: Read if they are the ownerId
         allow read: if isMember(teamspaceId) && (
           isAdmin() || 
           resource.data.teamLeadId == request.auth.uid || 

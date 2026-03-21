@@ -1,10 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { UserProfile, Teamspace, Notification } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, query, getDoc } from 'firebase/firestore';
+import { doc, collection, query, getDoc, orderBy, limit, addDoc, getDocs, writeBatch } from 'firebase/firestore';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -40,7 +40,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [availableTeamspaces, setAvailableTeamspaces] = useState<Teamspace[]>([]);
   const [areTeamspacesLoading, setAreTeamspacesLoading] = useState(true);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // NOTIFICATION PERSISTENCE: Subscribe to Firestore subcollection
+  const notificationsQuery = useMemoFirebase(() =>
+    currentUser ? query(
+      collection(firestore, 'users', currentUser.id, 'notifications'),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    ) : null
+  , [firestore, currentUser]);
+  
+  const { data: notificationsData } = useCollection<Notification>(notificationsQuery);
+  const notifications = useMemo(() => notificationsData || [], [notificationsData]);
+
+  const addNotification = useCallback(async (notif: Omit<Notification, 'id' | 'read' | 'timestamp'>) => {
+    if (!currentUser) return;
+    try {
+      const notifRef = collection(firestore, 'users', currentUser.id, 'notifications');
+      await addDoc(notifRef, {
+        ...notif,
+        read: false,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error("FAILED_TO_ADD_PERSISTENT_NOTIFICATION:", e);
+    }
+  }, [currentUser, firestore]);
+
+  const clearNotifications = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const colRef = collection(firestore, 'users', currentUser.id, 'notifications');
+      const snapshot = await getDocs(query(colRef, limit(100)));
+      const batch = writeBatch(firestore);
+      snapshot.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    } catch (e) {
+      console.error("FAILED_TO_CLEAR_PERSISTENT_NOTIFICATIONS:", e);
+    }
+  }, [currentUser, firestore]);
 
   const adminTeamspacesQuery = useMemoFirebase(() =>
     !isUserLoading && currentUser?.role === 'admin'
@@ -131,24 +169,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setThemeState(theme);
   };
 
-  const addNotification = (notif: Omit<Notification, 'id' | 'read' | 'timestamp'>) => {
-    const newNotif: Notification = {
-      ...notif,
-      id: Math.random().toString(36).substr(2, 9),
-      read: false,
-      timestamp: new Date().toISOString(),
-    };
-    setNotifications(prev => [newNotif, ...prev].slice(0, 50));
-  };
-
-  const clearNotifications = () => {
-    setNotifications([]);
-  };
-
   const logout = async () => {
     setCurrentTeamspaceState(null);
     setAvailableTeamspaces([]);
-    setNotifications([]);
     await auth.signOut();
     router.push('/login');
   };
