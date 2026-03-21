@@ -14,7 +14,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "assignedToIds", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -22,7 +22,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "assignedToIds", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],

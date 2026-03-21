@@ -13,8 +13,8 @@ export function LeadAlertListener() {
   const notifiedIds = useRef<Set<string>>(new Set());
   
   // sessionStartTime ensures we don't alert for historical data on initial load.
-  // Using a 10-second buffer to handle potential client/server clock drift.
-  const sessionStartTime = useRef(Date.now() - 10000);
+  // Using a 30-second buffer to handle potential client/server clock drift more gracefully.
+  const sessionStartTime = useRef(Date.now() - 30000);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -28,68 +28,68 @@ export function LeadAlertListener() {
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // We order by updatedAt to catch both new creations and reassignment updates.
-    // Reassigned leads will move to the top of this query result.
+    // We monitor for any lead where the current user is an assignee.
+    // Ordering by updatedAt ensures that reassigned leads trigger the listener.
     const q = query(
       leadsRef, 
       where('assignedToIds', 'array-contains', currentUser.id),
       orderBy('updatedAt', 'desc'),
-      limit(10)
+      limit(5)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Skip updates triggered by local user actions to prevent duplicate alerts
-      if (snapshot.metadata.hasPendingWrites) return;
-
+      // Process doc changes to detect new assignments or reassignments
       snapshot.docChanges().forEach((change) => {
-        // In Firestore, 'added' means the document newly matches the query filters.
-        // This is perfect for detecting when a lead is newly assigned to the user.
-        if (change.type === 'added') {
+        if (change.type === 'added' || change.type === 'modified') {
           const data = change.doc.data();
           const id = change.doc.id;
           
-          // Determine the most accurate timestamp available
+          // Skip if we've already notified for this specific document update in this session
+          if (notifiedIds.current.has(id)) return;
+
+          // Resolve the best available timestamp
           let timestampMillis = 0;
           if (data.updatedAt instanceof Timestamp) {
             timestampMillis = data.updatedAt.toMillis();
           } else if (data.updatedAt) {
             timestampMillis = new Date(data.updatedAt).getTime();
-          } else if (data.createdAt instanceof Timestamp) {
-            timestampMillis = data.createdAt.toMillis();
-          } else if (data.createdAt) {
-            timestampMillis = new Date(data.createdAt).getTime();
           }
 
-          // Trigger alert if the assignment happened during this session
-          if (timestampMillis > sessionStartTime.current && !notifiedIds.current.has(id)) {
+          // Trigger alert if the update happened recently (during this session)
+          if (timestampMillis > sessionStartTime.current) {
             notifiedIds.current.add(id);
             
             const alertMsg = `Strategic Priority: New Prospect Assigned - ${data.fullName}`;
-            setActiveAlert(alertMsg);
             
-            // Log to global header notification list
+            // LOGIC: Only trigger the visual alert and sound if it's not a local write.
+            // This ensures the RECIPIENT gets the alert, but the ASSIGNER doesn't get 
+            // alerted for their own action.
+            if (!snapshot.metadata.hasPendingWrites) {
+                setActiveAlert(alertMsg);
+                audioRef.current?.play().catch((err) => console.warn('Notification audio blocked:', err));
+                
+                const timer = setTimeout(() => {
+                  setActiveAlert(null);
+                }, 8000);
+                
+                // Cleanup timer on unmount or next change
+                return () => clearTimeout(timer);
+            }
+            
+            // ALWAYS add to the persistent notification panel for record keeping
             addNotification({
               title: 'New Prospect Assigned',
               description: `You have been assigned to ${data.fullName}. Take strategic action now.`,
               type: 'lead_assigned',
               link: '/leads'
             });
-            
-            // Audio-visual execution
-            audioRef.current?.play().catch((err) => console.warn('Notification audio blocked:', err));
-            
-            const timer = setTimeout(() => {
-              setActiveAlert(null);
-            }, 8000);
-            
-            return () => clearTimeout(timer);
           }
         }
       });
     }, (error) => {
-        // Log errors except for expected transient permission denials during auth transitions
+        // Log critical query errors (like missing indexes)
         if (error.code !== 'permission-denied') {
-            console.error("ALERT_ENGINE_ERROR:", error);
+            console.error("CRITICAL_ALERT_ENGINE_ERROR:", error.message);
         }
     });
 
