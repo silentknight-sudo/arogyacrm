@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -5,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { MainSidebar } from '@/components/main-sidebar';
 import { MainHeader } from '@/components/main-header';
 import { useUser } from '@/firebase';
+import { LeadAlertListener } from '@/components/lead-alert-listener';
 
 
 export default function AppLayout({
@@ -29,6 +31,7 @@ export default function AppLayout({
   // render their own loading states (e.g., skeletons), preventing a crash.
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[256px_1fr]">
+      <LeadAlertListener />
       <MainSidebar className="hidden w-64 lg:flex" />
       <div className="flex flex-col">
         <MainHeader />
