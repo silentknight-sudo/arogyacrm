@@ -3,18 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, onSnapshot, limit, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, limit, orderBy } from 'firebase/firestore';
 import { X, BellRing } from 'lucide-react';
 
 export function LeadAlertListener() {
-  const { currentUser, currentTeamspace, addNotification } = useApp();
+  const { currentUser, currentTeamspace } = useApp();
   const firestore = useFirestore();
   const [activeAlert, setActiveAlert] = useState<string | null>(null);
-  const notifiedIds = useRef<Set<string>>(new Set());
-  
-  // sessionStartTime ensures we don't alert for historical data on initial load.
-  // Using a 30-second buffer to handle potential client/server clock drift more gracefully.
-  const sessionStartTime = useRef(Date.now() - 30000);
+  const isInitialLoad = useRef(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -24,77 +20,43 @@ export function LeadAlertListener() {
   }, []);
 
   useEffect(() => {
-    if (!currentUser || !currentTeamspace?.id) return;
+    if (!currentUser) return;
 
-    const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
-    
-    // We monitor for any lead where the current user is an assignee.
-    // Ordering by updatedAt ensures that reassigned leads trigger the listener.
+    // STRATEGIC REFACTOR: Listen to the user's notification collection directly.
+    // This provides a much more reliable delivery mechanism than monitoring the leads collection.
+    const notificationsRef = collection(firestore, 'users', currentUser.id, 'notifications');
     const q = query(
-      leadsRef, 
-      where('assignedToIds', 'array-contains', currentUser.id),
-      orderBy('updatedAt', 'desc'),
-      limit(5)
+      notificationsRef,
+      orderBy('timestamp', 'desc'),
+      limit(1)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Process doc changes to detect new assignments or reassignments
+      // Skip the initial state to prevent alerting for historical data on mount/refresh
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+        return;
+      }
+
       snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added' || change.type === 'modified') {
+        if (change.type === 'added') {
           const data = change.doc.data();
-          const id = change.doc.id;
           
-          // Skip if we've already notified for this specific document update in this session
-          if (notifiedIds.current.has(id)) return;
-
-          // Resolve the best available timestamp
-          let timestampMillis = 0;
-          if (data.updatedAt instanceof Timestamp) {
-            timestampMillis = data.updatedAt.toMillis();
-          } else if (data.updatedAt) {
-            timestampMillis = new Date(data.updatedAt).getTime();
-          }
-
-          // Trigger alert if the update happened recently (during this session)
-          if (timestampMillis > sessionStartTime.current) {
-            notifiedIds.current.add(id);
-            
-            const alertMsg = `Strategic Priority: New Prospect Assigned - ${data.fullName}`;
-            
-            // LOGIC: Only trigger the visual alert and sound if it's not a local write.
-            // This ensures the RECIPIENT gets the alert, but the ASSIGNER doesn't get 
-            // alerted for their own action.
-            if (!snapshot.metadata.hasPendingWrites) {
-                setActiveAlert(alertMsg);
-                audioRef.current?.play().catch((err) => console.warn('Notification audio blocked:', err));
-                
-                const timer = setTimeout(() => {
-                  setActiveAlert(null);
-                }, 8000);
-                
-                // Cleanup timer on unmount or next change
-                return () => clearTimeout(timer);
-            }
-            
-            // ALWAYS add to the persistent notification panel for record keeping
-            addNotification({
-              title: 'New Prospect Assigned',
-              description: `You have been assigned to ${data.fullName}. Take strategic action now.`,
-              type: 'lead_assigned',
-              link: '/leads'
-            });
-          }
+          // Trigger the high-priority visual alert and audio ping
+          setActiveAlert(data.title || 'Strategic Assignment Received');
+          audioRef.current?.play().catch(() => {});
+          
+          const timer = setTimeout(() => {
+            setActiveAlert(null);
+          }, 8000);
+          
+          return () => clearTimeout(timer);
         }
       });
-    }, (error) => {
-        // Log critical query errors (like missing indexes)
-        if (error.code !== 'permission-denied') {
-            console.error("CRITICAL_ALERT_ENGINE_ERROR:", error.message);
-        }
     });
 
     return () => unsubscribe();
-  }, [currentUser, currentTeamspace?.id, firestore, addNotification]);
+  }, [currentUser, firestore]);
 
   if (!activeAlert) return null;
 

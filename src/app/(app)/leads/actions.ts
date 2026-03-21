@@ -214,8 +214,6 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = AssignLeadSchema.parse(values);
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    if (!currentUserDoc.exists) throw new Error('User context not found.');
-    
     const currentUserData = currentUserDoc.data();
     const role = currentUserData?.role;
 
@@ -240,12 +238,26 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     }
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+    const leadDoc = await leadRef.get();
 
     await leadRef.update({
       assignedToIds: newAssignedToIds,
       reassigned: true,
       updatedAt: FieldValue.serverTimestamp(),
     });
+
+    // NOTIFICATION DELIVERY
+    for (const userId of newAssignedToIds) {
+        if (userId === currentUserId) continue;
+        await adminDb.collection('users').doc(userId).collection('notifications').add({
+            title: 'Lead Assigned',
+            description: `A new strategic prospect "${leadDoc.data()?.fullName || 'Prospect'}" has been assigned to your workspace.`,
+            type: 'lead_assigned',
+            timestamp: new Date().toISOString(),
+            read: false,
+            link: '/leads'
+        });
+    }
 
     await syncDealForLead(leadId, teamspaceId);
 
@@ -272,8 +284,6 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = BulkAssignSchema.parse(values);
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    if (!currentUserDoc.exists) throw new Error('Unauthorized session.');
-    
     const currentUserData = currentUserDoc.data();
     const role = currentUserData?.role;
 
@@ -308,6 +318,19 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     });
 
     await batch.commit();
+
+    // CONSOLIDATED NOTIFICATION DELIVERY
+    for (const userId of newAssignedToIds) {
+        if (userId === currentUserId) continue;
+        await adminDb.collection('users').doc(userId).collection('notifications').add({
+            title: 'Bulk Pipeline Delegation',
+            description: `${leadIds.length} strategic prospects have been reassigned to your professional desk by ${currentUserData?.displayName}.`,
+            type: 'lead_assigned',
+            timestamp: new Date().toISOString(),
+            read: false,
+            link: '/leads'
+        });
+    }
 
     for (const id of leadIds) {
       await syncDealForLead(id, teamspaceId);
