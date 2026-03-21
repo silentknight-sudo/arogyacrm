@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { UserProfile, Teamspace } from '@/types';
+import type { UserProfile, Teamspace, Notification } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { doc, collection, query, getDoc } from 'firebase/firestore';
 
@@ -18,6 +18,9 @@ interface AppContextType {
   logout: () => void;
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  notifications: Notification[];
+  addNotification: (notification: Omit<Notification, 'id' | 'read' | 'timestamp'>) => void;
+  clearNotifications: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -33,13 +36,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   , [firestore, authUser]);
   const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  // Combined loading state: only ready when both auth and Firestore profile are settled
   const isUserLoading = isAuthLoading || (!!authUser && isProfileLoading);
 
   const [availableTeamspaces, setAvailableTeamspaces] = useState<Teamspace[]>([]);
   const [areTeamspacesLoading, setAreTeamspacesLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // Admin users can subscribe to all teamspaces in real-time
   const adminTeamspacesQuery = useMemoFirebase(() =>
     !isUserLoading && currentUser?.role === 'admin'
       ? query(collection(firestore, 'teamspaces'))
@@ -54,7 +56,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [adminTeamspaces, isAdminTeamspacesLoading, currentUser?.role, isUserLoading]);
   
-  // Non-admin users fetch their individual teamspaces based on their profile IDs
   useEffect(() => {
     if (!isUserLoading && currentUser && currentUser.role !== 'admin') {
       const teamspaceIds = currentUser.teamspaceIds || [];
@@ -130,10 +131,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setThemeState(theme);
   };
 
+  const addNotification = (notif: Omit<Notification, 'id' | 'read' | 'timestamp'>) => {
+    const newNotif: Notification = {
+      ...notif,
+      id: Math.random().toString(36).substr(2, 9),
+      read: false,
+      timestamp: new Date().toISOString(),
+    };
+    setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
   const logout = async () => {
-    // Clear state before signing out to prevent queries from failing with "auth: null"
     setCurrentTeamspaceState(null);
     setAvailableTeamspaces([]);
+    setNotifications([]);
     await auth.signOut();
     router.push('/login');
   };
@@ -147,7 +162,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     areTeamspacesLoading,
     logout,
     theme,
-    setTheme
+    setTheme,
+    notifications,
+    addNotification,
+    clearNotifications,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

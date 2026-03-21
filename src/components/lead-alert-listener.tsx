@@ -7,17 +7,15 @@ import { collection, query, where, onSnapshot, limit, orderBy } from 'firebase/f
 import { X, BellRing } from 'lucide-react';
 
 export function LeadAlertListener() {
-  const { currentUser, currentTeamspace } = useApp();
+  const { currentUser, currentTeamspace, addNotification } = useApp();
   const firestore = useFirestore();
   const [activeAlert, setActiveAlert] = useState<string | null>(null);
   const notifiedIds = useRef<Set<string>>(new Set());
   
-  // Use a slight buffer (5 seconds) to ensure we don't miss assignments happening during page load
   const sessionStartTime = useRef(Date.now() - 5000);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // High-quality notification sound for enterprise priority
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     audioRef.current.volume = 0.5;
   }, []);
@@ -27,10 +25,6 @@ export function LeadAlertListener() {
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    /**
-     * STRATEGIC QUERY: Real-time monitoring of assignments.
-     * Requires composite index: assignedToIds (ARRAY) + createdAt (DESC)
-     */
     const q = query(
       leadsRef, 
       where('assignedToIds', 'array-contains', currentUser.id),
@@ -39,7 +33,6 @@ export function LeadAlertListener() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Logic only for server-confirmed additions to prevent local write echoes
       if (snapshot.metadata.hasPendingWrites) return;
 
       snapshot.docChanges().forEach((change) => {
@@ -47,22 +40,25 @@ export function LeadAlertListener() {
           const data = change.doc.data();
           const id = change.doc.id;
           
-          // Determine numeric timestamp for robust comparison
           const createdAtMillis = data.createdAt?.toMillis 
             ? data.createdAt.toMillis() 
             : data.createdAt ? new Date(data.createdAt).getTime() : 0;
           
-          // Trigger alert only if lead was created after session start and hasn't been notified yet
           if (createdAtMillis > sessionStartTime.current && !notifiedIds.current.has(id)) {
             notifiedIds.current.add(id);
-            setActiveAlert(`Strategic Priority: New Prospect Assigned - ${data.fullName}`);
+            const alertMsg = `Strategic Priority: New Prospect Assigned - ${data.fullName}`;
+            setActiveAlert(alertMsg);
             
-            // Execute sound notification with silence catch for browser policy handling
-            audioRef.current?.play().catch(() => {
-                // Silent catch: Browser blocked autoplay (standard enterprise behavior)
+            // Add to persistent notification system
+            addNotification({
+              title: 'New Prospect Assigned',
+              description: `You have been assigned to ${data.fullName}. Take strategic action now.`,
+              type: 'lead_assigned',
+              link: '/leads'
             });
             
-            // Auto-dismiss alert after 10 seconds
+            audioRef.current?.play().catch(() => {});
+            
             const timer = setTimeout(() => {
               setActiveAlert(null);
             }, 10000);
@@ -72,14 +68,13 @@ export function LeadAlertListener() {
         }
       });
     }, (error) => {
-        // Suppress standard permission denials during transitionary auth states
         if (error.code !== 'permission-denied') {
             console.error("ALERT_ENGINE_ERROR:", error);
         }
     });
 
     return () => unsubscribe();
-  }, [currentUser, currentTeamspace?.id, firestore]);
+  }, [currentUser, currentTeamspace?.id, firestore, addNotification]);
 
   if (!activeAlert) return null;
 

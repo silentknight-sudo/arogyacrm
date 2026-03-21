@@ -10,6 +10,8 @@ import {
   Settings,
   User,
   Bell,
+  Trash2,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,9 +31,24 @@ import type { Teamspace } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { MainSidebar } from './main-sidebar';
 import { Skeleton } from './ui/skeleton';
+import { formatDistanceToNow } from 'date-fns';
+import { ScrollArea } from './ui/scroll-area';
+import { Badge } from './ui/badge';
 
 export function MainHeader() {
-  const { currentUser, currentTeamspace, setCurrentTeamspace, availableTeamspaces, logout, isUserLoading, areTeamspacesLoading } = useApp();
+  const { 
+    currentUser, 
+    currentTeamspace, 
+    setCurrentTeamspace, 
+    availableTeamspaces, 
+    logout, 
+    isUserLoading, 
+    areTeamspacesLoading,
+    notifications,
+    clearNotifications
+  } = useApp();
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <header className="glass-header h-16 flex items-center gap-4 px-4 md:px-6">
@@ -83,9 +100,64 @@ export function MainHeader() {
           </DropdownMenu>
         )}
 
-        <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-primary">
-          <Bell className="h-5 w-5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-primary relative group">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-destructive rounded-full border-2 border-background animate-pulse" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80 rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+            <div className="bg-primary p-4 text-primary-foreground flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                <span className="font-black text-xs uppercase tracking-widest">Strategic Intel</span>
+              </div>
+              {notifications.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearNotifications} className="h-7 text-[10px] font-black uppercase hover:bg-white/10 text-white/70">
+                  <Trash2 className="h-3 w-3 mr-1" /> Clear
+                </Button>
+              )}
+            </div>
+            <ScrollArea className="h-80">
+              {notifications.length > 0 ? (
+                <div className="p-2 space-y-1">
+                  {notifications.map((n) => (
+                    <DropdownMenuItem key={n.id} className="rounded-xl p-3 focus:bg-muted cursor-default">
+                      <div className="flex flex-col gap-1 w-full">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-xs text-primary leading-tight">{n.title}</span>
+                          <span className="text-[9px] font-medium text-muted-foreground flex items-center gap-1 shrink-0">
+                            <Clock className="h-2 w-2" />
+                            {formatDistanceToNow(new Date(n.timestamp), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">{n.description}</p>
+                        {n.link && (
+                          <Link href={n.link} className="text-[10px] font-black text-primary uppercase tracking-tighter mt-1 hover:underline">
+                            View Details →
+                          </Link>
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center p-12 text-center gap-3">
+                  <div className="p-4 bg-muted/50 rounded-2xl">
+                    <Bell className="h-8 w-8 text-muted-foreground opacity-20" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/40">Quiet Horizon</p>
+                    <p className="text-[10px] text-muted-foreground font-medium italic">No recent pipeline updates detected.</p>
+                  </div>
+                </div>
+              )}
+            </ScrollArea>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

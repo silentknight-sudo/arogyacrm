@@ -307,3 +307,13 @@ export type RawLead = {
   'Source': string;
   [key: string]: any;
 };
+
+export type Notification = {
+  id: string;
+  title: string;
+  description: string;
+  type: 'lead_assigned' | 'system';
+  timestamp: string;
+  read: boolean;
+  link?: string;
+};
