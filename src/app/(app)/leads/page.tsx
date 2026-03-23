@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, Suspense, useTransition, useEffect } from 'react';
@@ -27,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const ALL_STATUS_FILTERS: (LeadStatus | 'all')[] = ['all', 'new', 'pending', 'busy', 'done', 'canceled'];
+const ALL_STATUS_FILTERS: (LeadStatus | 'all')[] = ['all', 'new', 'interested', 'CNP', 'done', 'not interested'];
 
 export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();

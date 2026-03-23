@@ -21,7 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const stages: DealStage[] = ['new', 'pending', 'not connect', 'busy', 'done', 'cancel'];
+const stages: DealStage[] = ['new', 'interested', 'not connect', 'CNP', 'done', 'not interested'];
 
 const StageSelector = ({ deal }: { deal: Deal }) => {
   const { toast } = useToast();

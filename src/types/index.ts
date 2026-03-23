@@ -25,10 +25,10 @@ export type Teamspace = {
 
 export type LeadStatus =
   | 'new'
-  | 'pending'
-  | 'busy'
+  | 'interested'
+  | 'CNP'
   | 'done'
-  | 'canceled'
+  | 'not interested'
   | 'Converted';
 
 export type Lead = {
@@ -60,7 +60,7 @@ export type Lead = {
   updatedAt: any;
 };
 
-export type DealStage = 'new' | 'pending' | 'not connect' | 'busy' | 'done' | 'cancel';
+export type DealStage = 'new' | 'interested' | 'not connect' | 'CNP' | 'done' | 'not interested';
 
 export type Deal = {
   id: string;

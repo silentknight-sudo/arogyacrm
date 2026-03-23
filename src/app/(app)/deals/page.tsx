@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -23,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
 
-const stages: DealStage[] = ['new', 'pending', 'not connect', 'busy', 'done', 'cancel'];
+const stages: DealStage[] = ['new', 'interested', 'not connect', 'CNP', 'done', 'not interested'];
 
 export default function SalesPipelinePage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
@@ -78,11 +77,11 @@ export default function SalesPipelinePage() {
   const stagedData = useMemo(() => {
     const map: Record<DealStage, Deal[]> = {
       new: [],
-      pending: [],
+      interested: [],
       'not connect': [],
-      busy: [],
+      CNP: [],
       done: [],
-      cancel: []
+      'not interested': []
     };
     filteredDeals.forEach(deal => {
       if (map[deal.stage]) map[deal.stage].push(deal);
