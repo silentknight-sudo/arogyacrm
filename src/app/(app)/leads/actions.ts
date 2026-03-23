@@ -1,3 +1,4 @@
+
 'use server';
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
@@ -227,12 +228,16 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     const currentUserData = currentUserDoc.data();
     const role = currentUserData?.role;
 
+    let shouldResetToNew = false;
+
     if (role === 'admin') {
         for (const id of newAssignedToIds) {
             const target = await adminDb.collection('users').doc(id).get();
-            if (target.data()?.role !== 'sales_team_lead') {
+            const targetData = target.data();
+            if (targetData?.role !== 'sales_team_lead') {
                 throw new Error('Administrators can only delegate to verified Team Leaders.');
             }
+            if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }
     } else if (role === 'sales_team_lead') {
         for (const id of newAssignedToIds) {
@@ -242,6 +247,7 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
             if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
                 throw new Error('Team Leaders can only delegate to specialists they have personally onboarded.');
             }
+            if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }
     } else {
         throw new Error('Unauthorized: You do not have delegation privileges.');
@@ -250,11 +256,17 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
     const leadDoc = await leadRef.get();
 
-    await leadRef.update({
+    const updateData: any = {
       assignedToIds: newAssignedToIds,
       reassigned: true,
       updatedAt: FieldValue.serverTimestamp(),
-    });
+    };
+
+    if (shouldResetToNew) {
+      updateData.status = 'new';
+    }
+
+    await leadRef.update(updateData);
 
     // NOTIFICATION DELIVERY: Standardized Alert Message
     for (const userId of newAssignedToIds) {
@@ -296,12 +308,16 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     const currentUserData = currentUserDoc.data();
     const role = currentUserData?.role;
 
+    let shouldResetToNew = false;
+
     if (role === 'admin') {
         for (const id of newAssignedToIds) {
             const target = await adminDb.collection('users').doc(id).get();
-            if (target.data()?.role !== 'sales_team_lead') {
+            const targetData = target.data();
+            if (targetData?.role !== 'sales_team_lead') {
                 throw new Error('Strategic delegation restricted to Team Leaders only.');
             }
+            if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }
     } else if (role === 'sales_team_lead') {
         for (const id of newAssignedToIds) {
@@ -311,6 +327,7 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
             if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
                 throw new Error('You can only delegate prospects to specialists you have onboarded.');
             }
+            if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }
     } else {
         throw new Error('Unauthorized access.');
@@ -319,11 +336,15 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     const batch = adminDb.batch();
     leadIds.forEach((id: string) => {
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
-      batch.update(ref, {
+      const updateData: any = {
         assignedToIds: newAssignedToIds,
         reassigned: true,
         updatedAt: FieldValue.serverTimestamp(),
-      });
+      };
+      if (shouldResetToNew) {
+        updateData.status = 'new';
+      }
+      batch.update(ref, updateData);
     });
 
     await batch.commit();
