@@ -246,7 +246,7 @@ export const columns: ColumnDef<Lead>[] = [
         <span className="font-black text-primary tracking-tight text-sm">
             {row.getValue('fullName')}
         </span>
-        {row.original.reassigned && (
+        {row.original.reassigned && row.original.status !== 'new' && (
           <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20 text-accent-foreground px-1.5 h-4 rounded-md">
             Reassigned
           </Badge>
