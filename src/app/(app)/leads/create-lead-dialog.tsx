@@ -37,7 +37,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Product } from '@/types';
 
-const leadStatuses = ['new', 'interested', 'CNP', 'done', 'not interested'] as const;
+const leadStatuses = ['new', 'intrested', 'CNP', 'done', 'not intrested'] as const;
 const leadSources = ['Website', 'Referral', 'Cold Call', 'Advertisement', 'Social Media', 'Other'];
 
 const formSchema = z.object({
@@ -47,7 +47,7 @@ const formSchema = z.object({
   email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   productAsked: z.array(z.string()).default([]),
   source: z.string().optional(),
-  status: z.enum(['new', 'interested', 'CNP', 'done', 'not interested']),
+  status: z.enum(['new', 'intrested', 'CNP', 'done', 'not intrested']),
   attributionFields: z.string().optional(),
 });
 

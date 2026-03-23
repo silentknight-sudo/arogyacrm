@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
 
-const stages: DealStage[] = ['new', 'interested', 'not connect', 'CNP', 'done', 'not interested'];
+const stages: DealStage[] = ['new', 'intrested', 'not connect', 'CNP', 'done', 'not intrested'];
 
 export default function SalesPipelinePage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
@@ -77,11 +77,11 @@ export default function SalesPipelinePage() {
   const stagedData = useMemo(() => {
     const map: Record<DealStage, Deal[]> = {
       new: [],
-      interested: [],
+      intrested: [],
       'not connect': [],
       CNP: [],
       done: [],
-      'not interested': []
+      'not intrested': []
     };
     filteredDeals.forEach(deal => {
       if (map[deal.stage]) map[deal.stage].push(deal);

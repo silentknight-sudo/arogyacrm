@@ -37,12 +37,12 @@ import { LineItemSchema } from '../inventory/schemas';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, Trash2 } from 'lucide-react';
 
-const dealStages = ['interested', 'not connect', 'CNP', 'done', 'not interested'] as const;
+const dealStages = ['intrested', 'not connect', 'CNP', 'done', 'not intrested'] as const;
 const dealTypes = ['Wellness Package', 'Single Order', 'Subscription', 'Bulk Order', 'Retail'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, 'Deal name must be at least 2 characters.'),
-  stage: z.enum(['interested', 'not connect', 'CNP', 'done', 'not interested']),
+  stage: z.enum(['intrested', 'not connect', 'CNP', 'done', 'not intrested']),
   type: z.string().min(1, 'Deal type is required.'),
   closeDate: z.string().min(1, 'Close date is required.'),
   contactId: z.string().min(1, 'Contact is required.'),
@@ -66,7 +66,7 @@ export function CreateDealDialog({ children, contacts, products, isLoading }: Cr
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      stage: 'interested',
+      stage: 'intrested',
       type: 'Wellness Package',
       closeDate: '',
       lineItems: [],
