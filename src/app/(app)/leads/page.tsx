@@ -59,7 +59,13 @@ export default function LeadsPage() {
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
 
     if (statusFilter !== 'all') {
-      q = query(q, where('status', '==', statusFilter));
+      // STRATEGIC LEGACY BRIDGE: Map new stage names to legacy DB values for visibility
+      const filterValues = [statusFilter];
+      if (statusFilter === 'interested') filterValues.push('pending');
+      if (statusFilter === 'CNP') filterValues.push('busy');
+      if (statusFilter === 'not interested') filterValues.push('not interested', 'cancelled');
+      
+      q = query(q, where('status', 'in', filterValues));
     }
     
     return q;

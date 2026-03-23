@@ -25,6 +25,16 @@ import { Badge } from '@/components/ui/badge';
 
 const statuses: LeadStatus[] = ['new', 'interested', 'CNP', 'done', 'not interested'];
 
+// STRATEGIC NORMALIZATION: Map legacy status strings to current valid enums for UI display
+const normalizeStatus = (status: string): LeadStatus => {
+  const map: Record<string, LeadStatus> = {
+    'pending': 'interested',
+    'busy': 'CNP',
+    'cancelled': 'not interested',
+  };
+  return map[status] || (status as LeadStatus);
+};
+
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform';
   const params = new URLSearchParams();
@@ -80,11 +90,13 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
     });
   };
 
+  const currentStatus = normalizeStatus(lead.status);
+
   return (
     <div className="flex items-center gap-2">
       <Select 
         disabled={isPending} 
-        defaultValue={lead.status} 
+        defaultValue={currentStatus} 
         onValueChange={(v) => handleStatusChange(v as LeadStatus)}
       >
         <SelectTrigger className="h-8 w-[130px] rounded-lg text-[10px] font-black uppercase tracking-widest bg-muted/30 border-none">
@@ -218,6 +230,7 @@ const NameCell = ({ lead }: { lead: Lead }) => {
       <span className="font-black text-primary tracking-tight text-sm">
           {lead.fullName}
       </span>
+      {/* ROLE-BASED VISIBILITY: Only Admins/TLs see the reassignment tag */}
       {lead.reassigned && isAdminOrTL && (
         <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20 text-accent-foreground px-1.5 h-4 rounded-md">
           Reassigned

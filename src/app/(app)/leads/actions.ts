@@ -44,12 +44,15 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
       }
     }
 
-    const stageMap: Record<LeadStatus, DealStage> = {
+    const stageMap: Record<string, DealStage> = {
         'new': 'new',
         'interested': 'interested',
+        'pending': 'interested',
         'CNP': 'CNP',
+        'busy': 'CNP',
         'done': 'done',
         'not interested': 'not interested',
+        'cancelled': 'not interested',
         'Converted': 'done'
     };
 
@@ -125,7 +128,6 @@ export async function createLead(values: z.infer<typeof CreateLeadSchema>) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // Notify the creator of their assignment
     await adminDb.collection('users').doc(data.creatorId).collection('notifications').add({
         title: 'you got 1 new leads',
         description: `New strategic prospect "${data.fullName}" has been added to your queue.`,
@@ -267,7 +269,6 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
 
     await leadRef.update(updateData);
 
-    // NOTIFICATION DELIVERY: Standardized Alert Message
     for (const userId of newAssignedToIds) {
         await adminDb.collection('users').doc(userId).collection('notifications').add({
             title: 'you got 1 new leads',
@@ -348,7 +349,6 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
 
     await batch.commit();
 
-    // CONSOLIDATED NOTIFICATION DELIVERY: Standardized Alert Message
     for (const userId of newAssignedToIds) {
         await adminDb.collection('users').doc(userId).collection('notifications').add({
             title: `you got ${leadIds.length} new leads`,
@@ -405,7 +405,6 @@ export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
 
     await batch.commit();
 
-    // NOTIFICATION FOR SELF-RECLAIM: Standardized Alert Message
     await adminDb.collection('users').doc(currentUserId).collection('notifications').add({
         title: `you got ${leadIds.length} new leads`,
         description: `Successfully reclaimed ${leadIds.length} strategic prospects to your personal desk.`,

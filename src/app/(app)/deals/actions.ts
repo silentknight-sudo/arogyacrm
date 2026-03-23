@@ -25,7 +25,6 @@ export async function createDeal(values: CreateDealInput): Promise<CreateDealRes
     try {
         const validatedInput = CreateDealSchema.parse(values);
 
-        // HIERARCHY INHERITANCE: Resolve the Team Lead ID for the deal
         const ownerDoc = await adminDb.collection('users').doc(validatedInput.ownerId).get();
         const ownerData = ownerDoc.data();
         let teamLeadId = '';
@@ -94,7 +93,6 @@ export async function bulkAssignDeals(values: z.infer<typeof BulkAssignDealsSche
     const currentUserData = currentUserDoc.data();
     const role = currentUserData?.role;
 
-    // VALIDATE HIERARCHY
     if (role === 'admin') {
         const target = await adminDb.collection('users').doc(newOwnerId).get();
         if (target.data()?.role !== 'sales_team_lead' && target.data()?.role !== 'sales_executive') {
