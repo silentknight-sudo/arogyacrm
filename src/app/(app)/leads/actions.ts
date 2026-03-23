@@ -1,4 +1,3 @@
-
 'use server';
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
@@ -234,8 +233,8 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
         for (const id of newAssignedToIds) {
             const target = await adminDb.collection('users').doc(id).get();
             const targetData = target.data();
-            if (targetData?.role !== 'sales_team_lead') {
-                throw new Error('Administrators can only delegate to verified Team Leaders.');
+            if (targetData?.role !== 'sales_team_lead' && targetData?.role !== 'sales_executive') {
+                throw new Error('Administrators can only delegate to verified Team Leaders or Executives.');
             }
             if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }
@@ -314,8 +313,8 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
         for (const id of newAssignedToIds) {
             const target = await adminDb.collection('users').doc(id).get();
             const targetData = target.data();
-            if (targetData?.role !== 'sales_team_lead') {
-                throw new Error('Strategic delegation restricted to Team Leaders only.');
+            if (targetData?.role !== 'sales_team_lead' && targetData?.role !== 'sales_executive') {
+                throw new Error('Strategic delegation restricted to authorized Team Leaders or Executives.');
             }
             if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }

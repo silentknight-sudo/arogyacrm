@@ -53,21 +53,23 @@ const StageSelector = ({ deal }: { deal: Deal }) => {
   };
 
   return (
-    <Select 
-      disabled={isPending} 
-      defaultValue={deal.stage} 
-      onValueChange={(v) => handleStageChange(v as DealStage)}
-    >
-      <SelectTrigger className="h-8 w-[140px] rounded-lg text-[10px] font-black uppercase tracking-widest bg-muted/50 border-none">
-        {isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {stages.map(s => (
-          <SelectItem key={s} value={s} className="text-[10px] font-black uppercase">{s}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex items-center gap-2">
+      <Select 
+        disabled={isPending} 
+        defaultValue={deal.stage} 
+        onValueChange={(v) => handleStageChange(v as DealStage)}
+      >
+        <SelectTrigger className="h-8 w-[140px] rounded-lg text-[10px] font-black uppercase tracking-widest bg-muted/50 border-none">
+          {isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {stages.map(s => (
+            <SelectItem key={s} value={s} className="text-[10px] font-black uppercase">{s}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 

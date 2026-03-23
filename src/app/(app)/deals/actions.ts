@@ -9,7 +9,7 @@ import type { DealStage } from '@/types';
 const CreateDealSchema = z.object({
     name: z.string().min(2, 'Deal name must be at least 2 characters.'),
     amount: z.coerce.number().min(0, 'Amount must be a positive number.'),
-    stage: z.enum(['new', 'interested', 'not interested', 'not connect', 'CNP', 'done']),
+    stage: z.enum(['new', 'interested', 'not connect', 'CNP', 'done', 'not interested']),
     type: z.string().min(1, 'Deal type is required.'),
     closeDate: z.string().min(1, 'Close date is required.'),
     contactId: z.string().min(1, 'Contact is required.'),
@@ -97,8 +97,8 @@ export async function bulkAssignDeals(values: z.infer<typeof BulkAssignDealsSche
     // VALIDATE HIERARCHY
     if (role === 'admin') {
         const target = await adminDb.collection('users').doc(newOwnerId).get();
-        if (target.data()?.role !== 'sales_team_lead') {
-            throw new Error('Administrators can only reassign deals to Team Leaders.');
+        if (target.data()?.role !== 'sales_team_lead' && target.data()?.role !== 'sales_executive') {
+            throw new Error('Administrators can only reassign deals to Team Leaders or Executives.');
         }
     } else if (role === 'sales_team_lead') {
         const target = await adminDb.collection('users').doc(newOwnerId).get();
