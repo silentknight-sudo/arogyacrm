@@ -23,14 +23,17 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 
-const statuses: LeadStatus[] = ['new', 'interested', 'CNP', 'done', 'not interested'];
+const statuses: LeadStatus[] = ['new', 'intrested', 'CNP', 'done', 'not intrested'];
 
 // STRATEGIC NORMALIZATION: Map legacy status strings to current valid enums for UI display
 const normalizeStatus = (status: string): LeadStatus => {
   const map: Record<string, LeadStatus> = {
-    'pending': 'interested',
+    'pending': 'intrested',
+    'interested': 'intrested',
     'busy': 'CNP',
-    'cancelled': 'not interested',
+    'cancelled': 'not intrested',
+    'canceled': 'not intrested',
+    'not interested': 'not intrested',
   };
   return map[status] || (status as LeadStatus);
 };
@@ -231,7 +234,7 @@ const NameCell = ({ lead }: { lead: Lead }) => {
           {lead.fullName}
       </span>
       {/* ROLE-BASED VISIBILITY: Only Admins/TLs see the reassignment tag */}
-      {lead.reassigned && isAdminOrTL && (
+      {lead.reassigned && isAdminOrTL && lead.status !== 'new' && (
         <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20 text-accent-foreground px-1.5 h-4 rounded-md">
           Reassigned
         </Badge>

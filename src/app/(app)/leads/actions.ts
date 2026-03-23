@@ -17,7 +17,7 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
     const leadDoc = await leadRef.get();
     const lead = leadDoc.data() as Lead;
     
-    if (!lead || lead.status === 'not interested') {
+    if (!lead || lead.status === 'not intrested') {
         const dealsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals');
         const existingDealQuery = await dealsRef.where('leadId', '==', leadId).get();
         if (!existingDealQuery.empty) {
@@ -46,13 +46,15 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
 
     const stageMap: Record<string, DealStage> = {
         'new': 'new',
-        'interested': 'interested',
-        'pending': 'interested',
+        'intrested': 'intrested',
+        'pending': 'intrested',
+        'interested': 'intrested',
         'CNP': 'CNP',
         'busy': 'CNP',
         'done': 'done',
-        'not interested': 'not interested',
-        'cancelled': 'not interested',
+        'not intrested': 'not intrested',
+        'cancelled': 'not intrested',
+        'not interested': 'not intrested',
         'Converted': 'done'
     };
 
@@ -61,7 +63,7 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
       name: `Prospect: ${lead.fullName}`,
       ownerId: ownerId,
       teamLeadId: teamLeadId,
-      stage: stageMap[lead.status] || 'interested',
+      stage: stageMap[lead.status] || 'intrested',
       type: 'Automated Revenue Flow',
       closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -108,7 +110,7 @@ const CreateLeadSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   productAsked: z.array(z.string()).default([]),
   source: z.string().optional(),
-  status: z.enum(['new', 'interested', 'CNP', 'done', 'not interested']),
+  status: z.enum(['new', 'intrested', 'CNP', 'done', 'not intrested']),
   attributionFields: z.string().optional(),
   teamspaceId: z.string().min(1),
   creatorId: z.string().min(1),

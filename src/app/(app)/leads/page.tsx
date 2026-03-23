@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const ALL_STATUS_FILTERS: (LeadStatus | 'all')[] = ['all', 'new', 'interested', 'CNP', 'done', 'not interested'];
+const ALL_STATUS_FILTERS: (LeadStatus | 'all')[] = ['all', 'new', 'intrested', 'CNP', 'done', 'not intrested'];
 
 export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
@@ -60,10 +60,10 @@ export default function LeadsPage() {
 
     if (statusFilter !== 'all') {
       // STRATEGIC LEGACY BRIDGE: Map new stage names to legacy DB values for visibility
-      const filterValues = [statusFilter];
-      if (statusFilter === 'interested') filterValues.push('pending');
+      const filterValues: string[] = [statusFilter as string];
+      if (statusFilter === 'intrested') filterValues.push('pending', 'interested');
       if (statusFilter === 'CNP') filterValues.push('busy');
-      if (statusFilter === 'not interested') filterValues.push('not interested', 'cancelled');
+      if (statusFilter === 'not intrested') filterValues.push('cancelled', 'canceled', 'not interested');
       
       q = query(q, where('status', 'in', filterValues));
     }
