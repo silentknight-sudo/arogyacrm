@@ -39,7 +39,7 @@ const normalizeStatus = (status: string): LeadStatus => {
 };
 
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
-  const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdSr_uTvx08v3rl2DE8fBOiL9nUCpuQpgiwc0Rsq48yfgDK0Q/viewform';
+  const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
   const params = new URLSearchParams();
   
   params.append('entry.1000001', currentUser?.displayName || 'Specialist');
