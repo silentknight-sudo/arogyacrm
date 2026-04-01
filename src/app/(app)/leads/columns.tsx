@@ -98,8 +98,9 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
   return (
     <div className="flex items-center gap-2">
       <Select 
+        key={lead.id}
         disabled={isPending} 
-        defaultValue={currentStatus} 
+        value={currentStatus} 
         onValueChange={(v) => handleStatusChange(v as LeadStatus)}
       >
         <SelectTrigger className="h-8 w-[130px] rounded-lg text-[10px] font-black uppercase tracking-widest bg-muted/30 border-none">

@@ -55,8 +55,9 @@ const StageSelector = ({ deal }: { deal: Deal }) => {
   return (
     <div className="flex items-center gap-2">
       <Select 
+        key={deal.id}
         disabled={isPending} 
-        defaultValue={deal.stage} 
+        value={deal.stage} 
         onValueChange={(v) => handleStageChange(v as DealStage)}
       >
         <SelectTrigger className="h-8 w-[140px] rounded-lg text-[10px] font-black uppercase tracking-widest bg-muted/50 border-none">
