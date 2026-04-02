@@ -39,10 +39,10 @@ const normalizeStatus = (status: string): LeadStatus => {
 
 /**
  * STRATEGIC FEEDBACK ENGINE
- * Generates a pre-filled Google Form URL based on current lead details.
+ * Generates a pre-filled Google Form URL based on lead details.
  * 
- * TODO: REPLACE THE entry.XXXXX PLACEHOLDERS WITH THE REAL IDs FROM YOUR GOOGLE FORM
- * (See instructions in the chat response)
+ * NOTE: The 'entry.ID' parameters are placeholders. To finalize, 
+ * you must find the actual field IDs from your form's "Get pre-filled link".
  */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, products: Product[]) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
@@ -50,15 +50,15 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   
   params.append('usp', 'pp_url');
 
-  // MAPPING TABLE (Replace IDs below)
-  params.append('entry.SALE_PERSON_ID', currentUser?.displayName || 'Sales Specialist'); 
-  params.append('entry.CUSTOMER_NAME_ID', lead.fullName || '');
-  params.append('entry.PHONE_NO_ID', lead.phone || '');
-  params.append('entry.MAIL_ID', lead.email || '');
-  params.append('entry.ADDRESS_ID', lead.demographicData?.country || 'N/A');
-  params.append('entry.REPONSE_ID', normalizeStatus(lead.status));
+  // AUTOMATED MAPPING (Placeholders - please swap with real IDs)
+  params.append('entry.SALE_PERSON', currentUser?.displayName || 'Sales Specialist'); 
+  params.append('entry.CUSTOMER_NAME', lead.fullName || '');
+  params.append('entry.PHONE_NO', lead.phone || '');
+  params.append('entry.MAIL', lead.email || '');
+  params.append('entry.ADDRESS', lead.demographicData?.country || 'N/A');
+  params.append('entry.REPONSE', normalizeStatus(lead.status));
   
-  // PRODUCT DETECTOR
+  // PRODUCT SELECTION LOGIC
   const selectedProductNames = (lead.productAsked || [])
     .map(id => products.find(p => p.id === id)?.name || '')
     .join(', ');
@@ -72,9 +72,9 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   else if (hasOil) productChoice = 'Gouthealth Oil';
   else productChoice = selectedProductNames || 'N/A';
 
-  params.append('entry.PODUCT_ID', productChoice); 
-  params.append('entry.DEAL_ID', 'Automated Handoff');
-  params.append('entry.PRICE_ID', '0');
+  params.append('entry.PODUCT', productChoice); 
+  params.append('entry.DEAL', 'Automated Revenue Flow');
+  params.append('entry.PRICE', '0');
   
   return `${baseUrl}?${params.toString()}`;
 };
