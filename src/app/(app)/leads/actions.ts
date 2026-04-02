@@ -240,6 +240,7 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
             if (targetData?.role !== 'sales_team_lead' && targetData?.role !== 'sales_executive') {
                 throw new Error('Administrators can only delegate to verified Team Leaders or Executives.');
             }
+            // AUTOMATED RESET: If target is SE, set status to new
             if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }
     } else if (role === 'sales_team_lead') {
@@ -250,6 +251,7 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
             if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
                 throw new Error('Team Leaders can only delegate to specialists they have personally onboarded.');
             }
+            // AUTOMATED RESET: If target is SE, set status to new
             if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }
     } else {

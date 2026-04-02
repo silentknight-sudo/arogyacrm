@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useTransition } from 'react';
@@ -41,25 +40,25 @@ const normalizeStatus = (status: string): LeadStatus => {
 /**
  * STRATEGIC FEEDBACK ENGINE
  * Generates a pre-filled Google Form URL based on current lead details.
+ * 
+ * TODO: REPLACE THE entry.XXXXX PLACEHOLDERS WITH THE REAL IDs FROM YOUR GOOGLE FORM
+ * (See instructions in the chat response)
  */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, products: Product[]) => {
-  // Base URL provided by user
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
   const params = new URLSearchParams();
   
-  // PRE-FILL MODE
   params.append('usp', 'pp_url');
 
-  // STRATEGIC MAPPING: Use actual entry IDs from the Google Form. 
-  // (Note: These IDs must be verified via Google Form's "Get pre-filled link")
-  params.append('entry.1000001', currentUser?.displayName || 'Sales Specialist'); // Sale Person
-  params.append('entry.1000002', lead.fullName || ''); // Customer Name
-  params.append('entry.1000005', lead.phone || ''); // Phone No.
-  params.append('entry.1000003', lead.email || ''); // Mail
-  params.append('entry.1000004', lead.demographicData?.country || 'N/A'); // Address
-  params.append('entry.1000008', normalizeStatus(lead.status)); // Reponse
+  // MAPPING TABLE (Replace IDs below)
+  params.append('entry.SALE_PERSON_ID', currentUser?.displayName || 'Sales Specialist'); 
+  params.append('entry.CUSTOMER_NAME_ID', lead.fullName || '');
+  params.append('entry.PHONE_NO_ID', lead.phone || '');
+  params.append('entry.MAIL_ID', lead.email || '');
+  params.append('entry.ADDRESS_ID', lead.demographicData?.country || 'N/A');
+  params.append('entry.REPONSE_ID', normalizeStatus(lead.status));
   
-  // PODUCT MAPPING: Detect Gouthealth choices
+  // PRODUCT DETECTOR
   const selectedProductNames = (lead.productAsked || [])
     .map(id => products.find(p => p.id === id)?.name || '')
     .join(', ');
@@ -73,11 +72,9 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   else if (hasOil) productChoice = 'Gouthealth Oil';
   else productChoice = selectedProductNames || 'N/A';
 
-  params.append('entry.1000007', productChoice); // Poduct
-  
-  // PLACEHOLDERS for Deal and Price (Usually filled after closing)
-  params.append('entry.1000009', 'N/A'); // Deal
-  params.append('entry.1000010', '0'); // Price
+  params.append('entry.PODUCT_ID', productChoice); 
+  params.append('entry.DEAL_ID', 'Automated Handoff');
+  params.append('entry.PRICE_ID', '0');
   
   return `${baseUrl}?${params.toString()}`;
 };
@@ -255,14 +252,15 @@ const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], use
 
 const NameCell = ({ lead }: { lead: Lead }) => {
   const { currentUser } = useApp();
-  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  // EXECUTIVE PRIVACY: Hide reassigned tag from SEs
+  const isManagement = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   return (
     <div className="flex flex-col gap-1">
       <span className="font-black text-primary tracking-tight text-sm">
           {lead.fullName}
       </span>
-      {lead.reassigned && isAdminOrTL && lead.status !== 'new' && (
+      {lead.reassigned && isManagement && lead.status !== 'new' && (
         <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20 text-accent-foreground px-1.5 h-4 rounded-md">
           Reassigned
         </Badge>
