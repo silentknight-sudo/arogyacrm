@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -59,7 +60,8 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
-    // PREVENT PAGINATION RESET ON DATA UPDATES
+    // CRITICAL: Bind row IDs to unique entity IDs to prevent state leakage
+    getRowId: (row: any) => row.id,
     autoResetPageIndex: false,
     state: {
       sorting,

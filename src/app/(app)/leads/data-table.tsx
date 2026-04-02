@@ -58,6 +58,8 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
+    // CRITICAL: Bind row IDs to Lead/Deal IDs to prevent state leakage between adjacent rows
+    getRowId: (row: any) => row.id,
     autoResetPageIndex: false,
     state: {
       sorting,
@@ -92,7 +94,7 @@ export function DataTable<TData, TValue>({
         if (JSON.stringify(externalIds) !== JSON.stringify(internalIds)) {
             const newSelection: Record<string, boolean> = {};
             table.getRowModel().rows.forEach(row => {
-                if (externalIds.includes((row.original as Lead).id)) {
+                if (externalIds.includes((row.original as any).id)) {
                     newSelection[row.id] = true;
                 }
             });

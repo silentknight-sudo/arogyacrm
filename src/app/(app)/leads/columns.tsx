@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useTransition } from 'react';
@@ -34,37 +35,54 @@ const normalizeStatus = (status: string): LeadStatus => {
     'canceled': 'not intrested',
     'not interested': 'not intrested',
   };
-  return map[status] || (status as LeadStatus);
+  return map[status.toLowerCase()] || (status as LeadStatus);
 };
 
 /**
  * STRATEGIC FEEDBACK ENGINE
- * Maps CRM Lead fields to Google Form Entry IDs for zero-touch feedback loops.
+ * Generates a pre-filled Google Form URL based on current lead details.
  */
-const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
+const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, products: Product[]) => {
+  // Base URL provided by user
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
   const params = new URLSearchParams();
   
-  // CONFIGURATION: These entry IDs should be verified by generating a "Pre-filled Link" in your Google Form settings.
+  // PRE-FILL MODE
+  params.append('usp', 'pp_url');
+
+  // STRATEGIC MAPPING: Use actual entry IDs from the Google Form. 
+  // (Note: These IDs must be verified via Google Form's "Get pre-filled link")
   params.append('entry.1000001', currentUser?.displayName || 'Sales Specialist'); // Sale Person
   params.append('entry.1000002', lead.fullName || ''); // Customer Name
   params.append('entry.1000005', lead.phone || ''); // Phone No.
   params.append('entry.1000003', lead.email || ''); // Mail
-  params.append('entry.1000004', lead.demographicData?.country || 'India'); // Address
+  params.append('entry.1000004', lead.demographicData?.country || 'N/A'); // Address
   params.append('entry.1000008', normalizeStatus(lead.status)); // Reponse
   
-  // Product Logic
-  const productString = lead.productAsked?.join(', ') || 'N/A';
-  params.append('entry.1000007', productString); // Poduct
+  // PODUCT MAPPING: Detect Gouthealth choices
+  const selectedProductNames = (lead.productAsked || [])
+    .map(id => products.find(p => p.id === id)?.name || '')
+    .join(', ');
+
+  let productChoice = 'Both'; 
+  const hasCapsules = selectedProductNames.toLowerCase().includes('capsule');
+  const hasOil = selectedProductNames.toLowerCase().includes('oil');
   
-  // Placeholder for Deal and Price
-  params.append('entry.1000009', 'Pending'); // Deal
+  if (hasCapsules && hasOil) productChoice = 'Both';
+  else if (hasCapsules) productChoice = 'Gouthealth Capsules';
+  else if (hasOil) productChoice = 'Gouthealth Oil';
+  else productChoice = selectedProductNames || 'N/A';
+
+  params.append('entry.1000007', productChoice); // Poduct
+  
+  // PLACEHOLDERS for Deal and Price (Usually filled after closing)
+  params.append('entry.1000009', 'N/A'); // Deal
   params.append('entry.1000010', '0'); // Price
   
-  return `${baseUrl}?usp=pp_url&${params.toString()}`;
+  return `${baseUrl}?${params.toString()}`;
 };
 
-const StatusSelector = ({ lead }: { lead: Lead }) => {
+const StatusSelector = ({ lead, products }: { lead: Lead, products: Product[] }) => {
   const { toast } = useToast();
   const { currentTeamspace, currentUser } = useApp();
   const [isPending, startTransition] = useTransition();
@@ -85,7 +103,7 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
             <div className="flex flex-col gap-3 pt-2">
               <p className="font-medium">Lead transitioned to "{newStatus}".</p>
               <Button variant="default" size="sm" asChild className="herbal-gradient w-fit rounded-xl font-bold shadow-lg">
-                <a href={getPrefilledGoogleFormUrl(lead, currentUser)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href={getPrefilledGoogleFormUrl(lead, currentUser, products)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <ClipboardList className="h-4 w-4" />
                   Fill Feedback Form
                 </a>
@@ -126,7 +144,7 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-full" asChild>
-            <a href={getPrefilledGoogleFormUrl(lead, currentUser)} target="_blank" rel="noopener noreferrer">
+            <a href={getPrefilledGoogleFormUrl(lead, currentUser, products)} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
             </a>
           </Button>
@@ -327,6 +345,9 @@ export const columns: ColumnDef<Lead>[] = [
   {
     accessorKey: 'status',
     header: () => <div className="font-black uppercase tracking-widest text-[10px]">Stage</div>,
-    cell: ({ row }) => <StatusSelector lead={row.original} />,
+    cell: ({ row, table }) => {
+        const products = (table.options.meta as any)?.products || [];
+        return <StatusSelector lead={row.original} products={products} />;
+    }
   },
 ];
