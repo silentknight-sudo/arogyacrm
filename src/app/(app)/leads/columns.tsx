@@ -25,7 +25,6 @@ import { Badge } from '@/components/ui/badge';
 
 const statuses: LeadStatus[] = ['new', 'intrested', 'CNP', 'done', 'not intrested'];
 
-// STRATEGIC NORMALIZATION: Map legacy status strings to current valid enums for UI display
 const normalizeStatus = (status: string): LeadStatus => {
   const map: Record<string, LeadStatus> = {
     'pending': 'intrested',
@@ -38,18 +37,29 @@ const normalizeStatus = (status: string): LeadStatus => {
   return map[status] || (status as LeadStatus);
 };
 
+/**
+ * STRATEGIC FEEDBACK ENGINE
+ * Maps CRM Lead fields to Google Form Entry IDs for zero-touch feedback loops.
+ */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
   const params = new URLSearchParams();
   
-  params.append('entry.1000001', currentUser?.displayName || 'Specialist');
-  params.append('entry.1000002', lead.fullName || '');
-  params.append('entry.1000003', lead.email || '');
-  params.append('entry.1000004', lead.demographicData?.country || 'India');
-  params.append('entry.1000005', lead.phone || '');
-  params.append('entry.1000006', 'Automatic feedback session');
-  params.append('entry.1000007', lead.productAsked?.join(', ') || 'N/A');
-  params.append('entry.1000008', lead.status || 'new');
+  // CONFIGURATION: These entry IDs should be verified by generating a "Pre-filled Link" in your Google Form settings.
+  params.append('entry.1000001', currentUser?.displayName || 'Sales Specialist'); // Sale Person
+  params.append('entry.1000002', lead.fullName || ''); // Customer Name
+  params.append('entry.1000005', lead.phone || ''); // Phone No.
+  params.append('entry.1000003', lead.email || ''); // Mail
+  params.append('entry.1000004', lead.demographicData?.country || 'India'); // Address
+  params.append('entry.1000008', normalizeStatus(lead.status)); // Reponse
+  
+  // Product Logic
+  const productString = lead.productAsked?.join(', ') || 'N/A';
+  params.append('entry.1000007', productString); // Poduct
+  
+  // Placeholder for Deal and Price
+  params.append('entry.1000009', 'Pending'); // Deal
+  params.append('entry.1000010', '0'); // Price
   
   return `${baseUrl}?usp=pp_url&${params.toString()}`;
 };
@@ -234,7 +244,6 @@ const NameCell = ({ lead }: { lead: Lead }) => {
       <span className="font-black text-primary tracking-tight text-sm">
           {lead.fullName}
       </span>
-      {/* ROLE-BASED VISIBILITY: Only Admins/TLs see the reassignment tag */}
       {lead.reassigned && isAdminOrTL && lead.status !== 'new' && (
         <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20 text-accent-foreground px-1.5 h-4 rounded-md">
           Reassigned
