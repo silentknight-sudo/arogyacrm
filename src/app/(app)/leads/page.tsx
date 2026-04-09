@@ -10,7 +10,7 @@ import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download } from 'lucide-react';
+import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download, Sparkles } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -26,13 +26,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const ALL_STATUS_FILTERS: (LeadStatus | 'all')[] = ['all', 'new', 'intrested', 'CNP', 'done', 'not intrested'];
+type FilterType = LeadStatus | 'all' | 'fresh_uploads';
+
+const ALL_FILTERS: FilterType[] = ['all', 'fresh_uploads', 'new', 'intrested', 'CNP', 'done', 'not intrested'];
 
 export default function LeadsPage() {
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
@@ -47,8 +49,8 @@ export default function LeadsPage() {
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
   
   const displayFilters = currentUser?.role === 'sales_executive' 
-    ? (['all', 'new'] as (LeadStatus | 'all')[])
-    : ALL_STATUS_FILTERS;
+    ? (['all', 'new'] as FilterType[])
+    : ALL_FILTERS;
 
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
@@ -58,18 +60,19 @@ export default function LeadsPage() {
       ? query(leadsRef) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
 
-    if (statusFilter !== 'all') {
-      // STRATEGIC LEGACY BRIDGE: Map new stage names to legacy DB values for visibility
-      const filterValues: string[] = [statusFilter as string];
-      if (statusFilter === 'intrested') filterValues.push('pending', 'interested');
-      if (statusFilter === 'CNP') filterValues.push('busy');
-      if (statusFilter === 'not intrested') filterValues.push('cancelled', 'canceled', 'not interested');
+    if (activeFilter === 'fresh_uploads') {
+      q = query(q, where('status', '==', 'new'), where('reassigned', '==', false));
+    } else if (activeFilter !== 'all') {
+      const filterValues: string[] = [activeFilter as string];
+      if (activeFilter === 'intrested') filterValues.push('pending', 'interested');
+      if (activeFilter === 'CNP') filterValues.push('busy');
+      if (activeFilter === 'not intrested') filterValues.push('cancelled', 'canceled', 'not interested');
       
       q = query(q, where('status', 'in', filterValues));
     }
     
     return q;
-  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, statusFilter]);
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, activeFilter]);
 
   const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
@@ -192,7 +195,7 @@ export default function LeadsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `arogya_prospects_${statusFilter}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `arogya_prospects_${activeFilter}_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -247,14 +250,19 @@ export default function LeadsPage() {
         <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-[2.5rem] bg-card border border-primary/5 shadow-xl">
             <div className="flex items-center gap-3">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     {displayFilters.map((f) => (
                         <Badge 
                             key={f} 
-                            onClick={() => setStatusFilter(f)}
-                            className={`cursor-pointer px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none transition-all ${statusFilter === f ? 'bg-primary text-white shadow-lg' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}
+                            onClick={() => setActiveFilter(f)}
+                            className={`cursor-pointer px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}
                         >
-                            {f}
+                            {f === 'fresh_uploads' ? (
+                              <div className="flex items-center gap-1.5">
+                                <Sparkles className="h-3 w-3" />
+                                Fresh Prospects
+                              </div>
+                            ) : f}
                         </Badge>
                     ))}
                 </div>

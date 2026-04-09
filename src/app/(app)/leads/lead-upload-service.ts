@@ -42,6 +42,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
         status: 'new',
         assignedToIds: [assignedToId],
         teamspaceId: teamspaceId,
+        reassigned: false,
         attributionFields: JSON.stringify({
             'campaign': rawLead['campaign_name'],
             'ad': rawLead['ad_name'],

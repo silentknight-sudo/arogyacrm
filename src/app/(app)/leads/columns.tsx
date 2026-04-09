@@ -41,8 +41,7 @@ const normalizeStatus = (status: string): LeadStatus => {
  * STRATEGIC FEEDBACK ENGINE
  * Generates a pre-filled Google Form URL based on lead details.
  * 
- * NOTE: The 'entry.ID' parameters are placeholders. To finalize, 
- * you must find the actual field IDs from your form's "Get pre-filled link".
+ * NOTE: Replace the Descriptive Keys below with the exact entry.ID from your form.
  */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, products: Product[]) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
@@ -50,7 +49,7 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   
   params.append('usp', 'pp_url');
 
-  // AUTOMATED MAPPING (Placeholders - please swap with real IDs)
+  // AUTOMATED MAPPING (Placeholders - please swap with real entry.IDs from your 'Get pre-filled link')
   params.append('entry.SALE_PERSON', currentUser?.displayName || 'Sales Specialist'); 
   params.append('entry.CUSTOMER_NAME', lead.fullName || '');
   params.append('entry.PHONE_NO', lead.phone || '');
@@ -252,7 +251,6 @@ const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], use
 
 const NameCell = ({ lead }: { lead: Lead }) => {
   const { currentUser } = useApp();
-  // EXECUTIVE PRIVACY: Hide reassigned tag from SEs
   const isManagement = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   return (
