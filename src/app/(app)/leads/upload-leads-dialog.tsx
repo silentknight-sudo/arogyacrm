@@ -67,12 +67,17 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
   const handleUploadAccepted = (results: any) => {
     const header = results.data[0];
     const data = results.data.slice(1);
-    const leads: RawLead[] = data.map((row: string[]) => {
-      const lead: RawLead = { 'Name': '', 'Email address': '', 'Phone': '', 'Source': '' };
+    
+    // Filter out empty rows
+    const validRows = data.filter((row: any) => row.length > 1 && row.some((cell: any) => cell));
+
+    const leads: RawLead[] = validRows.map((row: string[]) => {
+      const lead: any = {};
       header.forEach((key: string, index: number) => {
-        lead[key] = row[index];
+        const cleanKey = key.trim();
+        lead[cleanKey] = row[index];
       });
-      return lead;
+      return lead as RawLead;
     });
     setImportedLeads(leads);
   };
@@ -85,11 +90,11 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Active session required.' });
       return;
     }
     if(importedLeads.length === 0){
-        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a CSV file with leads.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a CSV file with Meta Ads leads.' });
         return;
     }
 
@@ -102,8 +107,8 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
 
       if (result.success) {
         toast({
-          title: 'Leads Imported',
-          description: `${result.count} leads have been successfully imported.`,
+          title: 'Import Successful',
+          description: `${result.count} strategic prospects have been ingested.`,
         });
         setOpen(false);
         form.reset();
@@ -121,25 +126,27 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-4xl rounded-[2.5rem]">
         <DialogHeader>
-          <DialogTitle>Upload and Assign Leads</DialogTitle>
-          <DialogDescription>
-            Upload a CSV file from Meta Ads, review the leads, and assign them to a team member.
+          <DialogTitle className="text-2xl font-black text-primary">Strategic Bulk Ingestion</DialogTitle>
+          <DialogDescription className="font-medium">
+            Upload CSV from Meta Ads Lead Gen. We'll automatically map full_name, email, and platform source.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+            <div className="space-y-6">
                 <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <CSVReader onUploadAccepted={handleUploadAccepted}>
                         {({ getRootProps, acceptedFile, ProgressBar }: any) => (
-                            <div className="space-y-2">
-                                <Label>Upload CSV</Label>
-                                <FileInput {...getRootProps()}>
-                                    {acceptedFile ? acceptedFile.name : 'Click to upload a file'}
+                            <div className="space-y-3">
+                                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Source Data (CSV)</Label>
+                                <FileInput {...getRootProps()} className="bg-muted/20 border-primary/10 hover:bg-muted/30 transition-all h-32">
+                                    {acceptedFile ? (
+                                        <span className="font-bold text-primary">{acceptedFile.name}</span>
+                                    ) : 'Drop Meta Ads export here'}
                                 </FileInput>
-                                <ProgressBar />
+                                <ProgressBar className="bg-primary h-1 rounded-full" />
                             </div>
                         )}
                     </CSVReader>
@@ -149,20 +156,20 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     name="assignedToId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Assign To User</FormLabel>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Target Recipient</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
-                            <SelectTrigger disabled={isLoading}>
-                                <SelectValue placeholder={isLoading ? 'Loading...' : 'Select a user'} />
+                            <SelectTrigger disabled={isLoading} className="rounded-xl h-12 bg-muted/20 border-none">
+                                <SelectValue placeholder={isLoading ? 'Loading hierarchy...' : 'Select wellness specialist'} />
                             </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
+                            <SelectContent className="rounded-xl">
                             {users.length > 0 ? users.map(user => (
                                 <SelectItem key={user.id} value={user.id}>
                                 {user.displayName} ({user.role.replace(/_/g, ' ')})
                                 </SelectItem>
                             )) : (
-                                <div className="p-4 text-center text-sm text-muted-foreground">No team members found.</div>
+                                <div className="p-4 text-center text-xs text-muted-foreground italic">No authorized recipients found.</div>
                             )}
                             </SelectContent>
                         </Select>
@@ -170,34 +177,52 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                         </FormItem>
                     )}
                     />
-                    <Button type="submit" disabled={isPending || users.length === 0} className="w-full">
-                    {isPending ? 'Importing...' : 'Import and Assign Leads'}
+                    <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-14 rounded-2xl herbal-gradient font-black shadow-xl gold-glow">
+                    {isPending ? 'Processing Ingestion...' : 'Finalize Import and Assign'}
                     </Button>
                 </form>
                 </Form>
             </div>
             <div>
-                <Label>Review Imported Leads</Label>
-                <ScrollArea className="h-72 mt-2 rounded-md border">
-                    <div className="p-4 space-y-4">
-                        {importedLeads.length > 0 ? (
-                            importedLeads.map((lead, index) => (
-                                <div key={index} className="p-3 border rounded-lg space-y-2">
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <Input value={lead.Name} onChange={e => handleLeadFieldChange(index, 'Name', e.target.value)} placeholder="Name" />
-                                        <Input value={lead.Phone} onChange={e => handleLeadFieldChange(index, 'Phone', e.target.value)} placeholder="Phone" />
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Data Verification Pulse</Label>
+                <div className="rounded-[2rem] border bg-muted/10 p-1 mt-3 shadow-inner">
+                    <ScrollArea className="h-[350px]">
+                        <div className="p-4 space-y-4">
+                            {importedLeads.length > 0 ? (
+                                importedLeads.map((lead, index) => (
+                                    <div key={index} className="p-4 rounded-2xl bg-background border border-primary/5 space-y-3 shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] uppercase font-black opacity-40">Full Name</Label>
+                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.full_name} onChange={e => handleLeadFieldChange(index, 'full_name', e.target.value)} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] uppercase font-black opacity-40">Phone Number</Label>
+                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.phone_number} onChange={e => handleLeadFieldChange(index, 'phone_number', e.target.value)} />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-[10px] uppercase font-black opacity-40">Digital Identity</Label>
+                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.email} onChange={e => handleLeadFieldChange(index, 'email', e.target.value)} />
+                                        </div>
+                                        <div className="flex items-center justify-between pt-1">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Source: {lead.platform || 'Unknown'}</span>
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">Ready for sync</span>
+                                        </div>
                                     </div>
-                                    <Input value={lead['Email address']} onChange={e => handleLeadFieldChange(index, 'Email address', e.target.value)} placeholder="Email" />
-                                    <Input value={lead.Source} onChange={e => handleLeadFieldChange(index, 'Source', e.target.value)} placeholder="Source" />
+                                ))
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground text-center gap-2">
+                                    <div className="p-4 rounded-full bg-muted/50 border border-dashed">
+                                        <Input type="file" className="hidden" />
+                                        <span className="text-xs font-medium">Verify your CSV headers match:</span>
+                                        <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-40">full_name, email, phone_number, platform</p>
+                                    </div>
                                 </div>
-                            ))
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">
-                                Upload a file to see a preview of the leads.
-                            </div>
-                        )}
-                    </div>
-                </ScrollArea>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </div>
             </div>
         </div>
       </DialogContent>

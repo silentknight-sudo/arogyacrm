@@ -301,10 +301,13 @@ export type Quote = {
 };
 
 export type RawLead = {
-  'Name': string;
-  'Email address': string;
-  'Phone': string;
-  'Source': string;
+  'full_name': string;
+  'email': string;
+  'phone_number': string;
+  'platform': string;
+  'campaign_name'?: string;
+  'ad_name'?: string;
+  'form_name'?: string;
   [key: string]: any;
 };
 

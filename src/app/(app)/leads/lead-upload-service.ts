@@ -1,4 +1,3 @@
-
 'use server';
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
@@ -31,18 +30,23 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
       const id = leadRef.id;
       createdLeadIds.push(id);
       
+      // STRATEGIC CLEANING: Handle Meta Ads phone prefix artifact (p:+91...)
+      const cleanPhone = (rawLead['phone_number'] || '').toString().replace(/^p:/, '').trim();
+      
       const newLeadData = {
         id: id,
-        fullName: rawLead['Name'] || 'Unknown Prospect',
-        email: rawLead['Email address'] || '',
-        phone: rawLead['Phone'] || '',
-        source: rawLead['Source'] || 'Meta Ads',
+        fullName: rawLead['full_name'] || 'Unknown Prospect',
+        email: rawLead['email'] || '',
+        phone: cleanPhone || '',
+        source: rawLead['platform'] || 'Meta Ads',
         status: 'new',
         assignedToIds: [assignedToId],
         teamspaceId: teamspaceId,
         attributionFields: JSON.stringify({
-            'form': rawLead['Form'],
-            'channel': rawLead['Channel'],
+            'campaign': rawLead['campaign_name'],
+            'ad': rawLead['ad_name'],
+            'form': rawLead['form_name'],
+            'platform': rawLead['platform'],
         }),
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -54,11 +58,11 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     await batch.commit();
 
     /**
-     * PERSISTENT NOTIFICATION: Inform the user of their new leads
+     * PERSISTENT NOTIFICATION: Informed unit-based alert
      */
     await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
         title: `you got ${rawLeads.length} new leads`,
-        description: `Successfully imported and assigned ${rawLeads.length} prospects to your professional desk.`,
+        description: `Successfully imported ${rawLeads.length} strategic prospects from marketing platforms.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,
