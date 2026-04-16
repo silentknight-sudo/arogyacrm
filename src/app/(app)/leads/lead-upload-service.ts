@@ -33,14 +33,14 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
       // STRATEGIC CLEANING: Handle Meta Ads phone prefix artifact (p:+91...)
       const cleanPhone = (rawLead['phone_number'] || '').toString().replace(/^p:/, '').trim();
       
-      // Extract specific problem details for notes to provide specialists with clinical context
+      // SCRAPE INSIGHTS: Map custom questions from the new lead sheet format
       const problemType = rawLead['aapko_kis_type_ka_problem_hai?'] || '';
       const duration = rawLead['how_long_have_you_been_experiencing_joint_pain?'] || '';
       const notes = [problemType, duration].filter(Boolean).join(' | ');
 
       const newLeadData = {
         id: id,
-        fullName: rawLead['full_name'] || 'Unknown Prospect',
+        fullName: rawLead['full_name'] || 'New Prospect',
         email: rawLead['email'] || '',
         phone: cleanPhone || '',
         source: rawLead['platform'] || 'Meta Ads',
@@ -50,7 +50,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
         reassigned: false,
         notes: notes,
         demographicData: {
-            country: rawLead['state'] || '', // Mapping state to geographic context
+            country: rawLead['state'] || '',
             industry: '',
             companySize: '',
             jobTitle: ''
@@ -72,21 +72,15 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     
     await batch.commit();
 
-    /**
-     * PERSISTENT NOTIFICATION: Informed unit-based alert
-     */
     await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
         title: `you got ${rawLeads.length} new leads`,
-        description: `Successfully imported ${rawLeads.length} strategic prospects from marketing platforms.`,
+        description: `Successfully imported ${rawLeads.length} prospects from the updated Meta lead sheet.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,
         link: '/leads'
     });
 
-    /**
-     * AUTOMATIC CONVERSION: Initiate deals for all imported leads
-     */
     for (const id of createdLeadIds) {
       await syncDealForLead(id, teamspaceId);
     }

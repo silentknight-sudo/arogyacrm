@@ -37,27 +37,20 @@ const normalizeStatus = (status: string): LeadStatus => {
   return map[status.toLowerCase()] || (status as LeadStatus);
 };
 
-/**
- * STRATEGIC FEEDBACK ENGINE
- * Generates a pre-filled Google Form URL based on lead details.
- * 
- * NOTE: Replace the Descriptive Keys below with the exact entry.ID from your form.
- */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, products: Product[]) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
   const params = new URLSearchParams();
   
   params.append('usp', 'pp_url');
 
-  // AUTOMATED MAPPING (Placeholders - please swap with real entry.IDs from your 'Get pre-filled link')
-  params.append('entry.SALE_PERSON', currentUser?.displayName || 'Sales Specialist'); 
+  // STRATEGIC FEEDBACK MAPPING: Replace these keys with your real entry.IDs from the "Get pre-filled link" tool.
+  params.append('entry.SALE_PERSON', currentUser?.displayName || 'Specialist'); 
   params.append('entry.CUSTOMER_NAME', lead.fullName || '');
   params.append('entry.PHONE_NO', lead.phone || '');
   params.append('entry.MAIL', lead.email || '');
   params.append('entry.ADDRESS', lead.demographicData?.country || 'N/A');
   params.append('entry.REPONSE', normalizeStatus(lead.status));
   
-  // PRODUCT SELECTION LOGIC
   const selectedProductNames = (lead.productAsked || [])
     .map(id => products.find(p => p.id === id)?.name || '')
     .join(', ');
@@ -108,11 +101,7 @@ const StatusSelector = ({ lead, products }: { lead: Lead, products: Product[] })
           ),
         });
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Update Failed',
-          description: result.error,
-        });
+        toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
       }
     });
   };

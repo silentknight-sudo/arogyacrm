@@ -7,10 +7,6 @@ import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } f
 import type { Lead, DealStage, LeadStatus, Deal, LineItem } from '@/types';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
-/**
- * STRATEGIC SYNC: Automated Deal Conversion Logic
- * Maps lead statuses directly to deal stages for pipeline accuracy.
- */
 export async function syncDealForLead(leadId: string, teamspaceId: string) {
   try {
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
@@ -240,7 +236,6 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
             if (targetData?.role !== 'sales_team_lead' && targetData?.role !== 'sales_executive') {
                 throw new Error('Administrators can only delegate to verified Team Leaders or Executives.');
             }
-            // AUTOMATED RESET: If target is SE, set status to new
             if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }
     } else if (role === 'sales_team_lead') {
@@ -251,7 +246,6 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
             if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
                 throw new Error('Team Leaders can only delegate to specialists they have personally onboarded.');
             }
-            // AUTOMATED RESET: If target is SE, set status to new
             if (targetData?.role === 'sales_executive') shouldResetToNew = true;
         }
     } else {
