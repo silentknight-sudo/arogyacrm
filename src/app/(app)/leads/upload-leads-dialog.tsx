@@ -126,11 +126,11 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-4xl rounded-[2.5rem]">
+      <DialogContent className="sm:max-w-5xl rounded-[2.5rem]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-primary">Strategic Bulk Ingestion</DialogTitle>
           <DialogDescription className="font-medium">
-            Upload CSV from Meta Ads Lead Gen. We'll automatically map full_name, email, and platform source.
+            Upload Meta Ads CSV export. We'll automatically map full_name, phone_number, state, and wellness concerns.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
@@ -186,7 +186,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
             <div>
                 <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Data Verification Pulse</Label>
                 <div className="rounded-[2rem] border bg-muted/10 p-1 mt-3 shadow-inner">
-                    <ScrollArea className="h-[350px]">
+                    <ScrollArea className="h-[400px]">
                         <div className="p-4 space-y-4">
                             {importedLeads.length > 0 ? (
                                 importedLeads.map((lead, index) => (
@@ -201,22 +201,31 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                                 <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.phone_number} onChange={e => handleLeadFieldChange(index, 'phone_number', e.target.value)} />
                                             </div>
                                         </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                          <div className="space-y-1">
+                                              <Label className="text-[10px] uppercase font-black opacity-40">State</Label>
+                                              <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.state || ''} onChange={e => handleLeadFieldChange(index, 'state', e.target.value)} />
+                                          </div>
+                                          <div className="space-y-1">
+                                              <Label className="text-[10px] uppercase font-black opacity-40">Platform</Label>
+                                              <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.platform || ''} readOnly />
+                                          </div>
+                                        </div>
                                         <div className="space-y-1">
-                                            <Label className="text-[10px] uppercase font-black opacity-40">Digital Identity</Label>
-                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.email} onChange={e => handleLeadFieldChange(index, 'email', e.target.value)} />
+                                            <Label className="text-[10px] uppercase font-black opacity-40">Problem Insight</Label>
+                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead['aapko_kis_type_ka_problem_hai?'] || ''} readOnly />
                                         </div>
                                         <div className="flex items-center justify-between pt-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Source: {lead.platform || 'Unknown'}</span>
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Source: {lead.form_name || 'Meta Ads'}</span>
                                             <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">Ready for sync</span>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground text-center gap-2">
+                                <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground text-center gap-2">
                                     <div className="p-4 rounded-full bg-muted/50 border border-dashed">
-                                        <Input type="file" className="hidden" />
-                                        <span className="text-xs font-medium">Verify your CSV headers match:</span>
-                                        <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-40">full_name, email, phone_number, platform</p>
+                                        <span className="text-xs font-medium">Verification Protocol:</span>
+                                        <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-40">Headers: full_name, phone_number, state, platform...</p>
                                     </div>
                                 </div>
                             )}

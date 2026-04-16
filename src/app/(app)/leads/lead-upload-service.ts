@@ -33,6 +33,11 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
       // STRATEGIC CLEANING: Handle Meta Ads phone prefix artifact (p:+91...)
       const cleanPhone = (rawLead['phone_number'] || '').toString().replace(/^p:/, '').trim();
       
+      // Extract specific problem details for notes to provide specialists with clinical context
+      const problemType = rawLead['aapko_kis_type_ka_problem_hai?'] || '';
+      const duration = rawLead['how_long_have_you_been_experiencing_joint_pain?'] || '';
+      const notes = [problemType, duration].filter(Boolean).join(' | ');
+
       const newLeadData = {
         id: id,
         fullName: rawLead['full_name'] || 'Unknown Prospect',
@@ -43,11 +48,20 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
         assignedToIds: [assignedToId],
         teamspaceId: teamspaceId,
         reassigned: false,
+        notes: notes,
+        demographicData: {
+            country: rawLead['state'] || '', // Mapping state to geographic context
+            industry: '',
+            companySize: '',
+            jobTitle: ''
+        },
         attributionFields: JSON.stringify({
             'campaign': rawLead['campaign_name'],
             'ad': rawLead['ad_name'],
             'form': rawLead['form_name'],
             'platform': rawLead['platform'],
+            'created_time': rawLead['created_time'],
+            'meta_id': rawLead['id']
         }),
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),

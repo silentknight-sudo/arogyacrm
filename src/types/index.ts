@@ -302,12 +302,16 @@ export type Quote = {
 
 export type RawLead = {
   'full_name': string;
-  'email': string;
+  'email'?: string;
   'phone_number': string;
-  'platform': string;
-  'campaign_name'?: string;
+  'platform'?: string;
+  'state'?: string;
+  'created_time'?: string;
   'ad_name'?: string;
+  'campaign_name'?: string;
   'form_name'?: string;
+  'aapko_kis_type_ka_problem_hai?'?: string;
+  'how_long_have_you_been_experiencing_joint_pain?'?: string;
   [key: string]: any;
 };
 
