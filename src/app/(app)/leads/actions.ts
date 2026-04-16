@@ -1,3 +1,4 @@
+
 'use server';
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
@@ -463,6 +464,43 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
 
     revalidatePath('/leads');
     return { success: true, removedCount: toDelete.length };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
+export async function deleteLeads(values: { leadIds: string[], teamspaceId: string, currentUserId: string }): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { leadIds, teamspaceId, currentUserId } = values;
+
+    const userDoc = await adminDb.collection('users').doc(currentUserId).get();
+    if (userDoc.data()?.role !== 'admin') {
+      throw new Error('Unauthorized: Only administrators can purge database assets.');
+    }
+
+    const chunks = [];
+    for (let i = 0; i < leadIds.length; i += 500) {
+        chunks.push(leadIds.slice(i, i + 500));
+    }
+
+    const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
+    const dealsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals');
+
+    for (const chunk of chunks) {
+        const batch = adminDb.batch();
+        for (const id of chunk) {
+            batch.delete(leadsRef.doc(id));
+            
+            // Cleanup associated deals
+            const dealQuery = await dealsRef.where('leadId', '==', id).get();
+            dealQuery.docs.forEach(doc => batch.delete(doc.ref));
+        }
+        await batch.commit();
+    }
+
+    revalidatePath('/leads');
+    revalidatePath('/deals');
+    return { success: true };
   } catch (error: any) {
     return { success: false, error: handleAdminSDKError(error) };
   }

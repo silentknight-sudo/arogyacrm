@@ -1,3 +1,4 @@
+
 'use server';
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
@@ -50,12 +51,12 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
                 fullName: getVal(['full_name', 'name', 'customer_name']) || 'New Prospect',
                 email: getVal(['email', 'email_address', 'mail']) || '',
                 phone: cleanPhone || '',
-                source: getVal(['source', 'platform']) || 'Meta Ads',
+                source: getVal(['campaign_name', 'platform', 'source']) || 'Meta Ads',
                 status: 'new',
                 assignedToIds: [assignedToId],
                 teamspaceId: teamspaceId,
                 reassigned: false,
-                createdAt: FieldValue.serverTimestamp(),
+                createdAt: getVal(['created_time', 'created_at']) || FieldValue.serverTimestamp(),
                 updatedAt: FieldValue.serverTimestamp(),
             };
             
@@ -67,7 +68,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     // Trigger high-intensity alert pulse for the assigned specialist
     await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
         title: `you got ${rawLeads.length} new leads`,
-        description: `Successfully ingested ${rawLeads.length} prospects according to updated strategic headers.`,
+        description: `Successfully ingested ${rawLeads.length} prospects from Meta Ads.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,

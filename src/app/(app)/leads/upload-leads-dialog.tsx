@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -68,12 +69,12 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     const data = results.data;
     if (!data || data.length === 0) return;
 
-    // STRATEGIC HEADER AUTO-DISCOVERY
+    // STRATEGIC HEADER AUTO-DISCOVERY: Skip title rows found in Meta Sheets
     let headerIndex = -1;
     for (let i = 0; i < Math.min(data.length, 10); i++) {
       const row = data[i];
       if (!row || !Array.isArray(row)) continue;
-      const hasFullName = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('name'));
+      const hasFullName = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('full_name'));
       const hasPhone = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('phone'));
       
       if (hasFullName || hasPhone) {
@@ -86,7 +87,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       toast({ 
         variant: 'destructive', 
         title: 'Header Mapping Failed', 
-        description: 'Could not find column headers (e.g. "Name" or "Phone"). Ensure your CSV has valid headers.' 
+        description: 'Could not find "full_name" or "phone_number". Please ensure your sheet matches the standard Meta export format.' 
       });
       return;
     }
@@ -122,7 +123,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       return;
     }
     if (importedLeads.length === 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a valid CSV file.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a valid Meta Lead CSV.' });
         return;
     }
 
@@ -143,7 +144,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
           toast({ 
             variant: 'destructive', 
             title: 'Import Failed', 
-            description: result?.error || 'A secure ingestion operation failed.' 
+            description: result?.error || 'Strategic ingestion operation failed.' 
           });
         }
       } catch (e: any) {
@@ -157,9 +158,9 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-5xl rounded-[2.5rem]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-black text-primary">Strategic Ingestion Protocol</DialogTitle>
+          <DialogTitle className="text-2xl font-black text-primary">Strategic Meta Ingestion</DialogTitle>
           <DialogDescription className="font-medium">
-            Strict Name/Email/Phone extraction. Mapping CSV headers to core contact fields.
+            Mapping Full Name, Email, and Phone Number from your Meta Ads export.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
@@ -169,9 +170,9 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     <CSVReader onUploadAccepted={handleUploadAccepted}>
                         {({ getRootProps, acceptedFile, ProgressBar }: any) => (
                             <div className="space-y-3">
-                                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Source File (CSV)</Label>
+                                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Meta Export Source (CSV)</Label>
                                 <FileInput {...getRootProps()} className="bg-muted/20 border-primary/10 hover:bg-muted/30 transition-all h-32">
-                                    {acceptedFile ? <span className="font-bold text-primary">{acceptedFile.name}</span> : 'Drop Strategic Lead Sheet Here'}
+                                    {acceptedFile ? <span className="font-bold text-primary">{acceptedFile.name}</span> : 'Drop Meta Lead Sheet Here'}
                                 </FileInput>
                                 <ProgressBar className="bg-primary h-1 rounded-full" />
                             </div>
@@ -183,7 +184,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     name="assignedToId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Initial Recipient</FormLabel>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Initial Specialist Assignment</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
                             <SelectTrigger disabled={isLoading} className="rounded-xl h-12 bg-muted/20 border-none">
@@ -201,13 +202,13 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     )}
                     />
                     <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-14 rounded-2xl herbal-gradient font-black shadow-xl">
-                    {isPending ? 'Syncing Pipeline...' : 'Finalize Multi-Channel Ingestion'}
+                    {isPending ? 'Syncing Pipeline...' : 'Finalize Batch Ingestion'}
                     </Button>
                 </form>
                 </Form>
             </div>
             <div>
-                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Data Verification Pulse</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Mapped Prospect Preview</Label>
                 <div className="rounded-[2rem] border bg-muted/10 p-1 mt-3 shadow-inner">
                     <ScrollArea className="h-[400px]">
                         <div className="p-4 space-y-4">
@@ -217,18 +218,22 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                         <Label className="text-[10px] uppercase font-black opacity-40">Contact Core</Label>
                                         <div className="flex gap-2">
                                             <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['full_name', 'name'])} readOnly />
-                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['email', 'email address', 'mail'])} readOnly />
+                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['email', 'email address'])} readOnly />
                                         </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-[10px] uppercase font-black opacity-40">Phone Number</Label>
-                                        <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['phone', 'phone_number']).replace(/^p:/i, '')} readOnly />
+                                        <Label className="text-[10px] uppercase font-black opacity-40">Cleaned Contact Number</Label>
+                                        <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone']).replace(/^p:/i, '')} readOnly />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] uppercase font-black opacity-40">Attribution Source</Label>
+                                        <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['campaign_name', 'platform'])} readOnly />
                                     </div>
                                 </div>
                             ))}
                             {importedLeads.length === 0 && (
                                 <div className="text-center py-20 text-xs text-muted-foreground font-medium italic">
-                                    Awaiting file upload for pulse check...
+                                    Awaiting Meta sheet for pipeline mapping...
                                 </div>
                             )}
                         </div>

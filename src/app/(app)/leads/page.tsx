@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, Suspense, useTransition, useEffect } from 'react';
@@ -10,14 +11,14 @@ import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download, Sparkles } from 'lucide-react';
+import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download, Sparkles, Trash2 } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { BulkAssignLeadsDialog } from './bulk-assign-leads-dialog';
 import { DeduplicateLeadsDialog } from './deduplicate-leads-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { selfAssignLeads } from './actions';
+import { selfAssignLeads, deleteLeads } from './actions';
 import {
   Select,
   SelectContent,
@@ -25,6 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type FilterType = LeadStatus | 'all' | 'fresh_uploads';
 
@@ -38,8 +49,10 @@ export default function LeadsPage() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteOpen] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [isReclaiming, startReclaim] = useTransition();
+  const [isDeleting, startDelete] = useTransition();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -47,6 +60,7 @@ export default function LeadsPage() {
   }, []);
 
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  const isAdmin = currentUser?.role === 'admin';
   
   const displayFilters = currentUser?.role === 'sales_executive' 
     ? (['all', 'new'] as FilterType[])
@@ -154,11 +168,30 @@ export default function LeadsPage() {
         });
         setSelectedLeads([]);
       } else {
+        toast({ variant: 'destructive', title: 'Reclaim Failed', description: result.error });
+      }
+    });
+  };
+
+  const handleDeleteLeads = () => {
+    if (!currentUser || !currentTeamspace?.id || selectedLeads.length === 0) return;
+    
+    startDelete(async () => {
+      const result = await deleteLeads({
+        leadIds: selectedLeads.map(l => l.id),
+        teamspaceId: currentTeamspace.id,
+        currentUserId: currentUser.id,
+      });
+
+      if (result.success) {
         toast({
-          variant: 'destructive',
-          title: 'Reclaim Failed',
-          description: result.error,
+          title: 'Purge Successful',
+          description: `Successfully removed ${selectedLeads.length} assets from the database.`,
         });
+        setSelectedLeads([]);
+        setIsDeleteOpen(false);
+      } else {
+        toast({ variant: 'destructive', title: 'Purge Failed', description: result.error });
       }
     });
   };
@@ -170,22 +203,16 @@ export default function LeadsPage() {
       return;
     }
 
-    const headers = ['Full Name', 'Email', 'Phone', 'Status', 'Source', 'Product Interests', 'Assigned To', 'Created Date'];
+    const headers = ['Full Name', 'Email', 'Phone', 'Status', 'Source', 'Created Date'];
     
     const rows = dataToExport.map(lead => {
-      const assignedNames = lead.assignedToIds?.map(id => users?.find(u => u.id === id)?.displayName).filter(Boolean).join('; ') || 'Unassigned';
-      const productNames = lead.productAsked?.map(id => products?.find(p => p.id === id)?.name).filter(Boolean).join('; ') || 'None';
-      
       const escape = (val: any) => `"${(val || '').toString().replace(/"/g, '""')}"`;
-
       return [
         escape(lead.fullName),
         escape(lead.email),
         escape(lead.phone),
         escape(lead.status),
         escape(lead.source),
-        escape(productNames),
-        escape(assignedNames),
         escape(lead.createdAt)
       ].join(',');
     });
@@ -201,10 +228,7 @@ export default function LeadsPage() {
     link.click();
     document.body.removeChild(link);
     
-    toast({ 
-      title: 'Export Successful', 
-      description: `${dataToExport.length} prospects prepared for Google Sheets integration.` 
-    });
+    toast({ title: 'Export Successful', description: `${dataToExport.length} prospects prepared.` });
   };
 
   if (!mounted) return null;
@@ -309,7 +333,7 @@ export default function LeadsPage() {
                                     className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10"
                                     onClick={() => setBulkAssignOpen(true)}
                                 >
-                                    Delegate {selectedLeads.length} Selected
+                                    Delegate {selectedLeads.length}
                                 </Button>
                                 <Button 
                                     variant="outline" 
@@ -317,13 +341,20 @@ export default function LeadsPage() {
                                     onClick={handleSelfAssign}
                                     disabled={isReclaiming}
                                 >
-                                    {isReclaiming ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <UserCheck className="h-4 w-4" />
-                                    )}
+                                    {isReclaiming ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
                                     Reclaim {selectedLeads.length}
                                 </Button>
+                                {isAdmin && (
+                                    <Button 
+                                        variant="destructive" 
+                                        className="rounded-xl shadow-lg px-6 font-bold h-10 flex items-center gap-2"
+                                        onClick={() => setIsDeleteOpen(true)}
+                                        disabled={isDeleting}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Purge {selectedLeads.length}
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -355,6 +386,28 @@ export default function LeadsPage() {
             leads={selectedLeads}
             users={users || []}
         />
+
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteOpen}>
+            <AlertDialogContent className="rounded-[2.5rem] bg-[#0D1F0B] text-white border-none shadow-2xl p-10">
+                <AlertDialogHeader className="mb-6">
+                    <AlertDialogTitle className="text-3xl font-black text-[#ef4444]">Strategic Purge</AlertDialogTitle>
+                    <AlertDialogDescription className="text-white/60 text-lg font-medium">
+                        You are about to permanently decommission <span className="text-white font-bold">{selectedLeads.length}</span> prospects and their associated deals. 
+                        This operation cannot be reversed.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-4">
+                    <AlertDialogCancel className="h-14 px-8 rounded-xl border-white/10 bg-white/5 text-white hover:bg-white/10 font-bold">Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                        onClick={handleDeleteLeads} 
+                        className="h-14 px-10 rounded-xl bg-[#ef4444] text-white hover:bg-[#dc2626] font-black shadow-xl"
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? 'Processing Decommission...' : 'Confirm Pipeline Purge'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
