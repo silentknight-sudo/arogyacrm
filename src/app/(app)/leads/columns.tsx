@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react-hook-form';
+import { useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown, ExternalLink, Loader2, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,6 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) 
   const params = new URLSearchParams();
   
   params.append('usp', 'pp_url');
-  // REAL FIELD MAPPINGS FROM YOUR LINK
   params.append('entry.1165241773', currentUser?.displayName || ''); // Sale Person
   params.append('entry.1228229865', lead.fullName || '');             // Customer Name
   params.append('entry.1741544755', lead.phone || '');                // Phone No.
@@ -212,7 +211,7 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     accessorKey: 'email',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Email address</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Email</div>,
     cell: ({ row }) => <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{row.getValue('email') || 'N/A'}</span>
   },
   {

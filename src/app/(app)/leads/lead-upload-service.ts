@@ -44,28 +44,17 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
             
             const rawPhone = (getVal(['phone_number', 'phone', 'contact_number']) || '').toString();
             const cleanPhone = rawPhone.replace(/^p:/i, '').trim();
-
-            const rawSecondary = (getVal(['secondary_phone_number', 'secondary phone', 'secondary phone number']) || '').toString();
-            const cleanSecondary = rawSecondary.replace(/^p:/i, '').trim();
-
-            const rawWhatsapp = (getVal(['whatsapp_number', 'whatsapp number']) || '').toString();
-            const cleanWhatsapp = rawWhatsapp.replace(/^p:/i, '').trim();
             
             const newLeadData = {
                 id: id,
                 fullName: getVal(['full_name', 'name', 'customer_name']) || 'New Prospect',
                 email: getVal(['email', 'email_address', 'mail']) || '',
                 phone: cleanPhone || '',
-                secondaryPhone: cleanSecondary || '',
-                whatsappNumber: cleanWhatsapp || '',
-                source: getVal(['source', 'platform']) || 'Imported',
-                formName: getVal(['form', 'form_name']) || '',
-                channel: getVal(['channel']) || 'Lead Gen',
+                source: getVal(['source', 'platform']) || 'Meta Ads',
                 status: 'new',
                 assignedToIds: [assignedToId],
                 teamspaceId: teamspaceId,
                 reassigned: false,
-                labels: getVal(['labels']) ? getVal(['labels']).split(',').map((l: string) => l.trim()) : [],
                 createdAt: FieldValue.serverTimestamp(),
                 updatedAt: FieldValue.serverTimestamp(),
             };

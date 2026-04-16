@@ -159,7 +159,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-primary">Strategic Ingestion Protocol</DialogTitle>
           <DialogDescription className="font-medium">
-            Restored core table view. Mapping CSV headers to multi-channel contact fields.
+            Strict Name/Email/Phone extraction. Mapping CSV headers to core contact fields.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
@@ -221,21 +221,8 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                         </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-[10px] uppercase font-black opacity-40">Contact Channels</Label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <div className="space-y-1">
-                                                <span className="text-[8px] font-black uppercase opacity-60">Primary</span>
-                                                <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['phone', 'phone_number']).replace(/^p:/i, '')} readOnly />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[8px] font-black uppercase opacity-60">Secondary</span>
-                                                <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['secondary_phone_number', 'secondary phone']).replace(/^p:/i, '')} readOnly />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[8px] font-black uppercase opacity-60">WhatsApp</span>
-                                                <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['whatsapp_number', 'whatsapp number']).replace(/^p:/i, '')} readOnly />
-                                            </div>
-                                        </div>
+                                        <Label className="text-[10px] uppercase font-black opacity-40">Phone Number</Label>
+                                        <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['phone', 'phone_number']).replace(/^p:/i, '')} readOnly />
                                     </div>
                                 </div>
                             ))}
