@@ -25,7 +25,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     const batch = adminDb.batch();
 
     for (const rawLead of (rawLeads as any[])) {
-      // STRATEGIC HELPER: Find value by case-insensitive key search
+      // STRATEGIC HELPER: Robust case-insensitive header lookup
       const getVal = (possibleKeys: string[]) => {
         const foundKey = Object.keys(rawLead).find(k => 
           possibleKeys.some(pk => k.toLowerCase().trim() === pk.toLowerCase().trim())
@@ -37,28 +37,28 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
       const id = leadRef.id;
       createdLeadIds.push(id);
       
-      // DATA CLEANING: Handle phone artifacts
-      const rawPhone = getVal(['phone_number', 'phone', 'contact_number', 'contact number']).toString();
-      const cleanPhone = rawPhone.replace(/^p:/, '').trim();
+      // DATA CLEANING: Handle p: prefix in Meta exports
+      const rawPhone = (getVal(['phone_number', 'phone', 'contact_number', 'contact number']) || '').toString();
+      const cleanPhone = rawPhone.replace(/^p:/i, '').trim();
       
       const newLeadData = {
         id: id,
         fullName: getVal(['full_name', 'name', 'customer_name', 'full name']) || 'New Prospect',
-        email: getVal(['email', 'email_address', 'mail']) || '',
+        email: getVal(['email', 'email_address', 'mail', 'email address']) || '',
         phone: cleanPhone || '',
         source: getVal(['platform', 'source', 'lead_source']) || 'Meta Ads',
         status: 'new',
         assignedToIds: [assignedToId],
         teamspaceId: teamspaceId,
         reassigned: false,
-        notes: '', // Simplified: Leaving rest empty
+        notes: '', 
         demographicData: {
-            country: '', // Simplified: Leaving rest empty
+            country: '',
             industry: '',
             companySize: '',
             jobTitle: ''
         },
-        attributionFields: '', // Simplified: Leaving rest empty
+        attributionFields: '',
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -68,9 +68,10 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     
     await batch.commit();
 
+    // Trigger pulse notification for the recipient
     await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
         title: `you got ${rawLeads.length} new leads`,
-        description: `Successfully imported ${rawLeads.length} prospects from your lead sheet.`,
+        description: `Successfully ingested ${rawLeads.length} prospects into your fresh queue.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,

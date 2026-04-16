@@ -37,20 +37,24 @@ const normalizeStatus = (status: string): LeadStatus => {
   return map[status.toLowerCase()] || (status as LeadStatus);
 };
 
+/**
+ * STRATEGIC FEEDBACK MAPPING:
+ * Maps lead data to Google Form entry IDs.
+ * Note: Replace 'entry.XXXX' with real IDs from the "Get pre-filled link" tool.
+ */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, products: Product[]) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
   const params = new URLSearchParams();
   
   params.append('usp', 'pp_url');
 
-  // STRATEGIC FEEDBACK MAPPING: Replace these keys with your real entry.IDs from the "Get pre-filled link" tool.
-  // Example: entry.123456789=Value
-  params.append('entry.SALE_PERSON_ID', currentUser?.displayName || 'Specialist'); 
-  params.append('entry.CUSTOMER_NAME_ID', lead.fullName || '');
-  params.append('entry.PHONE_NO_ID', lead.phone || '');
-  params.append('entry.MAIL_ID', lead.email || '');
-  params.append('entry.ADDRESS_ID', lead.demographicData?.country || 'N/A');
-  params.append('entry.REPONSE_ID', normalizeStatus(lead.status));
+  // STRATEGIC FIELD ALIGNMENT
+  params.append('entry.SALE_PERSON', currentUser?.displayName || 'Wellness Specialist'); 
+  params.append('entry.CUSTOMER_NAME', lead.fullName || '');
+  params.append('entry.PHONE_NO', lead.phone || '');
+  params.append('entry.MAIL', lead.email || '');
+  params.append('entry.ADDRESS', lead.demographicData?.country || 'N/A');
+  params.append('entry.REPONSE', normalizeStatus(lead.status));
   
   const selectedProductNames = (lead.productAsked || [])
     .map(id => products.find(p => p.id === id)?.name || '')
@@ -65,9 +69,9 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   else if (hasOil) productChoice = 'Gouthealth Oil';
   else productChoice = selectedProductNames || 'N/A';
 
-  params.append('entry.PRODUCT_ID', productChoice); 
-  params.append('entry.DEAL_ID', 'Automated Revenue Flow');
-  params.append('entry.PRICE_ID', '0');
+  params.append('entry.PODUCT', productChoice); 
+  params.append('entry.DEAL', 'Strategic Prospect');
+  params.append('entry.PRICE', '0');
   
   return `${baseUrl}?${params.toString()}`;
 };
@@ -88,14 +92,14 @@ const StatusSelector = ({ lead, products }: { lead: Lead, products: Product[] })
 
       if (result.success) {
         toast({
-          title: 'Stage Updated',
+          title: 'Stage Transitioned',
           description: (
             <div className="flex flex-col gap-3 pt-2">
-              <p className="font-medium">Lead transitioned to "{newStatus}".</p>
+              <p className="font-medium">Lead moved to "{newStatus}".</p>
               <Button variant="default" size="sm" asChild className="herbal-gradient w-fit rounded-xl font-bold shadow-lg">
                 <a href={getPrefilledGoogleFormUrl(lead, currentUser, products)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <ClipboardList className="h-4 w-4" />
-                  Fill Feedback Form
+                  Open Feedback Form
                 </a>
               </Button>
             </div>
@@ -135,7 +139,7 @@ const StatusSelector = ({ lead, products }: { lead: Lead, products: Product[] })
             </a>
           </Button>
         </TooltipTrigger>
-        <TooltipContent className="rounded-xl font-bold">Open Pre-filled Form</TooltipContent>
+        <TooltipContent className="rounded-xl font-bold">Open Pre-filled Link</TooltipContent>
       </Tooltip>
     </div>
   );
@@ -171,13 +175,13 @@ const ProductSelector = ({ lead, products }: { lead: Lead, products: Product[] }
                 <Button variant="ghost" size="sm" className="h-8 flex gap-2 items-center text-muted-foreground hover:text-primary rounded-lg border-primary/5">
                     <Package className="h-3 w-3" />
                     <span className="text-[10px] font-black uppercase tracking-widest">
-                        {selectedIds.length === 0 ? 'Add Products' : `${selectedIds.length} Products`}
+                        {selectedIds.length === 0 ? 'Catalog' : `${selectedIds.length} Items`}
                     </span>
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64 p-0 rounded-2xl border-none shadow-2xl bg-card">
                 <div className="p-3 border-b border-muted/50 bg-muted/20">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Strategic Catalog</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Product Alignment</p>
                 </div>
                 <ScrollArea className="h-64">
                     <div className="p-2 space-y-1">
@@ -226,7 +230,7 @@ const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], use
             </TooltipTrigger>
             <TooltipContent className="rounded-xl border-none shadow-xl bg-[#0D1F0B] text-white p-3">
                 <div className="space-y-1">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-2">Workspace Specialists</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-2">Team Jurisdiction</p>
                     {assignedUsers.map(u => (
                         <div key={u.id} className="text-xs font-bold flex items-center gap-2">
                             <div className="w-1 h-1 rounded-full bg-accent" />
@@ -298,12 +302,12 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     accessorKey: 'phone',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Phone Number</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Contact No.</div>,
     cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('phone') || 'N/A'}</span>
   },
   {
     accessorKey: 'updatedAt',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Update Date</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Pulse Date</div>,
     cell: ({ row }) => {
         const date = row.original.updatedAt || row.original.createdAt;
         if (!date) return 'N/A';
@@ -313,7 +317,7 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     accessorKey: 'assignedToIds',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Assigned Person</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Specialists</div>,
     cell: ({ row, table }) => {
         const assignedToIds = row.getValue('assignedToIds') as string[] || [];
         const users = (table.options.meta as any)?.users || [];
@@ -322,7 +326,7 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     accessorKey: 'productAsked',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Products</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Interests</div>,
     cell: ({ row, table }) => {
         const products = (table.options.meta as any)?.products || [];
         return <ProductSelector lead={row.original} products={products} />;
@@ -330,7 +334,7 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     accessorKey: 'status',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Stage</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Status</div>,
     cell: ({ row, table }) => {
         const products = (table.options.meta as any)?.products || [];
         return <StatusSelector lead={row.original} products={products} />;

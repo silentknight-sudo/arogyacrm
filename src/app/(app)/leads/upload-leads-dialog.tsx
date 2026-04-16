@@ -39,7 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
-  assignedToId: z.string().min(1, 'You must assign the leads to a user.'),
+  assignedToId: z.string().min(1, 'You must assign the leads to a specialist.'),
 });
 
 type UploadLeadsDialogProps = {
@@ -65,15 +65,34 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
   });
 
   const handleUploadAccepted = (results: any) => {
-    const header = results.data[0];
-    const data = results.data.slice(1);
+    const data = results.data;
     
-    const validRows = data.filter((row: any) => row.length > 1 && row.some((cell: any) => cell));
+    // STRATEGIC DISCOVERY: Find the row containing actual headers
+    const headerIndex = data.findIndex((row: any) => 
+      row.some((cell: any) => {
+        const val = (cell || '').toString().toLowerCase().trim();
+        return val === 'full_name' || val === 'phone_number';
+      })
+    );
+
+    if (headerIndex === -1) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Header Discovery Failed', 
+        description: 'Ensure your CSV contains a "full_name" or "phone_number" column.' 
+      });
+      return;
+    }
+
+    const header = data[headerIndex];
+    const rows = data.slice(headerIndex + 1);
+    
+    const validRows = rows.filter((row: any) => row.length > 1 && row.some((cell: any) => cell));
 
     const leads = validRows.map((row: string[]) => {
       const lead: any = {};
       header.forEach((key: string, index: number) => {
-        const cleanKey = key.trim();
+        const cleanKey = (key || '').trim();
         lead[cleanKey] = row[index];
       });
       return lead;
@@ -91,11 +110,11 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Active session required.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Active workspace context required.' });
       return;
     }
     if(importedLeads.length === 0){
-        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a valid CSV file.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a valid CSV file with recognizable headers.' });
         return;
     }
 
@@ -109,7 +128,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       if (result.success) {
         toast({
           title: 'Import Successful',
-          description: `${result.count} prospects have been ingested.`,
+          description: `${result.count} prospects have been successfully synchronized.`,
         });
         setOpen(false);
         form.reset();
@@ -129,9 +148,9 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-5xl rounded-[2.5rem]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-black text-primary">Strategic Bulk Ingestion</DialogTitle>
+          <DialogTitle className="text-2xl font-black text-primary">Strategic Lead Ingestion</DialogTitle>
           <DialogDescription className="font-medium">
-            Upload your lead sheet. We will extract names and contact details for immediate action.
+            Upload your Meta Ads sheet. We will automatically discover headers and isolate contact details.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
@@ -141,11 +160,11 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     <CSVReader onUploadAccepted={handleUploadAccepted}>
                         {({ getRootProps, acceptedFile, ProgressBar }: any) => (
                             <div className="space-y-3">
-                                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Source Data (CSV)</Label>
+                                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Source File (CSV)</Label>
                                 <FileInput {...getRootProps()} className="bg-muted/20 border-primary/10 hover:bg-muted/30 transition-all h-32">
                                     {acceptedFile ? (
                                         <span className="font-bold text-primary">{acceptedFile.name}</span>
-                                    ) : 'Drop your lead sheet here'}
+                                    ) : 'Drop Meta Lead Sheet Here'}
                                 </FileInput>
                                 <ProgressBar className="bg-primary h-1 rounded-full" />
                             </div>
@@ -157,11 +176,11 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     name="assignedToId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Target Recipient</FormLabel>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Assigned Specialist</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
                             <SelectTrigger disabled={isLoading} className="rounded-xl h-12 bg-muted/20 border-none">
-                                <SelectValue placeholder={isLoading ? 'Loading hierarchy...' : 'Select wellness specialist'} />
+                                <SelectValue placeholder={isLoading ? 'Loading hierarchy...' : 'Select recipient'} />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-xl">
@@ -170,7 +189,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                 {user.displayName} ({user.role.replace(/_/g, ' ')})
                                 </SelectItem>
                             )) : (
-                                <div className="p-4 text-center text-xs text-muted-foreground italic">No authorized recipients found.</div>
+                                <div className="p-4 text-center text-xs text-muted-foreground italic">No eligible specialists found.</div>
                             )}
                             </SelectContent>
                         </Select>
@@ -179,7 +198,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     )}
                     />
                     <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-14 rounded-2xl herbal-gradient font-black shadow-xl gold-glow">
-                    {isPending ? 'Processing Ingestion...' : 'Finalize Import and Assign'}
+                    {isPending ? 'Ingesting Leads...' : 'Finalize Batch Ingestion'}
                     </Button>
                 </form>
                 </Form>
@@ -193,17 +212,17 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                 importedLeads.map((lead, index) => (
                                     <div key={index} className="p-4 rounded-2xl bg-background border border-primary/5 space-y-3 shadow-sm hover:shadow-md transition-shadow">
                                         <div className="space-y-1">
-                                            <Label className="text-[10px] uppercase font-black opacity-40">Name</Label>
-                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['full_name', 'name', 'customer_name'])} readOnly />
+                                            <Label className="text-[10px] uppercase font-black opacity-40">Full Name</Label>
+                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['full_name', 'name'])} readOnly />
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase font-black opacity-40">Phone</Label>
-                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone', 'contact_number']).toString().replace(/^p:/, '')} readOnly />
+                                                <Label className="text-[10px] uppercase font-black opacity-40">Cleaned Phone</Label>
+                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone']).toString().replace(/^p:/i, '')} readOnly />
                                             </div>
                                             <div className="space-y-1">
                                                 <Label className="text-[10px] uppercase font-black opacity-40">Email</Label>
-                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['email', 'email_address', 'mail'])} readOnly />
+                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['email', 'mail'])} readOnly />
                                             </div>
                                         </div>
                                     </div>
@@ -211,8 +230,8 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground text-center gap-2">
                                     <div className="p-4 rounded-full bg-muted/50 border border-dashed">
-                                        <span className="text-xs font-medium">Verification Protocol:</span>
-                                        <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-40">Drop CSV to analyze columns...</p>
+                                        <span className="text-xs font-medium">Verification Mode:</span>
+                                        <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-40">Upload file to verify headers...</p>
                                     </div>
                                 </div>
                             )}
