@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, Suspense, useTransition, useEffect } from 'react';
@@ -10,7 +11,7 @@ import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download, Sparkles, Trash2 } from 'lucide-react';
+import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download, Sparkles, Trash2, Calendar as CalendarIcon, X } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 type FilterType = LeadStatus | 'all' | 'fresh_uploads';
 
@@ -46,6 +52,7 @@ export default function LeadsPage() {
   const firestore = useFirestore();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteOpen] = useState(false);
@@ -91,9 +98,27 @@ export default function LeadsPage() {
 
   const leads = useMemo(() => {
     if (!rawLeads) return null;
-    if (assigneeFilter === 'all') return rawLeads;
-    return rawLeads.filter(lead => lead.assignedToIds?.includes(assigneeFilter));
-  }, [rawLeads, assigneeFilter]);
+    let filtered = rawLeads;
+
+    // 1. Assignee Filter
+    if (assigneeFilter !== 'all') {
+      filtered = filtered.filter(lead => lead.assignedToIds?.includes(assigneeFilter));
+    }
+
+    // 2. Date Range Filter
+    if (dateRange?.from) {
+      const start = startOfDay(dateRange.from);
+      const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+      
+      filtered = filtered.filter(lead => {
+        if (!lead.createdAt) return false;
+        const leadDate = lead.createdAt.toDate ? lead.createdAt.toDate() : new Date(lead.createdAt);
+        return isWithinInterval(leadDate, { start, end });
+      });
+    }
+
+    return filtered;
+  }, [rawLeads, assigneeFilter, dateRange]);
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
@@ -271,23 +296,76 @@ export default function LeadsPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-[2.5rem] bg-card border border-primary/5 shadow-xl">
-            <div className="flex items-center gap-3">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <div className="flex flex-wrap gap-2">
-                    {displayFilters.map((f) => (
-                        <Badge 
-                            key={f} 
-                            onClick={() => setActiveFilter(f)}
-                            className={`cursor-pointer px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}
+            <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex flex-wrap gap-2">
+                        {displayFilters.map((f) => (
+                            <Badge 
+                                key={f} 
+                                onClick={() => setActiveFilter(f)}
+                                className={`cursor-pointer px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}
+                            >
+                                {f === 'fresh_uploads' ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <Sparkles className="h-3 w-3" />
+                                    Fresh Prospects
+                                  </div>
+                                ) : f}
+                            </Badge>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="h-10 w-px bg-primary/10 mx-2 hidden lg:block" />
+
+                <div className="flex items-center gap-3">
+                  <div className={cn("grid gap-2")}>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="date"
+                          variant={"outline"}
+                          className={cn(
+                            "w-[260px] justify-start text-left font-bold rounded-xl h-11 border-none bg-muted/30 hover:bg-muted/50",
+                            !dateRange && "text-muted-foreground"
+                          )}
                         >
-                            {f === 'fresh_uploads' ? (
-                              <div className="flex items-center gap-1.5">
-                                <Sparkles className="h-3 w-3" />
-                                Fresh Prospects
-                              </div>
-                            ) : f}
-                        </Badge>
-                    ))}
+                          <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                          {dateRange?.from ? (
+                            dateRange.to ? (
+                              <>
+                                {format(dateRange.from, "LLL dd, y")} -{" "}
+                                {format(dateRange.to, "LLL dd, y")}
+                              </>
+                            ) : (
+                              format(dateRange.from, "LLL dd, y")
+                            )
+                          ) : (
+                            <span className="text-[10px] font-black uppercase tracking-widest">Temporal Filter</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 rounded-2xl border-none shadow-2xl" align="start">
+                        <div className="p-3 border-b border-muted/50 bg-muted/20 flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Date Range</span>
+                            {dateRange && (
+                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => setDateRange(undefined)}>
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            )}
+                        </div>
+                        <Calendar
+                          initialFocus
+                          mode="range"
+                          defaultMonth={dateRange?.from}
+                          selected={dateRange}
+                          onSelect={setDateRange}
+                          numberOfMonths={2}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
             </div>
 
@@ -295,9 +373,9 @@ export default function LeadsPage() {
                 <div className="flex items-center gap-4 bg-muted/20 p-2 rounded-2xl border border-primary/5">
                     <div className="flex items-center gap-2 px-3 border-r border-primary/10 mr-2 h-10">
                         <UsersIcon className="h-4 w-4 text-primary" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Filter Specialist:</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Specialist:</span>
                         <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                            <SelectTrigger className="w-[160px] h-9 rounded-xl bg-background border-none shadow-inner text-[10px] font-black uppercase tracking-tighter">
+                            <SelectTrigger className="w-[140px] h-9 rounded-xl bg-background border-none shadow-inner text-[10px] font-black uppercase tracking-tighter">
                                 <SelectValue placeholder="All Members" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-none shadow-2xl bg-card/95 backdrop-blur-xl">
@@ -310,24 +388,24 @@ export default function LeadsPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Range / Qty:</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Qty:</span>
                         <Input 
                             type="text" 
                             placeholder="e.g. 1-10" 
                             value={selectCount}
                             onChange={(e) => setSelectCount(e.target.value)}
-                            className="w-32 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
+                            className="w-24 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
                         />
                         <Button 
                             variant="secondary" 
                             size="sm" 
                             onClick={handleSelectNLeads}
-                            className="rounded-xl font-bold px-6 h-10"
+                            className="rounded-xl font-bold px-4 h-10"
                         >
                             Select
                         </Button>
                         {selectedLeads.length > 0 && (
-                            <div className="flex gap-2 ml-4">
+                            <div className="flex gap-2 ml-2">
                                 <Button 
                                     className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10"
                                     onClick={() => setBulkAssignOpen(true)}
@@ -336,22 +414,22 @@ export default function LeadsPage() {
                                 </Button>
                                 <Button 
                                     variant="outline" 
-                                    className="rounded-xl border-primary/20 bg-background hover:bg-primary/5 px-6 font-bold h-10 text-primary flex items-center gap-2"
+                                    className="rounded-xl border-primary/20 bg-background hover:bg-primary/5 px-4 font-bold h-10 text-primary flex items-center gap-2"
                                     onClick={handleSelfAssign}
                                     disabled={isReclaiming}
                                 >
                                     {isReclaiming ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
-                                    Reclaim {selectedLeads.length}
+                                    Reclaim
                                 </Button>
                                 {isAdmin && (
                                     <Button 
                                         variant="destructive" 
-                                        className="rounded-xl shadow-lg px-6 font-bold h-10 flex items-center gap-2"
+                                        className="rounded-xl shadow-lg px-4 font-bold h-10 flex items-center gap-2"
                                         onClick={() => setIsDeleteOpen(true)}
                                         disabled={isDeleting}
                                     >
                                         <Trash2 className="h-4 w-4" />
-                                        Purge {selectedLeads.length}
+                                        Purge
                                     </Button>
                                 )}
                             </div>
