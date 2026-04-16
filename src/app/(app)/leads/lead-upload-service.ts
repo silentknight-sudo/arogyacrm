@@ -3,7 +3,6 @@ import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { syncDealForLead } from './actions';
-import type { RawLead } from '@/types';
 
 const UploadLeadsSchema = z.object({
   rawLeads: z.array(z.any()),
@@ -42,11 +41,6 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
       const rawPhone = getVal(['phone_number', 'phone', 'contact_number', 'contact number']).toString();
       const cleanPhone = rawPhone.replace(/^p:/, '').trim();
       
-      // CLINICAL INSIGHT: Map custom wellness questions
-      const problemType = getVal(['aapko_kis_type_ka_problem_hai?', 'problem_type', 'type_of_problem', 'problem']);
-      const duration = getVal(['how_long_have_you_been_experiencing_joint_pain?', 'duration', 'how_long']);
-      const notes = [problemType, duration].filter(Boolean).join(' | ');
-
       const newLeadData = {
         id: id,
         fullName: getVal(['full_name', 'name', 'customer_name', 'full name']) || 'New Prospect',
@@ -57,21 +51,14 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
         assignedToIds: [assignedToId],
         teamspaceId: teamspaceId,
         reassigned: false,
-        notes: notes,
+        notes: '', // Simplified: Leaving rest empty
         demographicData: {
-            country: getVal(['state', 'city', 'location', 'address']) || '',
+            country: '', // Simplified: Leaving rest empty
             industry: '',
             companySize: '',
             jobTitle: ''
         },
-        attributionFields: JSON.stringify({
-            'campaign': getVal(['campaign_name', 'campaign']),
-            'ad': getVal(['ad_name', 'ad']),
-            'form': getVal(['form_name', 'form']),
-            'platform': getVal(['platform']),
-            'created_time': getVal(['created_time', 'time']),
-            'meta_id': getVal(['id', 'lead_id', 'meta_id'])
-        }),
+        attributionFields: '', // Simplified: Leaving rest empty
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -83,7 +70,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
 
     await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
         title: `you got ${rawLeads.length} new leads`,
-        description: `Successfully imported ${rawLeads.length} prospects from your Meta lead sheet.`,
+        description: `Successfully imported ${rawLeads.length} prospects from your lead sheet.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,

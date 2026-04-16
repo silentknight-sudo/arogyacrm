@@ -23,7 +23,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/context/app-context';
-import type { UserProfile, RawLead } from '@/types';
+import type { UserProfile } from '@/types';
 import { FileInput } from '@/components/ui/file-input';
 import { useCSVReader } from 'react-papaparse';
 import { uploadLeads } from './lead-upload-service';
@@ -109,7 +109,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       if (result.success) {
         toast({
           title: 'Import Successful',
-          description: `${result.count} strategic prospects have been ingested.`,
+          description: `${result.count} prospects have been ingested.`,
         });
         setOpen(false);
         form.reset();
@@ -131,7 +131,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-primary">Strategic Bulk Ingestion</DialogTitle>
           <DialogDescription className="font-medium">
-            Upload your lead sheet. We'll automatically map customer details and clinical insights.
+            Upload your lead sheet. We will extract names and contact details for immediate action.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
@@ -192,19 +192,19 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                             {importedLeads.length > 0 ? (
                                 importedLeads.map((lead, index) => (
                                     <div key={index} className="p-4 rounded-2xl bg-background border border-primary/5 space-y-3 shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="space-y-1">
+                                            <Label className="text-[10px] uppercase font-black opacity-40">Name</Label>
+                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['full_name', 'name', 'customer_name'])} readOnly />
+                                        </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase font-black opacity-40">Name Scraped</Label>
-                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['full_name', 'name', 'customer_name'])} readOnly />
+                                                <Label className="text-[10px] uppercase font-black opacity-40">Phone</Label>
+                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone', 'contact_number']).toString().replace(/^p:/, '')} readOnly />
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase font-black opacity-40">Phone Cleaned</Label>
-                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone', 'contact_number']).replace(/^p:/, '')} readOnly />
+                                                <Label className="text-[10px] uppercase font-black opacity-40">Email</Label>
+                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['email', 'email_address', 'mail'])} readOnly />
                                             </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-[10px] uppercase font-black opacity-40">Problem Type</Label>
-                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['aapko_kis_type_ka_problem_hai?', 'problem_type', 'type_of_problem'])} readOnly />
                                         </div>
                                     </div>
                                 ))
