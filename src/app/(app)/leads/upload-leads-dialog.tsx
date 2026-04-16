@@ -55,8 +55,6 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
   const [isPending, startTransition] = useTransition();
   const [importedLeads, setImportedLeads] = useState<any[]>([]);
 
-  const { CSVReader } = useCSVReader();
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,17 +62,18 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     },
   });
 
+  const { CSVReader } = useCSVReader();
+
   const handleUploadAccepted = (results: any) => {
     const data = results.data;
     if (!data || data.length === 0) return;
 
-    // STRATEGIC AUTO-DISCOVERY: Scan rows to find the actual header line (skipping title rows)
     let headerIndex = -1;
     for (let i = 0; i < Math.min(data.length, 10); i++) {
       const row = data[i];
       if (!row || !Array.isArray(row)) continue;
-      const hasFullName = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('full_name'));
-      const hasPhone = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('phone_number'));
+      const hasFullName = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('name'));
+      const hasPhone = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('phone'));
       
       if (hasFullName || hasPhone) {
         headerIndex = i;
@@ -85,8 +84,8 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     if (headerIndex === -1) {
       toast({ 
         variant: 'destructive', 
-        title: 'Header Identification Failed', 
-        description: 'Could not find "full_name" or "phone_number" headers. Ensure your sheet matches the Meta export format.' 
+        title: 'Header Auto-Discovery Failed', 
+        description: 'Could not find column headers like "Name" or "Phone".' 
       });
       return;
     }
@@ -94,15 +93,13 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     const header = data[headerIndex];
     const rows = data.slice(headerIndex + 1);
     
-    // Filter out empty rows
     const validRows = rows.filter((row: any) => row.length > 1 && row.some((cell: any) => cell));
 
     const leads = validRows.map((row: string[]) => {
       const lead: any = {};
       header.forEach((key: string, index: number) => {
         if (key) {
-          const cleanKey = (key || '').trim();
-          lead[cleanKey] = row[index];
+          lead[key.trim()] = row[index];
         }
       });
       return lead;
@@ -110,7 +107,6 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     setImportedLeads(leads);
   };
 
-  // FUZZY LOOKUP FOR PREVIEW
   const getFuzzyVal = (lead: any, keys: string[]) => {
     const found = Object.keys(lead).find(k => 
       keys.some(pk => k.toLowerCase().trim() === pk.toLowerCase().trim())
@@ -121,11 +117,11 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Active workspace context required.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Active session required.' });
       return;
     }
     if(importedLeads.length === 0){
-        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a valid CSV file with recognizable headers.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a valid CSV file.' });
         return;
     }
 
@@ -137,19 +133,12 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       });
 
       if (result.success) {
-        toast({
-          title: 'Import Successful',
-          description: `${result.count} prospects have been successfully synchronized.`,
-        });
+        toast({ title: 'Import Successful', description: `${result.count} prospects synchronized.` });
         setOpen(false);
         form.reset();
         setImportedLeads([]);
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Import Failed',
-          description: result.error,
-        });
+        toast({ variant: 'destructive', title: 'Import Failed', description: result.error });
       }
     });
   };
@@ -159,9 +148,9 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-5xl rounded-[2.5rem]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-black text-primary">Strategic Lead Ingestion</DialogTitle>
+          <DialogTitle className="text-2xl font-black text-primary">Strategic Header Mapping</DialogTitle>
           <DialogDescription className="font-medium">
-            Upload your Meta Ads sheet. We automatically skip title rows and extract core contact details.
+            Scraping data according to: Created, Name, Email, Source, Form, Channel, Phone, Secondary Phone, WhatsApp.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
@@ -173,9 +162,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                             <div className="space-y-3">
                                 <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Source File (CSV)</Label>
                                 <FileInput {...getRootProps()} className="bg-muted/20 border-primary/10 hover:bg-muted/30 transition-all h-32">
-                                    {acceptedFile ? (
-                                        <span className="font-bold text-primary">{acceptedFile.name}</span>
-                                    ) : 'Drop Meta Lead Sheet Here'}
+                                    {acceptedFile ? <span className="font-bold text-primary">{acceptedFile.name}</span> : 'Drop Strategic Lead Sheet Here'}
                                 </FileInput>
                                 <ProgressBar className="bg-primary h-1 rounded-full" />
                             </div>
@@ -191,25 +178,21 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
                             <SelectTrigger disabled={isLoading} className="rounded-xl h-12 bg-muted/20 border-none">
-                                <SelectValue placeholder={isLoading ? 'Loading hierarchy...' : 'Select recipient'} />
+                                <SelectValue placeholder="Select recipient" />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-xl">
-                            {users.length > 0 ? users.map(user => (
-                                <SelectItem key={user.id} value={user.id}>
-                                {user.displayName} ({user.role.replace(/_/g, ' ')})
-                                </SelectItem>
-                            )) : (
-                                <div className="p-4 text-center text-xs text-muted-foreground italic">No eligible specialists found.</div>
-                            )}
+                            {users.map(user => (
+                                <SelectItem key={user.id} value={user.id}>{user.displayName} ({user.role.replace(/_/g, ' ')})</SelectItem>
+                            ))}
                             </SelectContent>
                         </Select>
                         <FormMessage />
                         </FormItem>
                     )}
                     />
-                    <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-14 rounded-2xl herbal-gradient font-black shadow-xl gold-glow">
-                    {isPending ? 'Ingesting Leads...' : 'Finalize Batch Ingestion'}
+                    <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-14 rounded-2xl herbal-gradient font-black shadow-xl">
+                    {isPending ? 'Ingesting Data...' : 'Finalize Multi-Channel Ingestion'}
                     </Button>
                 </form>
                 </Form>
@@ -219,33 +202,34 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                 <div className="rounded-[2rem] border bg-muted/10 p-1 mt-3 shadow-inner">
                     <ScrollArea className="h-[400px]">
                         <div className="p-4 space-y-4">
-                            {importedLeads.length > 0 ? (
-                                importedLeads.map((lead, index) => (
-                                    <div key={index} className="p-4 rounded-2xl bg-background border border-primary/5 space-y-3 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="space-y-1">
-                                            <Label className="text-[10px] uppercase font-black opacity-40">Full Name</Label>
+                            {importedLeads.map((lead, index) => (
+                                <div key={index} className="p-4 rounded-2xl bg-background border border-primary/5 space-y-3 shadow-sm">
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] uppercase font-black opacity-40">Name / Email</Label>
+                                        <div className="flex gap-2">
                                             <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['full_name', 'name'])} readOnly />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase font-black opacity-40">Phone Number</Label>
-                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone']).replace(/^p:/i, '')} readOnly />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase font-black opacity-40">Email</Label>
-                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['email', 'mail'])} readOnly />
-                                            </div>
+                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['email', 'email address', 'mail'])} readOnly />
                                         </div>
                                     </div>
-                                ))
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground text-center gap-2">
-                                    <div className="p-4 rounded-full bg-muted/50 border border-dashed">
-                                        <span className="text-xs font-medium">Verification Mode:</span>
-                                        <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-40">Upload file to verify headers...</p>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] uppercase font-black opacity-40">Contact Channels</Label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div className="space-y-1">
+                                                <span className="text-[8px] font-black uppercase opacity-60">Primary</span>
+                                                <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['phone', 'phone_number']).replace(/^p:/i, '')} readOnly />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[8px] font-black uppercase opacity-60">Secondary</span>
+                                                <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['secondary_phone_number', 'secondary phone']).replace(/^p:/i, '')} readOnly />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[8px] font-black uppercase opacity-60">WhatsApp</span>
+                                                <Input className="h-8 rounded-lg border-none bg-muted/30 text-[10px] font-bold" value={getFuzzyVal(lead, ['whatsapp_number', 'whatsapp number']).replace(/^p:/i, '')} readOnly />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            )}
+                            ))}
                         </div>
                     </ScrollArea>
                 </div>

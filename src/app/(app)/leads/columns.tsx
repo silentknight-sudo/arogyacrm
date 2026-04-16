@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useTransition } from 'react';
@@ -38,24 +37,17 @@ const normalizeStatus = (status: string): LeadStatus => {
   return map[status.toLowerCase()] || (status as LeadStatus);
 };
 
-/**
- * STRATEGIC FEEDBACK MAPPING:
- * Maps lead data to Google Form entry IDs for the provided link.
- */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, products: Product[]) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
   const params = new URLSearchParams();
   
   params.append('usp', 'pp_url');
-
-  // MAPPING STRATEGY: Replace placeholders with real field IDs if known
-  // These IDs are illustrative based on your field list. Please swap if different.
-  params.append('entry.1234567', currentUser?.displayName || 'Wellness Specialist'); // Sale Person
-  params.append('entry.2345678', lead.fullName || ''); // Customer Name
-  params.append('entry.3456789', lead.phone || ''); // Phone No.
-  params.append('entry.4567890', lead.email || ''); // Mail
-  params.append('entry.5678901', lead.demographicData?.country || 'N/A'); // Address
-  params.append('entry.6789012', normalizeStatus(lead.status)); // Response
+  params.append('entry.1165241773', currentUser?.displayName || '');
+  params.append('entry.1228229865', lead.fullName || '');
+  params.append('entry.1741544755', lead.phone || '');
+  params.append('entry.492500057', lead.email || '');
+  params.append('entry.2001479836', lead.demographicData?.country || '');
+  params.append('entry.1444985794', normalizeStatus(lead.status));
   
   const selectedProductNames = (lead.productAsked || [])
     .map(id => products.find(p => p.id === id)?.name || '')
@@ -68,11 +60,9 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   if (hasCapsules && hasOil) productChoice = 'Both';
   else if (hasCapsules) productChoice = 'Gouthealth Capsules';
   else if (hasOil) productChoice = 'Gouthealth Oil';
-  else productChoice = selectedProductNames || 'N/A';
+  else productChoice = 'Both';
 
-  params.append('entry.7890123', productChoice); // Product
-  params.append('entry.8901234', 'Strategic Prospect'); // Deal
-  params.append('entry.9012345', '0'); // Price
+  params.append('entry.65345719', productChoice);
   
   return `${baseUrl}?${params.toString()}`;
 };
@@ -146,66 +136,6 @@ const StatusSelector = ({ lead, products }: { lead: Lead, products: Product[] })
   );
 };
 
-const ProductSelector = ({ lead, products }: { lead: Lead, products: Product[] }) => {
-    const { toast } = useToast();
-    const { currentTeamspace } = useApp();
-    const [isPending, startTransition] = useTransition();
-    const selectedIds = lead.productAsked || [];
-
-    const handleProductToggle = (productId: string) => {
-        if (!currentTeamspace) return;
-        const newSelection = selectedIds.includes(productId)
-            ? selectedIds.filter(id => id !== productId)
-            : [...selectedIds, productId];
-
-        startTransition(async () => {
-            const result = await updateLeadProducts({
-                leadId: lead.id,
-                teamspaceId: currentTeamspace.id,
-                products: newSelection
-            });
-            if (!result.success) {
-                toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
-            }
-        });
-    };
-
-    return (
-        <Popover>
-            <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 flex gap-2 items-center text-muted-foreground hover:text-primary rounded-lg border-primary/5">
-                    <Package className="h-3 w-3" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">
-                        {selectedIds.length === 0 ? 'Catalog' : `${selectedIds.length} Items`}
-                    </span>
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-0 rounded-2xl border-none shadow-2xl bg-card">
-                <div className="p-3 border-b border-muted/50 bg-muted/20">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Product Alignment</p>
-                </div>
-                <ScrollArea className="h-64">
-                    <div className="p-2 space-y-1">
-                        {products.map(product => (
-                            <div key={product.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors cursor-pointer group" onClick={() => handleProductToggle(product.id)}>
-                                <Checkbox 
-                                    checked={selectedIds.includes(product.id)}
-                                    onCheckedChange={() => handleProductToggle(product.id)}
-                                    className="rounded-full border-2"
-                                />
-                                <div className="flex flex-col gap-0.5">
-                                    <span className="text-xs font-bold leading-tight group-hover:text-primary">{product.name}</span>
-                                    <span className="text-[9px] text-muted-foreground uppercase font-black">{product.category}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea>
-            </PopoverContent>
-        </Popover>
-    );
-};
-
 const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], users: UserProfile[] }) => {
     const assignedUsers = (assignedToIds || []).map(id => users.find(u => u.id === id)).filter(Boolean) as UserProfile[];
     if (assignedUsers.length === 0) return <span className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">Unassigned</span>;
@@ -244,24 +174,6 @@ const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], use
     );
 };
 
-const NameCell = ({ lead }: { lead: Lead }) => {
-  const { currentUser } = useApp();
-  const isManagement = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
-
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="font-black text-primary tracking-tight text-sm">
-          {lead.fullName}
-      </span>
-      {lead.reassigned && isManagement && lead.status !== 'new' && (
-        <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20 text-accent-foreground px-1.5 h-4 rounded-md">
-          Reassigned
-        </Badge>
-      )}
-    </div>
-  );
-};
-
 export const columns: ColumnDef<Lead>[] = [
   {
     id: 'select',
@@ -285,40 +197,66 @@ export const columns: ColumnDef<Lead>[] = [
     enableHiding: false,
   },
   {
+    accessorKey: 'createdAt',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Created</div>,
+    cell: ({ row }) => {
+        const date = row.original.createdAt;
+        if (!date) return 'N/A';
+        const d = date.toDate ? date.toDate() : new Date(date);
+        return <span className="text-[10px] font-bold text-muted-foreground">{format(d, 'PPp')}</span>;
+    },
+  },
+  {
     accessorKey: 'fullName',
     header: ({ column }) => {
       return (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="font-black uppercase tracking-widest text-[10px] hover:bg-transparent px-0">
-          Lead Name
+          Name
           <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />
         </Button>
       );
     },
-    cell: ({ row }) => <NameCell lead={row.original} />,
-  },
-  {
-    accessorKey: 'email',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Email</div>,
-    cell: ({ row }) => <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{row.getValue('email') || 'N/A'}</span>
-  },
-  {
-    accessorKey: 'phone',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Contact No.</div>,
-    cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('phone') || 'N/A'}</span>
-  },
-  {
-    accessorKey: 'updatedAt',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Pulse Date</div>,
     cell: ({ row }) => {
-        const date = row.original.updatedAt || row.original.createdAt;
-        if (!date) return 'N/A';
-        const d = date.toDate ? date.toDate() : new Date(date);
-        return <span className="text-[10px] font-bold text-muted-foreground">{format(d, 'PP')}</span>;
+      const lead = row.original;
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="font-black text-primary tracking-tight text-sm">{lead.fullName}</span>
+          {lead.reassigned && <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20">Reassigned</Badge>}
+        </div>
+      );
     },
   },
   {
+    accessorKey: 'email',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Email address</div>,
+    cell: ({ row }) => <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{row.getValue('email') || 'N/A'}</span>
+  },
+  {
+    accessorKey: 'source',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Source</div>,
+    cell: ({ row }) => <Badge variant="secondary" className="text-[9px] font-black uppercase">{row.getValue('source') || 'Direct'}</Badge>
+  },
+  {
+    accessorKey: 'formName',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Form</div>,
+    cell: ({ row }) => <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[100px]">{row.getValue('formName') || 'N/A'}</span>
+  },
+  {
+    accessorKey: 'channel',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Channel</div>,
+    cell: ({ row }) => <span className="text-[10px] font-bold uppercase">{row.getValue('channel') || 'Lead Gen'}</span>
+  },
+  {
+    accessorKey: 'status',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Stage</div>,
+    cell: ({ row, table }) => {
+        const products = (table.options.meta as any)?.products || [];
+        return <StatusSelector lead={row.original} products={products} />;
+    }
+  },
+  {
     accessorKey: 'assignedToIds',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Specialists</div>,
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Owner</div>,
     cell: ({ row, table }) => {
         const assignedToIds = row.getValue('assignedToIds') as string[] || [];
         const users = (table.options.meta as any)?.users || [];
@@ -326,19 +264,26 @@ export const columns: ColumnDef<Lead>[] = [
     }
   },
   {
-    accessorKey: 'productAsked',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Interests</div>,
-    cell: ({ row, table }) => {
-        const products = (table.options.meta as any)?.products || [];
-        return <ProductSelector lead={row.original} products={products} />;
+    accessorKey: 'labels',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Labels</div>,
+    cell: ({ row }) => {
+        const labels = row.getValue('labels') as string[] || [];
+        return <div className="flex gap-1">{labels.map(l => <Badge key={l} className="text-[8px]">{l}</Badge>)}</div>
     }
   },
   {
-    accessorKey: 'status',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Status</div>,
-    cell: ({ row, table }) => {
-        const products = (table.options.meta as any)?.products || [];
-        return <StatusSelector lead={row.original} products={products} />;
-    }
+    accessorKey: 'phone',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Phone</div>,
+    cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('phone') || 'N/A'}</span>
+  },
+  {
+    accessorKey: 'secondaryPhone',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Secondary Phone</div>,
+    cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('secondaryPhone') || 'N/A'}</span>
+  },
+  {
+    accessorKey: 'whatsappNumber',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">WhatsApp number</div>,
+    cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('whatsappNumber') || 'N/A'}</span>
   },
 ];

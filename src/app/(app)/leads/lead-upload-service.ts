@@ -1,4 +1,3 @@
-
 'use server';
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
@@ -23,56 +22,62 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     }
     
     const createdLeadIds: string[] = [];
-    const batch = adminDb.batch();
-
-    for (const rawLead of (rawLeads as any[])) {
-      // STRATEGIC HELPER: Robust case-insensitive header lookup
-      const getVal = (possibleKeys: string[]) => {
-        const foundKey = Object.keys(rawLead).find(k => 
-          possibleKeys.some(pk => k.toLowerCase().trim() === pk.toLowerCase().trim())
-        );
-        return foundKey ? rawLead[foundKey] : '';
-      };
-
-      const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
-      const id = leadRef.id;
-      createdLeadIds.push(id);
-      
-      // DATA CLEANING: Strict extraction of name, phone, and email ONLY
-      const rawPhone = (getVal(['phone_number', 'phone', 'contact_number', 'contact number']) || '').toString();
-      const cleanPhone = rawPhone.replace(/^p:/i, '').trim();
-      
-      const newLeadData = {
-        id: id,
-        fullName: getVal(['full_name', 'name', 'customer_name', 'full name']) || 'New Prospect',
-        email: getVal(['email', 'email_address', 'mail', 'email address']) || '',
-        phone: cleanPhone || '',
-        source: 'Meta Ads',
-        status: 'new',
-        assignedToIds: [assignedToId],
-        teamspaceId: teamspaceId,
-        reassigned: false,
-        notes: '', 
-        demographicData: {
-            country: '',
-            industry: '',
-            companySize: '',
-            jobTitle: ''
-        },
-        attributionFields: '',
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      };
-      
-      batch.set(leadRef, newLeadData);
+    const chunks = [];
+    for (let i = 0; i < rawLeads.length; i += 500) {
+        chunks.push(rawLeads.slice(i, i + 500));
     }
-    
-    await batch.commit();
 
-    // Trigger pulse notification for the recipient
+    for (const chunk of chunks) {
+        const batch = adminDb.batch();
+        
+        for (const rawLead of chunk) {
+            const getVal = (possibleKeys: string[]) => {
+                const foundKey = Object.keys(rawLead).find(k => 
+                    possibleKeys.some(pk => k.toLowerCase().trim() === pk.toLowerCase().trim())
+                );
+                return foundKey ? rawLead[foundKey] : '';
+            };
+
+            const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
+            const id = leadRef.id;
+            createdLeadIds.push(id);
+            
+            const rawPhone = (getVal(['phone_number', 'phone', 'contact_number']) || '').toString();
+            const cleanPhone = rawPhone.replace(/^p:/i, '').trim();
+
+            const rawSecondary = (getVal(['secondary_phone_number', 'secondary phone', 'secondary phone number']) || '').toString();
+            const cleanSecondary = rawSecondary.replace(/^p:/i, '').trim();
+
+            const rawWhatsapp = (getVal(['whatsapp_number', 'whatsapp number']) || '').toString();
+            const cleanWhatsapp = rawWhatsapp.replace(/^p:/i, '').trim();
+            
+            const newLeadData = {
+                id: id,
+                fullName: getVal(['full_name', 'name', 'customer_name']) || 'New Prospect',
+                email: getVal(['email', 'email_address', 'mail']) || '',
+                phone: cleanPhone || '',
+                secondaryPhone: cleanSecondary || '',
+                whatsappNumber: cleanWhatsapp || '',
+                source: getVal(['source']) || 'Paid',
+                formName: getVal(['form', 'form_name']) || '',
+                channel: getVal(['channel']) || 'Phone number',
+                status: 'new',
+                assignedToIds: [assignedToId],
+                teamspaceId: teamspaceId,
+                reassigned: false,
+                labels: [],
+                createdAt: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
+            };
+            
+            batch.set(leadRef, newLeadData);
+        }
+        await batch.commit();
+    }
+
     await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
         title: `you got ${rawLeads.length} new leads`,
-        description: `Successfully ingested ${rawLeads.length} prospects into your fresh queue.`,
+        description: `Successfully ingested ${rawLeads.length} prospects according to updated strategic headers.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,

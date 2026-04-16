@@ -36,9 +36,14 @@ export type Lead = {
   fullName: string;
   email?: string;
   phone: string;
+  secondaryPhone?: string;
+  whatsappNumber?: string;
+  channel?: string;
+  labels?: string[];
   age?: number;
   status: LeadStatus;
   source?: string;
+  formName?: string;
   assignedToIds: string[];
   teamspaceId: string;
   lastContacted?: string;
