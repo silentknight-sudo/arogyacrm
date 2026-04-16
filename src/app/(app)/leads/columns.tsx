@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, ExternalLink, Loader2, Package, ClipboardList } from 'lucide-react';
+import { ArrowUpDown, ExternalLink, Loader2, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -13,14 +13,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
-import { updateLeadStatus, updateLeadProducts } from './actions';
+import { updateLeadStatus } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 
 const statuses: LeadStatus[] = ['new', 'intrested', 'CNP', 'done', 'not intrested'];
@@ -37,37 +35,23 @@ const normalizeStatus = (status: string): LeadStatus => {
   return map[status.toLowerCase()] || (status as LeadStatus);
 };
 
-const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, products: Product[]) => {
+const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
   const params = new URLSearchParams();
   
   params.append('usp', 'pp_url');
-  params.append('entry.1165241773', currentUser?.displayName || '');
-  params.append('entry.1228229865', lead.fullName || '');
-  params.append('entry.1741544755', lead.phone || '');
-  params.append('entry.492500057', lead.email || '');
-  params.append('entry.2001479836', lead.demographicData?.country || '');
-  params.append('entry.1444985794', normalizeStatus(lead.status));
-  
-  const selectedProductNames = (lead.productAsked || [])
-    .map(id => products.find(p => p.id === id)?.name || '')
-    .join(', ');
-
-  let productChoice = 'Both'; 
-  const hasCapsules = selectedProductNames.toLowerCase().includes('capsule');
-  const hasOil = selectedProductNames.toLowerCase().includes('oil');
-  
-  if (hasCapsules && hasOil) productChoice = 'Both';
-  else if (hasCapsules) productChoice = 'Gouthealth Capsules';
-  else if (hasOil) productChoice = 'Gouthealth Oil';
-  else productChoice = 'Both';
-
-  params.append('entry.65345719', productChoice);
+  // STRATEGIC MAPPING: IDs derived from "Get pre-filled link"
+  params.append('entry.1165241773', currentUser?.displayName || ''); // Sale Person
+  params.append('entry.1228229865', lead.fullName || '');             // Customer Name
+  params.append('entry.1741544755', lead.phone || '');                // Phone No.
+  params.append('entry.492500057', lead.email || '');                 // Mail
+  params.append('entry.2001479836', lead.demographicData?.country || lead.demographicData?.industry || ''); // Address/Location
+  params.append('entry.1444985794', normalizeStatus(lead.status));    // Response
   
   return `${baseUrl}?${params.toString()}`;
 };
 
-const StatusSelector = ({ lead, products }: { lead: Lead, products: Product[] }) => {
+const StatusSelector = ({ lead }: { lead: Lead }) => {
   const { toast } = useToast();
   const { currentTeamspace, currentUser } = useApp();
   const [isPending, startTransition] = useTransition();
@@ -88,7 +72,7 @@ const StatusSelector = ({ lead, products }: { lead: Lead, products: Product[] })
             <div className="flex flex-col gap-3 pt-2">
               <p className="font-medium">Lead moved to "{newStatus}".</p>
               <Button variant="default" size="sm" asChild className="herbal-gradient w-fit rounded-xl font-bold shadow-lg">
-                <a href={getPrefilledGoogleFormUrl(lead, currentUser, products)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href={getPrefilledGoogleFormUrl(lead, currentUser)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <ClipboardList className="h-4 w-4" />
                   Open Feedback Form
                 </a>
@@ -125,12 +109,12 @@ const StatusSelector = ({ lead, products }: { lead: Lead, products: Product[] })
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-full" asChild>
-            <a href={getPrefilledGoogleFormUrl(lead, currentUser, products)} target="_blank" rel="noopener noreferrer">
+            <a href={getPrefilledGoogleFormUrl(lead, currentUser)} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
             </a>
           </Button>
         </TooltipTrigger>
-        <TooltipContent className="rounded-xl font-bold">Open Pre-filled Form</TooltipContent>
+        <TooltipContent className="rounded-xl font-bold">Feedback Loop</TooltipContent>
       </Tooltip>
     </div>
   );
@@ -249,10 +233,7 @@ export const columns: ColumnDef<Lead>[] = [
   {
     accessorKey: 'status',
     header: () => <div className="font-black uppercase tracking-widest text-[10px]">Stage</div>,
-    cell: ({ row, table }) => {
-        const products = (table.options.meta as any)?.products || [];
-        return <StatusSelector lead={row.original} products={products} />;
-    }
+    cell: ({ row }) => <StatusSelector lead={row.original} />
   },
   {
     accessorKey: 'assignedToIds',
@@ -268,7 +249,11 @@ export const columns: ColumnDef<Lead>[] = [
     header: () => <div className="font-black uppercase tracking-widest text-[10px]">Labels</div>,
     cell: ({ row }) => {
         const labels = row.getValue('labels') as string[] || [];
-        return <div className="flex gap-1">{labels.map(l => <Badge key={l} className="text-[8px]">{l}</Badge>)}</div>
+        return (
+          <div className="flex flex-wrap gap-1">
+            {labels.map(l => <Badge key={l} variant="outline" className="text-[8px] border-primary/10 px-1 py-0">{l}</Badge>)}
+          </div>
+        );
     }
   },
   {

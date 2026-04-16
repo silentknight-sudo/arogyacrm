@@ -18,7 +18,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     const { rawLeads, assignedToId, teamspaceId } = UploadLeadsSchema.parse(values);
 
     if (!rawLeads || rawLeads.length === 0) {
-      throw new Error('No leads to import.');
+      throw new Error('No leads detected in the ingestion batch.');
     }
     
     const createdLeadIds: string[] = [];
@@ -58,14 +58,14 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
                 phone: cleanPhone || '',
                 secondaryPhone: cleanSecondary || '',
                 whatsappNumber: cleanWhatsapp || '',
-                source: getVal(['source']) || 'Paid',
+                source: getVal(['source', 'platform']) || 'Imported',
                 formName: getVal(['form', 'form_name']) || '',
-                channel: getVal(['channel']) || 'Phone number',
+                channel: getVal(['channel']) || 'Lead Gen',
                 status: 'new',
                 assignedToIds: [assignedToId],
                 teamspaceId: teamspaceId,
                 reassigned: false,
-                labels: [],
+                labels: getVal(['labels']) ? getVal(['labels']).split(',').map((l: string) => l.trim()) : [],
                 createdAt: FieldValue.serverTimestamp(),
                 updatedAt: FieldValue.serverTimestamp(),
             };
@@ -75,6 +75,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
         await batch.commit();
     }
 
+    // Trigger high-intensity alert pulse for the assigned specialist
     await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
         title: `you got ${rawLeads.length} new leads`,
         description: `Successfully ingested ${rawLeads.length} prospects according to updated strategic headers.`,
@@ -84,6 +85,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
         link: '/leads'
     });
 
+    // Sync Automated Revenue Pipeline
     for (const id of createdLeadIds) {
       await syncDealForLead(id, teamspaceId);
     }
@@ -94,6 +96,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     return { success: true, count: rawLeads.length };
 
   } catch (error: any) {
-    return { success: false, error: handleAdminSDKError(error) };
+    const errorMessage = handleAdminSDKError(error);
+    return { success: false, error: errorMessage };
   }
 }

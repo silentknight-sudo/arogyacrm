@@ -68,6 +68,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     const data = results.data;
     if (!data || data.length === 0) return;
 
+    // STRATEGIC HEADER AUTO-DISCOVERY: Skip decorative title rows
     let headerIndex = -1;
     for (let i = 0; i < Math.min(data.length, 10); i++) {
       const row = data[i];
@@ -84,8 +85,8 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     if (headerIndex === -1) {
       toast({ 
         variant: 'destructive', 
-        title: 'Header Auto-Discovery Failed', 
-        description: 'Could not find column headers like "Name" or "Phone".' 
+        title: 'Header Mapping Failed', 
+        description: 'Could not find column headers (e.g. "Name" or "Phone"). Ensure your CSV has valid headers.' 
       });
       return;
     }
@@ -120,25 +121,33 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       toast({ variant: 'destructive', title: 'Error', description: 'Active session required.' });
       return;
     }
-    if(importedLeads.length === 0){
+    if (importedLeads.length === 0) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please upload a valid CSV file.' });
         return;
     }
 
     startTransition(async () => {
-      const result = await uploadLeads({
-        rawLeads: importedLeads,
-        assignedToId: values.assignedToId,
-        teamspaceId: currentTeamspace.id,
-      });
+      try {
+        const result = await uploadLeads({
+          rawLeads: importedLeads,
+          assignedToId: values.assignedToId,
+          teamspaceId: currentTeamspace.id,
+        });
 
-      if (result.success) {
-        toast({ title: 'Import Successful', description: `${result.count} prospects synchronized.` });
-        setOpen(false);
-        form.reset();
-        setImportedLeads([]);
-      } else {
-        toast({ variant: 'destructive', title: 'Import Failed', description: result.error });
+        if (result && result.success) {
+          toast({ title: 'Import Successful', description: `${result.count} prospects synchronized.` });
+          setOpen(false);
+          form.reset();
+          setImportedLeads([]);
+        } else {
+          toast({ 
+            variant: 'destructive', 
+            title: 'Import Failed', 
+            description: result?.error || 'A secure ingestion operation failed.' 
+          });
+        }
+      } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Critical Error', description: e.message });
       }
     });
   };
@@ -148,9 +157,9 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-5xl rounded-[2.5rem]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-black text-primary">Strategic Header Mapping</DialogTitle>
+          <DialogTitle className="text-2xl font-black text-primary">Strategic Ingestion Protocol</DialogTitle>
           <DialogDescription className="font-medium">
-            Scraping data according to: Created, Name, Email, Source, Form, Channel, Phone, Secondary Phone, WhatsApp.
+            Mapping CSV headers to multi-channel contact fields (Phone, Secondary, WhatsApp).
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
@@ -174,11 +183,11 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     name="assignedToId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Assigned Specialist</FormLabel>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Initial Recipient</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
                             <SelectTrigger disabled={isLoading} className="rounded-xl h-12 bg-muted/20 border-none">
-                                <SelectValue placeholder="Select recipient" />
+                                <SelectValue placeholder="Select specialist" />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-xl">
@@ -192,7 +201,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     )}
                     />
                     <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-14 rounded-2xl herbal-gradient font-black shadow-xl">
-                    {isPending ? 'Ingesting Data...' : 'Finalize Multi-Channel Ingestion'}
+                    {isPending ? 'Syncing Pipeline...' : 'Finalize Multi-Channel Ingestion'}
                     </Button>
                 </form>
                 </Form>
@@ -205,7 +214,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                             {importedLeads.map((lead, index) => (
                                 <div key={index} className="p-4 rounded-2xl bg-background border border-primary/5 space-y-3 shadow-sm">
                                     <div className="space-y-1">
-                                        <Label className="text-[10px] uppercase font-black opacity-40">Name / Email</Label>
+                                        <Label className="text-[10px] uppercase font-black opacity-40">Contact Core</Label>
                                         <div className="flex gap-2">
                                             <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['full_name', 'name'])} readOnly />
                                             <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['email', 'email address', 'mail'])} readOnly />
@@ -230,6 +239,11 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                     </div>
                                 </div>
                             ))}
+                            {importedLeads.length === 0 && (
+                                <div className="text-center py-20 text-xs text-muted-foreground font-medium italic">
+                                    Awaiting file upload for pulse check...
+                                </div>
+                            )}
                         </div>
                     </ScrollArea>
                 </div>
