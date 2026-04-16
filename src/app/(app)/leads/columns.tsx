@@ -44,12 +44,13 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   params.append('usp', 'pp_url');
 
   // STRATEGIC FEEDBACK MAPPING: Replace these keys with your real entry.IDs from the "Get pre-filled link" tool.
-  params.append('entry.SALE_PERSON', currentUser?.displayName || 'Specialist'); 
-  params.append('entry.CUSTOMER_NAME', lead.fullName || '');
-  params.append('entry.PHONE_NO', lead.phone || '');
-  params.append('entry.MAIL', lead.email || '');
-  params.append('entry.ADDRESS', lead.demographicData?.country || 'N/A');
-  params.append('entry.REPONSE', normalizeStatus(lead.status));
+  // Example: entry.123456789=Value
+  params.append('entry.SALE_PERSON_ID', currentUser?.displayName || 'Specialist'); 
+  params.append('entry.CUSTOMER_NAME_ID', lead.fullName || '');
+  params.append('entry.PHONE_NO_ID', lead.phone || '');
+  params.append('entry.MAIL_ID', lead.email || '');
+  params.append('entry.ADDRESS_ID', lead.demographicData?.country || 'N/A');
+  params.append('entry.REPONSE_ID', normalizeStatus(lead.status));
   
   const selectedProductNames = (lead.productAsked || [])
     .map(id => products.find(p => p.id === id)?.name || '')
@@ -64,9 +65,9 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   else if (hasOil) productChoice = 'Gouthealth Oil';
   else productChoice = selectedProductNames || 'N/A';
 
-  params.append('entry.PODUCT', productChoice); 
-  params.append('entry.DEAL', 'Automated Revenue Flow');
-  params.append('entry.PRICE', '0');
+  params.append('entry.PRODUCT_ID', productChoice); 
+  params.append('entry.DEAL_ID', 'Automated Revenue Flow');
+  params.append('entry.PRICE_ID', '0');
   
   return `${baseUrl}?${params.toString()}`;
 };

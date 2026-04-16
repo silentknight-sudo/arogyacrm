@@ -53,7 +53,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
   const { currentUser, currentTeamspace } = useApp();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [importedLeads, setImportedLeads] = useState<RawLead[]>([]);
+  const [importedLeads, setImportedLeads] = useState<any[]>([]);
 
   const { CSVReader } = useCSVReader();
 
@@ -68,25 +68,26 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     const header = results.data[0];
     const data = results.data.slice(1);
     
-    // Filter out empty rows
     const validRows = data.filter((row: any) => row.length > 1 && row.some((cell: any) => cell));
 
-    const leads: RawLead[] = validRows.map((row: string[]) => {
+    const leads = validRows.map((row: string[]) => {
       const lead: any = {};
       header.forEach((key: string, index: number) => {
         const cleanKey = key.trim();
         lead[cleanKey] = row[index];
       });
-      return lead as RawLead;
+      return lead;
     });
     setImportedLeads(leads);
   };
 
-  const handleLeadFieldChange = (index: number, field: keyof RawLead, value: string) => {
-    const updatedLeads = [...importedLeads];
-    updatedLeads[index][field] = value;
-    setImportedLeads(updatedLeads);
-  }
+  // FUZZY LOOKUP FOR PREVIEW
+  const getFuzzyVal = (lead: any, keys: string[]) => {
+    const found = Object.keys(lead).find(k => 
+      keys.some(pk => k.toLowerCase().trim() === pk.toLowerCase().trim())
+    );
+    return found ? lead[found] : '';
+  };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser || !currentTeamspace) {
@@ -94,7 +95,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       return;
     }
     if(importedLeads.length === 0){
-        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a CSV file with Meta Ads leads.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Please upload a valid CSV file.' });
         return;
     }
 
@@ -130,7 +131,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-primary">Strategic Bulk Ingestion</DialogTitle>
           <DialogDescription className="font-medium">
-            Upload Meta Ads CSV export. We'll automatically map full_name, phone_number, state, and wellness concerns.
+            Upload your lead sheet. We'll automatically map customer details and clinical insights.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
@@ -144,7 +145,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                 <FileInput {...getRootProps()} className="bg-muted/20 border-primary/10 hover:bg-muted/30 transition-all h-32">
                                     {acceptedFile ? (
                                         <span className="font-bold text-primary">{acceptedFile.name}</span>
-                                    ) : 'Drop Meta Ads export here'}
+                                    ) : 'Drop your lead sheet here'}
                                 </FileInput>
                                 <ProgressBar className="bg-primary h-1 rounded-full" />
                             </div>
@@ -193,31 +194,17 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                     <div key={index} className="p-4 rounded-2xl bg-background border border-primary/5 space-y-3 shadow-sm hover:shadow-md transition-shadow">
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase font-black opacity-40">Full Name</Label>
-                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.full_name} onChange={e => handleLeadFieldChange(index, 'full_name', e.target.value)} />
+                                                <Label className="text-[10px] uppercase font-black opacity-40">Name Scraped</Label>
+                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['full_name', 'name', 'customer_name'])} readOnly />
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase font-black opacity-40">Phone Number</Label>
-                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.phone_number} onChange={e => handleLeadFieldChange(index, 'phone_number', e.target.value)} />
+                                                <Label className="text-[10px] uppercase font-black opacity-40">Phone Cleaned</Label>
+                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone', 'contact_number']).replace(/^p:/, '')} readOnly />
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                          <div className="space-y-1">
-                                              <Label className="text-[10px] uppercase font-black opacity-40">State</Label>
-                                              <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.state || ''} onChange={e => handleLeadFieldChange(index, 'state', e.target.value)} />
-                                          </div>
-                                          <div className="space-y-1">
-                                              <Label className="text-[10px] uppercase font-black opacity-40">Platform</Label>
-                                              <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead.platform || ''} readOnly />
-                                          </div>
-                                        </div>
                                         <div className="space-y-1">
-                                            <Label className="text-[10px] uppercase font-black opacity-40">Problem Insight</Label>
-                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={lead['aapko_kis_type_ka_problem_hai?'] || ''} readOnly />
-                                        </div>
-                                        <div className="flex items-center justify-between pt-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Source: {lead.form_name || 'Meta Ads'}</span>
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">Ready for sync</span>
+                                            <Label className="text-[10px] uppercase font-black opacity-40">Problem Type</Label>
+                                            <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['aapko_kis_type_ka_problem_hai?', 'problem_type', 'type_of_problem'])} readOnly />
                                         </div>
                                     </div>
                                 ))
@@ -225,7 +212,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                 <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground text-center gap-2">
                                     <div className="p-4 rounded-full bg-muted/50 border border-dashed">
                                         <span className="text-xs font-medium">Verification Protocol:</span>
-                                        <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-40">Headers: full_name, phone_number, state, platform...</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-40">Drop CSV to analyze columns...</p>
                                     </div>
                                 </div>
                             )}

@@ -25,43 +25,52 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     const createdLeadIds: string[] = [];
     const batch = adminDb.batch();
 
-    for (const rawLead of (rawLeads as RawLead[])) {
+    for (const rawLead of (rawLeads as any[])) {
+      // STRATEGIC HELPER: Find value by case-insensitive key search
+      const getVal = (possibleKeys: string[]) => {
+        const foundKey = Object.keys(rawLead).find(k => 
+          possibleKeys.some(pk => k.toLowerCase().trim() === pk.toLowerCase().trim())
+        );
+        return foundKey ? rawLead[foundKey] : '';
+      };
+
       const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
       const id = leadRef.id;
       createdLeadIds.push(id);
       
-      // STRATEGIC CLEANING: Handle Meta Ads phone prefix artifact (p:+91...)
-      const cleanPhone = (rawLead['phone_number'] || '').toString().replace(/^p:/, '').trim();
+      // DATA CLEANING: Handle phone artifacts
+      const rawPhone = getVal(['phone_number', 'phone', 'contact_number', 'contact number']).toString();
+      const cleanPhone = rawPhone.replace(/^p:/, '').trim();
       
-      // SCRAPE INSIGHTS: Map custom questions from the new lead sheet format
-      const problemType = rawLead['aapko_kis_type_ka_problem_hai?'] || '';
-      const duration = rawLead['how_long_have_you_been_experiencing_joint_pain?'] || '';
+      // CLINICAL INSIGHT: Map custom wellness questions
+      const problemType = getVal(['aapko_kis_type_ka_problem_hai?', 'problem_type', 'type_of_problem', 'problem']);
+      const duration = getVal(['how_long_have_you_been_experiencing_joint_pain?', 'duration', 'how_long']);
       const notes = [problemType, duration].filter(Boolean).join(' | ');
 
       const newLeadData = {
         id: id,
-        fullName: rawLead['full_name'] || 'New Prospect',
-        email: rawLead['email'] || '',
+        fullName: getVal(['full_name', 'name', 'customer_name', 'full name']) || 'New Prospect',
+        email: getVal(['email', 'email_address', 'mail']) || '',
         phone: cleanPhone || '',
-        source: rawLead['platform'] || 'Meta Ads',
+        source: getVal(['platform', 'source', 'lead_source']) || 'Meta Ads',
         status: 'new',
         assignedToIds: [assignedToId],
         teamspaceId: teamspaceId,
         reassigned: false,
         notes: notes,
         demographicData: {
-            country: rawLead['state'] || '',
+            country: getVal(['state', 'city', 'location', 'address']) || '',
             industry: '',
             companySize: '',
             jobTitle: ''
         },
         attributionFields: JSON.stringify({
-            'campaign': rawLead['campaign_name'],
-            'ad': rawLead['ad_name'],
-            'form': rawLead['form_name'],
-            'platform': rawLead['platform'],
-            'created_time': rawLead['created_time'],
-            'meta_id': rawLead['id']
+            'campaign': getVal(['campaign_name', 'campaign']),
+            'ad': getVal(['ad_name', 'ad']),
+            'form': getVal(['form_name', 'form']),
+            'platform': getVal(['platform']),
+            'created_time': getVal(['created_time', 'time']),
+            'meta_id': getVal(['id', 'lead_id', 'meta_id'])
         }),
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -74,7 +83,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
 
     await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
         title: `you got ${rawLeads.length} new leads`,
-        description: `Successfully imported ${rawLeads.length} prospects from the updated Meta lead sheet.`,
+        description: `Successfully imported ${rawLeads.length} prospects from your Meta lead sheet.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,
