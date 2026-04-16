@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useTransition } from 'react-hook-form';
 import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown, ExternalLink, Loader2, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
+import type { Lead, UserProfile, LeadStatus } from '@/types';
 import { updateLeadStatus } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -40,12 +40,12 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) 
   const params = new URLSearchParams();
   
   params.append('usp', 'pp_url');
-  // STRATEGIC MAPPING: IDs derived from "Get pre-filled link"
+  // REAL FIELD MAPPINGS FROM YOUR LINK
   params.append('entry.1165241773', currentUser?.displayName || ''); // Sale Person
   params.append('entry.1228229865', lead.fullName || '');             // Customer Name
   params.append('entry.1741544755', lead.phone || '');                // Phone No.
   params.append('entry.492500057', lead.email || '');                 // Mail
-  params.append('entry.2001479836', lead.demographicData?.country || lead.demographicData?.industry || ''); // Address/Location
+  params.append('entry.2001479836', lead.demographicData?.country || ''); // Address/Location
   params.append('entry.1444985794', normalizeStatus(lead.status));    // Response
   
   return `${baseUrl}?${params.toString()}`;
@@ -216,19 +216,14 @@ export const columns: ColumnDef<Lead>[] = [
     cell: ({ row }) => <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{row.getValue('email') || 'N/A'}</span>
   },
   {
+    accessorKey: 'phone',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Phone</div>,
+    cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('phone') || 'N/A'}</span>
+  },
+  {
     accessorKey: 'source',
     header: () => <div className="font-black uppercase tracking-widest text-[10px]">Source</div>,
     cell: ({ row }) => <Badge variant="secondary" className="text-[9px] font-black uppercase">{row.getValue('source') || 'Direct'}</Badge>
-  },
-  {
-    accessorKey: 'formName',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Form</div>,
-    cell: ({ row }) => <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[100px]">{row.getValue('formName') || 'N/A'}</span>
-  },
-  {
-    accessorKey: 'channel',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Channel</div>,
-    cell: ({ row }) => <span className="text-[10px] font-bold uppercase">{row.getValue('channel') || 'Lead Gen'}</span>
   },
   {
     accessorKey: 'status',
@@ -243,32 +238,5 @@ export const columns: ColumnDef<Lead>[] = [
         const users = (table.options.meta as any)?.users || [];
         return <AssignedToCell assignedToIds={assignedToIds} users={users} />;
     }
-  },
-  {
-    accessorKey: 'labels',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Labels</div>,
-    cell: ({ row }) => {
-        const labels = row.getValue('labels') as string[] || [];
-        return (
-          <div className="flex flex-wrap gap-1">
-            {labels.map(l => <Badge key={l} variant="outline" className="text-[8px] border-primary/10 px-1 py-0">{l}</Badge>)}
-          </div>
-        );
-    }
-  },
-  {
-    accessorKey: 'phone',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Phone</div>,
-    cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('phone') || 'N/A'}</span>
-  },
-  {
-    accessorKey: 'secondaryPhone',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Secondary Phone</div>,
-    cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('secondaryPhone') || 'N/A'}</span>
-  },
-  {
-    accessorKey: 'whatsappNumber',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">WhatsApp number</div>,
-    cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('whatsappNumber') || 'N/A'}</span>
   },
 ];

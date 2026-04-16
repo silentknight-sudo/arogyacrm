@@ -68,7 +68,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     const data = results.data;
     if (!data || data.length === 0) return;
 
-    // STRATEGIC HEADER AUTO-DISCOVERY: Skip decorative title rows
+    // STRATEGIC HEADER AUTO-DISCOVERY
     let headerIndex = -1;
     for (let i = 0; i < Math.min(data.length, 10); i++) {
       const row = data[i];
@@ -159,7 +159,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-primary">Strategic Ingestion Protocol</DialogTitle>
           <DialogDescription className="font-medium">
-            Mapping CSV headers to multi-channel contact fields (Phone, Secondary, WhatsApp).
+            Restored core table view. Mapping CSV headers to multi-channel contact fields.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
