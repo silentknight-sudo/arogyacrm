@@ -1,4 +1,3 @@
-
 'use server';
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
@@ -177,27 +176,6 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
 
     await leadRef.update({
       status,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
-    await syncDealForLead(leadId, teamspaceId);
-
-    revalidatePath('/leads');
-    revalidatePath('/deals');
-
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: handleAdminSDKError(error) };
-  }
-}
-
-export async function updateLeadProducts(values: { leadId: string, teamspaceId: string, products: string[] }): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { leadId, teamspaceId, products } = values;
-    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
-
-    await leadRef.update({
-      productAsked: products,
       updatedAt: FieldValue.serverTimestamp(),
     });
 

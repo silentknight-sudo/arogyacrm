@@ -201,10 +201,13 @@ export const columns: ColumnDef<Lead>[] = [
     },
     cell: ({ row }) => {
       const lead = row.original;
+      const { currentUser } = useApp();
+      const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+
       return (
         <div className="flex flex-col gap-1">
           <span className="font-black text-primary tracking-tight text-sm">{lead.fullName}</span>
-          {lead.reassigned && <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20">Reassigned</Badge>}
+          {isAdminOrTL && lead.reassigned && <Badge variant="outline" className="w-fit text-[8px] font-black uppercase bg-accent/10 border-accent/20">Reassigned</Badge>}
         </div>
       );
     },
