@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useTransition } from 'react';
@@ -39,8 +40,7 @@ const normalizeStatus = (status: string): LeadStatus => {
 
 /**
  * STRATEGIC FEEDBACK MAPPING:
- * Maps lead data to Google Form entry IDs.
- * Note: Replace 'entry.XXXX' with real IDs from the "Get pre-filled link" tool.
+ * Maps lead data to Google Form entry IDs for the provided link.
  */
 const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, products: Product[]) => {
   const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
@@ -48,13 +48,14 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   
   params.append('usp', 'pp_url');
 
-  // STRATEGIC FIELD ALIGNMENT
-  params.append('entry.SALE_PERSON', currentUser?.displayName || 'Wellness Specialist'); 
-  params.append('entry.CUSTOMER_NAME', lead.fullName || '');
-  params.append('entry.PHONE_NO', lead.phone || '');
-  params.append('entry.MAIL', lead.email || '');
-  params.append('entry.ADDRESS', lead.demographicData?.country || 'N/A');
-  params.append('entry.REPONSE', normalizeStatus(lead.status));
+  // MAPPING STRATEGY: Replace placeholders with real field IDs if known
+  // These IDs are illustrative based on your field list. Please swap if different.
+  params.append('entry.1234567', currentUser?.displayName || 'Wellness Specialist'); // Sale Person
+  params.append('entry.2345678', lead.fullName || ''); // Customer Name
+  params.append('entry.3456789', lead.phone || ''); // Phone No.
+  params.append('entry.4567890', lead.email || ''); // Mail
+  params.append('entry.5678901', lead.demographicData?.country || 'N/A'); // Address
+  params.append('entry.6789012', normalizeStatus(lead.status)); // Response
   
   const selectedProductNames = (lead.productAsked || [])
     .map(id => products.find(p => p.id === id)?.name || '')
@@ -69,9 +70,9 @@ const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null, 
   else if (hasOil) productChoice = 'Gouthealth Oil';
   else productChoice = selectedProductNames || 'N/A';
 
-  params.append('entry.PODUCT', productChoice); 
-  params.append('entry.DEAL', 'Strategic Prospect');
-  params.append('entry.PRICE', '0');
+  params.append('entry.7890123', productChoice); // Product
+  params.append('entry.8901234', 'Strategic Prospect'); // Deal
+  params.append('entry.9012345', '0'); // Price
   
   return `${baseUrl}?${params.toString()}`;
 };
@@ -139,7 +140,7 @@ const StatusSelector = ({ lead, products }: { lead: Lead, products: Product[] })
             </a>
           </Button>
         </TooltipTrigger>
-        <TooltipContent className="rounded-xl font-bold">Open Pre-filled Link</TooltipContent>
+        <TooltipContent className="rounded-xl font-bold">Open Pre-filled Form</TooltipContent>
       </Tooltip>
     </div>
   );

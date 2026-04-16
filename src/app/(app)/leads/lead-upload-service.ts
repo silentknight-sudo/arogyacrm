@@ -1,3 +1,4 @@
+
 'use server';
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
@@ -37,7 +38,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
       const id = leadRef.id;
       createdLeadIds.push(id);
       
-      // DATA CLEANING: Handle p: prefix in Meta exports
+      // DATA CLEANING: Strict extraction of name, phone, and email ONLY
       const rawPhone = (getVal(['phone_number', 'phone', 'contact_number', 'contact number']) || '').toString();
       const cleanPhone = rawPhone.replace(/^p:/i, '').trim();
       
@@ -46,7 +47,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
         fullName: getVal(['full_name', 'name', 'customer_name', 'full name']) || 'New Prospect',
         email: getVal(['email', 'email_address', 'mail', 'email address']) || '',
         phone: cleanPhone || '',
-        source: getVal(['platform', 'source', 'lead_source']) || 'Meta Ads',
+        source: 'Meta Ads',
         status: 'new',
         assignedToIds: [assignedToId],
         teamspaceId: teamspaceId,

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -57,29 +58,28 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
 
   const { CSVReader } = useCSVReader();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      assignedToId: '',
-    },
-  });
-
   const handleUploadAccepted = (results: any) => {
     const data = results.data;
-    
-    // STRATEGIC DISCOVERY: Find the row containing actual headers
-    const headerIndex = data.findIndex((row: any) => 
-      row.some((cell: any) => {
-        const val = (cell || '').toString().toLowerCase().trim();
-        return val === 'full_name' || val === 'phone_number';
-      })
-    );
+    if (!data || data.length === 0) return;
+
+    // STRATEGIC AUTO-DISCOVERY: Scan rows to find the actual header line (skipping title rows)
+    let headerIndex = -1;
+    for (let i = 0; i < Math.min(data.length, 5); i++) {
+      const row = data[i];
+      const hasFullName = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('full_name'));
+      const hasPhone = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('phone_number'));
+      
+      if (hasFullName || hasPhone) {
+        headerIndex = i;
+        break;
+      }
+    }
 
     if (headerIndex === -1) {
       toast({ 
         variant: 'destructive', 
-        title: 'Header Discovery Failed', 
-        description: 'Ensure your CSV contains a "full_name" or "phone_number" column.' 
+        title: 'Header Identification Failed', 
+        description: 'Could not find "full_name" or "phone_number" headers. Ensure your sheet matches the Meta export format.' 
       });
       return;
     }
@@ -87,20 +87,23 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     const header = data[headerIndex];
     const rows = data.slice(headerIndex + 1);
     
+    // Filter out empty rows
     const validRows = rows.filter((row: any) => row.length > 1 && row.some((cell: any) => cell));
 
     const leads = validRows.map((row: string[]) => {
       const lead: any = {};
       header.forEach((key: string, index: number) => {
-        const cleanKey = (key || '').trim();
-        lead[cleanKey] = row[index];
+        if (key) {
+          const cleanKey = (key || '').trim();
+          lead[cleanKey] = row[index];
+        }
       });
       return lead;
     });
     setImportedLeads(leads);
   };
 
-  // FUZZY LOOKUP FOR PREVIEW
+  // FUZZY LOOKUP FOR PREVIEW (Matches logic in service)
   const getFuzzyVal = (lead: any, keys: string[]) => {
     const found = Object.keys(lead).find(k => 
       keys.some(pk => k.toLowerCase().trim() === pk.toLowerCase().trim())
@@ -150,7 +153,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-primary">Strategic Lead Ingestion</DialogTitle>
           <DialogDescription className="font-medium">
-            Upload your Meta Ads sheet. We will automatically discover headers and isolate contact details.
+            Upload your Meta Ads sheet. We automatically skip title rows and extract core contact details.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
@@ -217,7 +220,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase font-black opacity-40">Cleaned Phone</Label>
+                                                <Label className="text-[10px] uppercase font-black opacity-40">Phone Number</Label>
                                                 <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone']).toString().replace(/^p:/i, '')} readOnly />
                                             </div>
                                             <div className="space-y-1">
