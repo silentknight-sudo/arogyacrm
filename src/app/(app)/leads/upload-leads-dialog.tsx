@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -58,14 +57,22 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
 
   const { CSVReader } = useCSVReader();
 
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      assignedToId: '',
+    },
+  });
+
   const handleUploadAccepted = (results: any) => {
     const data = results.data;
     if (!data || data.length === 0) return;
 
     // STRATEGIC AUTO-DISCOVERY: Scan rows to find the actual header line (skipping title rows)
     let headerIndex = -1;
-    for (let i = 0; i < Math.min(data.length, 5); i++) {
+    for (let i = 0; i < Math.min(data.length, 10); i++) {
       const row = data[i];
+      if (!row || !Array.isArray(row)) continue;
       const hasFullName = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('full_name'));
       const hasPhone = row.some((cell: any) => (cell || '').toString().toLowerCase().includes('phone_number'));
       
@@ -103,12 +110,13 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
     setImportedLeads(leads);
   };
 
-  // FUZZY LOOKUP FOR PREVIEW (Matches logic in service)
+  // FUZZY LOOKUP FOR PREVIEW
   const getFuzzyVal = (lead: any, keys: string[]) => {
     const found = Object.keys(lead).find(k => 
       keys.some(pk => k.toLowerCase().trim() === pk.toLowerCase().trim())
     );
-    return found ? lead[found] : '';
+    const val = found ? lead[found] : '';
+    return (val || '').toString();
   };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
@@ -221,7 +229,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1">
                                                 <Label className="text-[10px] uppercase font-black opacity-40">Phone Number</Label>
-                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone']).toString().replace(/^p:/i, '')} readOnly />
+                                                <Input className="h-9 rounded-lg border-none bg-muted/30 text-xs font-bold" value={getFuzzyVal(lead, ['phone_number', 'phone']).replace(/^p:/i, '')} readOnly />
                                             </div>
                                             <div className="space-y-1">
                                                 <Label className="text-[10px] uppercase font-black opacity-40">Email</Label>
