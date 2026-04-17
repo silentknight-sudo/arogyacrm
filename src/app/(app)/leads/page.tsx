@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useState, useMemo, Suspense, useTransition, useEffect } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -76,9 +75,10 @@ export default function LeadsPage() {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
+    // STRATEGIC_SORTING: Always enforce descending chronological order for high-velocity response
     let q = currentUser.role === 'admin' 
-      ? query(leadsRef) 
-      : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
+      ? query(leadsRef, orderBy('createdAt', 'desc')) 
+      : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id), orderBy('createdAt', 'desc'));
 
     if (activeFilter === 'fresh_uploads') {
       q = query(q, where('status', '==', 'new'), where('reassigned', '==', false));

@@ -50,6 +50,7 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
         'done': 'done',
         'not intrested': 'not intrested',
         'cancelled': 'not intrested',
+        'canceled': 'not intrested',
         'not interested': 'not intrested',
         'Converted': 'done'
     };
@@ -203,6 +204,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     const updateData: any = {
       assignedToIds: newAssignedToIds,
       reassigned: true,
+      createdAt: FieldValue.serverTimestamp(), // REASSIGN_DATE_AUTO_UPDATE: Push to top of pipeline
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -254,6 +256,7 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
       const updateData: any = {
         assignedToIds: newAssignedToIds,
         reassigned: true,
+        createdAt: FieldValue.serverTimestamp(), // REASSIGN_DATE_AUTO_UPDATE: Push to top of pipeline
         updatedAt: FieldValue.serverTimestamp(),
       };
       if (shouldResetToNew) {
@@ -296,6 +299,7 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned: true,
+        createdAt: FieldValue.serverTimestamp(), // REASSIGN_DATE_AUTO_UPDATE: Push to top of pipeline
         updatedAt: FieldValue.serverTimestamp(),
       });
     });
