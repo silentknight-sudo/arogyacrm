@@ -4,8 +4,8 @@ import { syncDealForLead } from '@/app/(app)/leads/actions';
 import { sendMetaCapiEvent } from '@/lib/meta-capi';
 
 /**
- * STRATEGIC META INLET
- * This endpoint allows Meta Ads to push leads directly into the CRM in real-time.
+ * STRATEGIC META ADS REAL-TIME INGESTION
+ * This endpoint allows Meta Ads to push leads directly into the CRM.
  */
 
 export async function GET(request: Request) {
@@ -14,13 +14,11 @@ export async function GET(request: Request) {
   const token = searchParams.get('hub.verify_token');
   const challenge = searchParams.get('hub.challenge');
 
-  // Verification handshake for Meta Webhook setup
+  // Handshake for Webhook setup in Meta Developer Portal
   if (mode === 'subscribe' && token === process.env.META_VERIFY_TOKEN) {
-    console.log('META_WEBHOOK_VERIFIED');
     return new Response(challenge, { status: 200 });
   }
   
-  console.error('META_WEBHOOK_VERIFICATION_FAILED: Token mismatch or invalid mode.');
   return new Response('Forbidden', { status: 403 });
 }
 
@@ -44,20 +42,17 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('META_WEBHOOK_CRITICAL_FAILURE:', error);
+    console.error('META_WEBHOOK_FAILURE:', error);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
 
 async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
   const accessToken = process.env.META_ACCESS_TOKEN;
-  if (!accessToken) {
-    console.error('META_ACCESS_TOKEN_MISSING: Cannot fetch lead details from Meta Graph API.');
-    return;
-  }
+  if (!accessToken) return;
 
   try {
-    // Fetch full lead data from Meta Graph API
+    // Fetch lead details from Meta Graph API
     const response = await fetch(`https://graph.facebook.com/v21.0/${leadId}?access_token=${accessToken}`);
     const metaLead = await response.json();
 
@@ -73,19 +68,13 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
     const email = getVal('email');
     const phone = (getVal('phone_number') || '').toString().replace(/^p:/, '').trim();
 
-    // ROUTING LOGIC: Find the primary teamspace and default recipient (First Admin)
+    // Default Routing: Find primary workspace and first administrator
     const teamspaceSnap = await adminDb.collection('teamspaces').limit(1).get();
-    if (teamspaceSnap.empty) {
-        console.error('META_INGESTION_ABORTED: No teamspaces found.');
-        return;
-    }
+    if (teamspaceSnap.empty) return;
     const teamspaceId = teamspaceSnap.docs[0].id;
 
     const adminSnap = await adminDb.collection('users').where('role', '==', 'admin').limit(1).get();
-    if (adminSnap.empty) {
-        console.error('META_INGESTION_ABORTED: No admin found.');
-        return;
-    }
+    if (adminSnap.empty) return;
     const recipientId = adminSnap.docs[0].id;
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
@@ -93,7 +82,7 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
 
     const newLead = {
       id,
-      fullName: fullName || 'New Meta Prospect',
+      fullName: fullName || 'Meta Prospect',
       email: email || '',
       phone: phone || '',
       source: 'Meta Ads',
@@ -101,7 +90,7 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
       assignedToIds: [recipientId],
       teamspaceId,
       reassigned: false,
-      metaLeadId: leadId, // Explicitly capture for Conversions API
+      metaLeadId: leadId, // Core attribute for CAPI feedback loop
       attributionFields: JSON.stringify({
         meta_lead_id: leadId,
         meta_form_id: formId,
@@ -115,7 +104,7 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
 
     await leadRef.set(newLead);
 
-    // Initial "Lead" event to Meta via CAPI
+    // Step 1: Immediate CAPI "Lead" event to Meta
     await sendMetaCapiEvent({
       eventName: 'Lead',
       leadId: leadId,
@@ -123,9 +112,10 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
       phone: phone,
     });
 
+    // Notify Administrator of fresh prospect arrival
     await adminDb.collection('users').doc(recipientId).collection('notifications').add({
       title: 'you got 1 new leads',
-      description: `Real-time capture: "${fullName || 'Prospect'}" from Meta Ads.`,
+      description: `Real-time capture: "${fullName || 'Prospect'}" has arrived from Meta Ads.`,
       type: 'lead_assigned',
       timestamp: new Date().toISOString(),
       read: false,
@@ -133,8 +123,6 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
     });
 
     await syncDealForLead(id, teamspaceId);
-    
-    console.log(`META_LEAD_INGESTED: ${id} (${fullName})`);
   } catch (error) {
     console.error('META_LEAD_INGESTION_ERROR:', error);
   }

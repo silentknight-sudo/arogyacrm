@@ -146,30 +146,6 @@ export async function createLead(values: z.infer<typeof CreateLeadSchema>) {
   }
 }
 
-export async function scoreLeadWithAI(lead: Lead) {
-  try {
-    const input: AiLeadScoringAndPrioritizationInput = {
-      engagementScore: lead.engagementScore || 0,
-      leadSource: lead.source || 'Unknown',
-      demographicData: {
-        industry: lead.demographicData?.industry || '',
-        companySize: lead.demographicData?.companySize || '',
-        jobTitle: lead.demographicData?.jobTitle || '',
-        country: lead.demographicData?.country || '',
-      },
-      productAsked: lead.productAsked || [],
-      leadStatus: lead.status,
-      notes: lead.notes,
-    };
-
-    const result = await aiLeadScoringAndPrioritization(input);
-    return { success: true, data: result };
-  } catch (error) {
-    console.error('Error scoring lead with AI:', error);
-    return { success: false, error: 'Failed to score lead.' };
-  }
-}
-
 export async function updateLeadStatus(values: { leadId: string, teamspaceId: string, status: LeadStatus }): Promise<{ success: boolean; error?: string }> {
   try {
     const { leadId, teamspaceId, status } = values;
