@@ -3,7 +3,6 @@
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
 import type { Lead, DealStage, LeadStatus, Deal, LineItem } from '@/types';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { sendMetaCapiEvent } from '@/lib/meta-capi';
@@ -129,7 +128,7 @@ export async function createLead(values: z.infer<typeof CreateLeadSchema>) {
 
     await adminDb.collection('users').doc(data.creatorId).collection('notifications').add({
         title: 'you got 1 new leads',
-        description: `New strategic prospect "${data.fullName}" has been added to your queue.`,
+        description: `New prospect "${data.fullName}" has been added to your queue.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,
@@ -158,7 +157,7 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // Send CRM Event back to Meta via Conversions API
+    // CRM Feedback Loop: Send Event back to Meta
     if (lead.metaLeadId) {
         const metaEventName = status === 'done' ? 'Converted' : (status === 'intrested' ? 'Other' : 'Lead');
         await sendMetaCapiEvent({
@@ -183,45 +182,19 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
   }
 }
 
-const AssignLeadSchema = z.object({
-  leadId: z.string().min(1),
-  teamspaceId: z.string().min(1),
-  newAssignedToIds: z.array(z.string()).min(1, 'At least one user must be assigned.'),
-  currentUserId: z.string().min(1),
-});
-
-export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
-: Promise<{ success: boolean; error?: string }> {
+export async function assignLead(values: { leadId: string, teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {
   try {
-    const { leadId, teamspaceId, newAssignedToIds, currentUserId } = AssignLeadSchema.parse(values);
+    const { leadId, teamspaceId, newAssignedToIds, currentUserId } = values;
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const currentUserData = currentUserDoc.data();
-    const role = currentUserData?.role;
+    const role = currentUserDoc.data()?.role;
 
     let shouldResetToNew = false;
-
-    if (role === 'admin') {
-        for (const id of newAssignedToIds) {
-            const target = await adminDb.collection('users').doc(id).get();
-            const targetData = target.data();
-            if (targetData?.role !== 'sales_team_lead' && targetData?.role !== 'sales_executive') {
-                throw new Error('Administrators can only delegate to verified Team Leaders or Executives.');
-            }
-            if (targetData?.role === 'sales_executive') shouldResetToNew = true;
+    if (role === 'admin' || role === 'sales_team_lead') {
+        const target = await adminDb.collection('users').doc(newAssignedToIds[0]).get();
+        if (target.data()?.role === 'sales_executive') {
+            shouldResetToNew = true;
         }
-    } else if (role === 'sales_team_lead') {
-        for (const id of newAssignedToIds) {
-            if (id === currentUserId) continue; 
-            const target = await adminDb.collection('users').doc(id).get();
-            const targetData = target.data();
-            if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
-                throw new Error('Team Leaders can only delegate to specialists they have personally onboarded.');
-            }
-            if (targetData?.role === 'sales_executive') shouldResetToNew = true;
-        }
-    } else {
-        throw new Error('Unauthorized: You do not have delegation privileges.');
     }
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
@@ -254,57 +227,29 @@ export async function assignLead(values: z.infer<typeof AssignLeadSchema>)
 
     revalidatePath('/leads');
     revalidatePath('/deals');
-
     return { success: true };
-
   } catch (error: any) {
     return { success: false, error: handleAdminSDKError(error) };
   }
 }
 
-const BulkAssignSchema = z.object({
-  leadIds: z.array(z.string()).min(1),
-  teamspaceId: z.string().min(1),
-  newAssignedToIds: z.array(z.string()).min(1),
-  currentUserId: z.string().min(1),
-});
-
-export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
-: Promise<{ success: boolean; error?: string }> {
+export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {
   try {
-    const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = BulkAssignSchema.parse(values);
+    const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = values;
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const currentUserData = currentUserDoc.data();
-    const role = currentUserData?.role;
+    const role = currentUserDoc.data()?.role;
 
     let shouldResetToNew = false;
-
-    if (role === 'admin') {
-        for (const id of newAssignedToIds) {
-            const target = await adminDb.collection('users').doc(id).get();
-            const targetData = target.data();
-            if (targetData?.role !== 'sales_team_lead' && targetData?.role !== 'sales_executive') {
-                throw new Error('Strategic delegation restricted to authorized Team Leaders or Executives.');
-            }
-            if (targetData?.role === 'sales_executive') shouldResetToNew = true;
+    if (role === 'admin' || role === 'sales_team_lead') {
+        const target = await adminDb.collection('users').doc(newAssignedToIds[0]).get();
+        if (target.data()?.role === 'sales_executive') {
+            shouldResetToNew = true;
         }
-    } else if (role === 'sales_team_lead') {
-        for (const id of newAssignedToIds) {
-            if (id === currentUserId) continue;
-            const target = await adminDb.collection('users').doc(id).get();
-            const targetData = target.data();
-            if (targetData?.role !== 'sales_executive' || targetData?.createdBy !== currentUserId) {
-                throw new Error('You can only delegate prospects to specialists you have onboarded.');
-            }
-            if (targetData?.role === 'sales_executive') shouldResetToNew = true;
-        }
-    } else {
-        throw new Error('Unauthorized access.');
     }
 
     const batch = adminDb.batch();
-    leadIds.forEach((id: string) => {
+    leadIds.forEach(id => {
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       const updateData: any = {
         assignedToIds: newAssignedToIds,
@@ -322,7 +267,7 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
     for (const userId of newAssignedToIds) {
         await adminDb.collection('users').doc(userId).collection('notifications').add({
             title: `you got ${leadIds.length} new leads`,
-            description: `${leadIds.length} strategic prospects have been reassigned to your professional desk.`,
+            description: `${leadIds.length} prospects have been assigned to your desk.`,
             type: 'lead_assigned',
             timestamp: new Date().toISOString(),
             read: false,
@@ -342,29 +287,11 @@ export async function bulkAssignLeads(values: z.infer<typeof BulkAssignSchema>)
   }
 }
 
-const SelfAssignSchema = z.object({
-  leadIds: z.array(z.string()).min(1),
-  teamspaceId: z.string().min(1),
-  currentUserId: z.string().min(1),
-});
-
-export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
-: Promise<{ success: boolean; error?: string }> {
+export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: string, currentUserId: string }) {
   try {
-    const { leadIds, teamspaceId, currentUserId } = SelfAssignSchema.parse(values);
-
-    const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    if (!currentUserDoc.exists) throw new Error('User context not found.');
-    
-    const currentUserData = currentUserDoc.data();
-    const role = currentUserData?.role;
-
-    if (role !== 'admin' && role !== 'sales_team_lead') {
-        throw new Error('Unauthorized: Executive governance required to reclaim prospects.');
-    }
-
+    const { leadIds, teamspaceId, currentUserId } = values;
     const batch = adminDb.batch();
-    leadIds.forEach((id: string) => {
+    leadIds.forEach(id => {
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       batch.update(ref, {
         assignedToIds: [currentUserId],
@@ -377,7 +304,7 @@ export async function selfAssignLeads(values: z.infer<typeof SelfAssignSchema>)
 
     await adminDb.collection('users').doc(currentUserId).collection('notifications').add({
         title: `you got ${leadIds.length} new leads`,
-        description: `Successfully reclaimed ${leadIds.length} strategic prospects to your personal desk.`,
+        description: `Successfully reclaimed ${leadIds.length} prospects to your desk.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,
@@ -401,11 +328,11 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
     const snapshot = await leadsRef.orderBy('createdAt', 'asc').get();
     
-    const leads = snapshot.docs.map((doc: QueryDocumentSnapshot) => doc.data() as Lead);
+    const leads = snapshot.docs.map(doc => doc.data() as Lead);
     const seenPhones = new Map<string, string>(); 
     const toDelete: string[] = [];
 
-    leads.forEach((lead: Lead) => {
+    leads.forEach(lead => {
       const phone = lead.phone?.trim();
       if (!phone) return;
 
@@ -427,7 +354,7 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
 
     for (const chunk of chunks) {
       const batch = adminDb.batch();
-      chunk.forEach((id: string) => {
+      chunk.forEach(id => {
         batch.delete(leadsRef.doc(id));
       });
       await batch.commit();
@@ -446,7 +373,7 @@ export async function deleteLeads(values: { leadIds: string[], teamspaceId: stri
 
     const userDoc = await adminDb.collection('users').doc(currentUserId).get();
     if (userDoc.data()?.role !== 'admin') {
-      throw new Error('Unauthorized: Only administrators can purge database assets.');
+      throw new Error('Unauthorized.');
     }
 
     const chunks = [];
@@ -461,8 +388,6 @@ export async function deleteLeads(values: { leadIds: string[], teamspaceId: stri
         const batch = adminDb.batch();
         for (const id of chunk) {
             batch.delete(leadsRef.doc(id));
-            
-            // Cleanup associated deals
             const dealQuery = await dealsRef.where('leadId', '==', id).get();
             dealQuery.docs.forEach(doc => batch.delete(doc.ref));
         }

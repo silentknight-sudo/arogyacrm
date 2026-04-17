@@ -68,7 +68,7 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
     const email = getVal('email');
     const phone = (getVal('phone_number') || '').toString().replace(/^p:/, '').trim();
 
-    // Default Routing: Find primary workspace and first administrator
+    // Routing Logic: Find first available workspace and first administrator
     const teamspaceSnap = await adminDb.collection('teamspaces').limit(1).get();
     if (teamspaceSnap.empty) return;
     const teamspaceId = teamspaceSnap.docs[0].id;
@@ -104,7 +104,7 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
 
     await leadRef.set(newLead);
 
-    // Step 1: Immediate CAPI "Lead" event to Meta
+    // Immediate CAPI "Lead" event to Meta
     await sendMetaCapiEvent({
       eventName: 'Lead',
       leadId: leadId,
@@ -112,10 +112,10 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
       phone: phone,
     });
 
-    // Notify Administrator of fresh prospect arrival
+    // Notify Specialist
     await adminDb.collection('users').doc(recipientId).collection('notifications').add({
       title: 'you got 1 new leads',
-      description: `Real-time capture: "${fullName || 'Prospect'}" has arrived from Meta Ads.`,
+      description: `New prospect "${fullName || 'Prospect'}" has arrived from Meta Ads.`,
       type: 'lead_assigned',
       timestamp: new Date().toISOString(),
       read: false,

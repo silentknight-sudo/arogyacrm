@@ -3,7 +3,7 @@ import crypto from 'crypto';
 /**
  * STRATEGIC META CAPI SERVICE
  * Handles SHA-256 hashing and event transmission for Meta Conversions API.
- * Follows Meta's privacy requirements and payload structure.
+ * Adheres to Meta's strict privacy requirements and payload structure.
  */
 
 function hashData(data: string): string {
@@ -17,6 +17,8 @@ export type MetaEventData = {
   leadId?: string;   // 15-17 digit Meta Lead ID
   email?: string;
   phone?: string;
+  firstName?: string;
+  lastName?: string;
   customData?: Record<string, any>;
 };
 
@@ -34,10 +36,12 @@ export async function sendMetaCapiEvent(event: MetaEventData) {
       client_user_agent: 'Arogya-CRM-Server',
     };
 
-    // Attribution Parameters
+    // Attribution Parameters (Required for Matching)
     if (event.leadId) userData.lead_id = event.leadId;
     if (event.email) userData.em = [hashData(event.email)];
     if (event.phone) userData.ph = [hashData(event.phone)];
+    if (event.firstName) userData.fn = [hashData(event.firstName)];
+    if (event.lastName) userData.ln = [hashData(event.lastName)];
 
     const payload = {
       data: [
