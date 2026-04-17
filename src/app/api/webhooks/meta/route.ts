@@ -1,7 +1,7 @@
-
 import { NextResponse } from 'next/server';
 import { adminDb, FieldValue } from '@/firebase/admin';
 import { syncDealForLead } from '@/app/(app)/leads/actions';
+import { sendMetaCapiEvent } from '@/lib/meta-capi';
 
 /**
  * STRATEGIC META INLET
@@ -28,7 +28,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // Meta sends notifications for Page events
     if (body.object === 'page') {
       for (const entry of body.entry) {
         for (const change of entry.changes) {
@@ -37,7 +36,6 @@ export async function POST(request: Request) {
             const pageId = change.value.page_id;
             const formId = change.value.form_id;
 
-            // Off-load lead fetching to prevent timeout
             await ingestMetaLead(leadId, pageId, formId);
           }
         }
@@ -59,7 +57,7 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
   }
 
   try {
-    // Fetch full lead data from Meta Graph API (v21.0 or latest)
+    // Fetch full lead data from Meta Graph API
     const response = await fetch(`https://graph.facebook.com/v21.0/${leadId}?access_token=${accessToken}`);
     const metaLead = await response.json();
 
@@ -71,7 +69,6 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
     const fieldData = metaLead.field_data || [];
     const getVal = (name: string) => fieldData.find((f: any) => f.name === name)?.values?.[0] || '';
 
-    // Standard Meta Lead Gen field mappings
     const fullName = getVal('full_name') || `${getVal('first_name')} ${getVal('last_name')}`.trim();
     const email = getVal('email');
     const phone = (getVal('phone_number') || '').toString().replace(/^p:/, '').trim();
@@ -79,14 +76,14 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
     // ROUTING LOGIC: Find the primary teamspace and default recipient (First Admin)
     const teamspaceSnap = await adminDb.collection('teamspaces').limit(1).get();
     if (teamspaceSnap.empty) {
-        console.error('META_INGESTION_ABORTED: No teamspaces found in database.');
+        console.error('META_INGESTION_ABORTED: No teamspaces found.');
         return;
     }
     const teamspaceId = teamspaceSnap.docs[0].id;
 
     const adminSnap = await adminDb.collection('users').where('role', '==', 'admin').limit(1).get();
     if (adminSnap.empty) {
-        console.error('META_INGESTION_ABORTED: No admin user found to assign incoming lead.');
+        console.error('META_INGESTION_ABORTED: No admin found.');
         return;
     }
     const recipientId = adminSnap.docs[0].id;
@@ -100,10 +97,11 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
       email: email || '',
       phone: phone || '',
       source: 'Meta Ads',
-      status: 'new', // Unified stage naming
+      status: 'new',
       assignedToIds: [recipientId],
       teamspaceId,
       reassigned: false,
+      metaLeadId: leadId, // Explicitly capture for Conversions API
       attributionFields: JSON.stringify({
         meta_lead_id: leadId,
         meta_form_id: formId,
@@ -117,7 +115,14 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
 
     await leadRef.set(newLead);
 
-    // Trigger high-intensity alert for the recipient via persistent notification
+    // Initial "Lead" event to Meta via CAPI
+    await sendMetaCapiEvent({
+      eventName: 'Lead',
+      leadId: leadId,
+      email: email,
+      phone: phone,
+    });
+
     await adminDb.collection('users').doc(recipientId).collection('notifications').add({
       title: 'you got 1 new leads',
       description: `Real-time capture: "${fullName || 'Prospect'}" from Meta Ads.`,
@@ -127,7 +132,6 @@ async function ingestMetaLead(leadId: string, pageId: string, formId: string) {
       link: '/leads'
     });
 
-    // Automated Revenue Sync: Create deal if applicable
     await syncDealForLead(id, teamspaceId);
     
     console.log(`META_LEAD_INGESTED: ${id} (${fullName})`);

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { aiLeadScoringAndPrioritization, AiLeadScoringAndPrioritizationInput } from '@/ai/flows/ai-lead-scoring-and-prioritization-flow';
 import type { Lead, DealStage, LeadStatus, Deal, LineItem } from '@/types';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { sendMetaCapiEvent } from '@/lib/meta-capi';
 
 export async function syncDealForLead(leadId: string, teamspaceId: string) {
   try {
@@ -173,11 +174,27 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
   try {
     const { leadId, teamspaceId, status } = values;
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+    const leadDoc = await leadRef.get();
+    const lead = leadDoc.data() as Lead;
 
     await leadRef.update({
       status,
       updatedAt: FieldValue.serverTimestamp(),
     });
+
+    // Send CRM Event back to Meta via Conversions API
+    if (lead.metaLeadId) {
+        const metaEventName = status === 'done' ? 'Converted' : (status === 'intrested' ? 'Other' : 'Lead');
+        await sendMetaCapiEvent({
+            eventName: metaEventName,
+            leadId: lead.metaLeadId,
+            email: lead.email,
+            phone: lead.phone,
+            customData: {
+                crm_status: status
+            }
+        });
+    }
 
     await syncDealForLead(leadId, teamspaceId);
 

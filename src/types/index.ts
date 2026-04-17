@@ -60,6 +60,7 @@ export type Lead = {
   };
   notes?: string;
   attributionFields?: string;
+  metaLeadId?: string; // Captured from Meta Ads
   reassigned?: boolean;
   createdAt: any;
   updatedAt: any;
