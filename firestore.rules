@@ -12,9 +12,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function getUserData() {
-      let doc = getUserDoc();
-      return doc != null ? doc.data : null;
+      return userExists() ? getUserDoc().data : null;
     }
 
     function isAdmin() {
@@ -28,6 +31,12 @@ service cloud.firestore {
         data.role == 'admin' || 
         (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
       );
+    }
+
+    // -- GLOBAL ADMIN OVERRIDE --
+    // This ensures that anyone with the 'admin' role has guaranteed access to all resources.
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
     }
 
     // -- COLLECTION GROUP RULES (Required for Global Dashboards) --
@@ -54,7 +63,7 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         isAdmin() || 
         userId == request.auth.uid ||
-        (getUserData().role == 'sales_team_lead' && (
+        (userExists() && getUserData().role == 'sales_team_lead' && (
             resource == null || resource.data.createdBy == request.auth.uid
         ))
       );
@@ -72,9 +81,6 @@ service cloud.firestore {
     }
 
     match /teamspaces/{teamspaceId} {
-      // Admin Override: Full access to the teamspace and its metadata
-      allow read, write: if isAdmin();
-      
       // Member Access: View teamspace metadata
       allow get, list: if isMember(teamspaceId);
 
@@ -87,7 +93,7 @@ service cloud.firestore {
       match /leads/{leadId} {
         allow read, write: if isMember(teamspaceId) && (
           isAdmin() || 
-          getUserData().role == 'sales_team_lead' || 
+          (userExists() && getUserData().role == 'sales_team_lead') || 
           (resource != null && request.auth.uid in resource.data.assignedToIds) ||
           (resource == null) // Allow creation if they are a member
         );
