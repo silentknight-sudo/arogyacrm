@@ -21,15 +21,19 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      let data = getUserData();
-      return isSignedIn() && data != null && data.role == 'admin';
+      // FAIL-SAFE: Check for the master admin email directly in the token 
+      // alongside the document-based role check to ensure zero-lockout.
+      return isSignedIn() && (
+        (userExists() && getUserDoc().data.role == 'admin') || 
+        request.auth.token.email == 'admin@arogyabio.com'
+      );
     }
 
     function isMember(teamspaceId) {
       let data = getUserData();
-      return isSignedIn() && data != null && (
-        data.role == 'admin' || 
-        (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
+      return isSignedIn() && (
+        isAdmin() || 
+        (data != null && data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
       );
     }
 
@@ -37,24 +41,6 @@ service cloud.firestore {
     // This ensures that anyone with the 'admin' role has guaranteed access to all resources.
     match /{allPaths=**} {
       allow read, write: if isAdmin();
-    }
-
-    // -- COLLECTION GROUP RULES (Required for Global Dashboards) --
-    
-    match /{path=**}/leads/{leadId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/deals/{dealId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/contacts/{contactId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/activityLogs/{logId} {
-      allow read: if isAdmin();
     }
 
     // -- CORE RULES --
@@ -68,7 +54,7 @@ service cloud.firestore {
         ))
       );
       
-      allow write: if isAdmin();
+      allow write: if isAdmin() || (isSignedIn() && userId == request.auth.uid);
 
       match /notifications/{notificationId} {
         allow read, write: if isSignedIn() && userId == request.auth.uid;
@@ -84,31 +70,29 @@ service cloud.firestore {
       // Member Access: View teamspace metadata
       allow get, list: if isMember(teamspaceId);
 
-      // Recursive Member Override: Members can access any sub-collection unless specifically restricted
-      match /{allPaths=**} {
-        allow read, write: if isMember(teamspaceId);
-      }
-
       // Specific Lead Logic: Enforces assignment privacy for Sales Executives
       match /leads/{leadId} {
-        allow read, write: if isMember(teamspaceId) && (
-          isAdmin() || 
+        allow read, write: if isAdmin() || (isMember(teamspaceId) && (
           (userExists() && getUserData().role == 'sales_team_lead') || 
           (resource != null && request.auth.uid in resource.data.assignedToIds) ||
           (resource == null) // Allow creation if they are a member
-        );
+        ));
       }
 
       // Specific Deal Logic: Enforces management hierarchy
       match /deals/{dealId} {
-        allow read, write: if isMember(teamspaceId) && (
-          isAdmin() || 
+        allow read, write: if isAdmin() || (isMember(teamspaceId) && (
           (resource != null && (
             resource.data.teamLeadId == request.auth.uid || 
             resource.data.ownerId == request.auth.uid
           )) ||
           (resource == null) // Allow creation
-        );
+        ));
+      }
+
+      // Recursive Member Override: Members can access other sub-collections
+      match /{allPaths=**} {
+        allow read, write: if isAdmin() || isMember(teamspaceId);
       }
     }
   }
