@@ -191,17 +191,17 @@ async function getReassignmentState(leadId: string, teamspaceId: string) {
     // If it was already reassigned, keep it reassigned
     if (leadData?.reassigned) return true;
     
-    // If moving from a Specialist to anyone else, it's a reassignment
+    // If moving from a Specialist to anyone else, it's a true reassignment
     if (leadData?.assignedToIds?.length > 0) {
         const currentOwnerId = leadData.assignedToIds[0];
         const ownerDoc = await adminDb.collection('users').doc(currentOwnerId).get();
         const ownerRole = ownerDoc.data()?.role;
         
-        // If the current owner is a specialist, this is a true reassignment
+        // REFINED LOGIC: Only movement from a Specialist (Executive) counts as reassignment.
+        // Distribution from an Admin or Team Lead is considered "Initial Field Arrival".
         if (ownerRole === 'sales_executive') return true;
     }
     
-    // If moving from an Admin/TL, it's considered "Distribution" (not reassigned yet)
     return false;
 }
 
@@ -227,7 +227,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     const updateData: any = {
       assignedToIds: newAssignedToIds,
       reassigned,
-      createdAt: FieldValue.serverTimestamp(), // TOP_OF_PIPELINE: Move to top on assignment
+      createdAt: FieldValue.serverTimestamp(), // DYNAMIC_DATE_REFRESH: Force to top of pipeline
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -275,22 +275,21 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
 
     const batch = adminDb.batch();
     
-    // For bulk actions, we evaluate reassigned based on the first lead (assuming they are from the same context)
-    const reassigned = await getReassignmentState(leadIds[0], teamspaceId);
-
-    leadIds.forEach(id => {
+    // Evaluate reassigned status based on the specific batch context
+    for (const id of leadIds) {
+      const reassigned = await getReassignmentState(id, teamspaceId);
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       const updateData: any = {
         assignedToIds: newAssignedToIds,
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // TOP_OF_PIPELINE: Move to top on assignment
+        createdAt: FieldValue.serverTimestamp(), // DYNAMIC_DATE_REFRESH
         updatedAt: FieldValue.serverTimestamp(),
       };
       if (shouldResetToNew) {
         updateData.status = 'new';
       }
       batch.update(ref, updateData);
-    });
+    }
 
     await batch.commit();
 
@@ -322,17 +321,16 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
     const { leadIds, teamspaceId, currentUserId } = values;
     const batch = adminDb.batch();
     
-    const reassigned = await getReassignmentState(leadIds[0], teamspaceId);
-
-    leadIds.forEach(id => {
+    for (const id of leadIds) {
+      const reassigned = await getReassignmentState(id, teamspaceId);
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // TOP_OF_PIPELINE
+        createdAt: FieldValue.serverTimestamp(), // DYNAMIC_DATE_REFRESH
         updatedAt: FieldValue.serverTimestamp(),
       });
-    });
+    }
 
     await batch.commit();
 

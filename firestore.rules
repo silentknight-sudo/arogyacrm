@@ -21,11 +21,11 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // FAIL-SAFE: Check for the master admin email directly in the token 
-      // alongside the document-based role check to ensure zero-lockout.
+      // MASTER OVERRIDE: Check for the admin email in the token first for high-velocity access.
+      // Then fallback to the document-based role check.
       return isSignedIn() && (
-        (userExists() && getUserDoc().data.role == 'admin') || 
-        request.auth.token.email == 'admin@arogyabio.com'
+        request.auth.token.email == 'admin@arogyabio.com' ||
+        (userExists() && getUserDoc().data.role == 'admin')
       );
     }
 
@@ -38,7 +38,7 @@ service cloud.firestore {
     }
 
     // -- GLOBAL ADMIN OVERRIDE --
-    // This ensures that anyone with the 'admin' role has guaranteed access to all resources.
+    // This is the "Fast-Pass" that ensures admins have guaranteed access to all resources.
     match /{allPaths=**} {
       allow read, write: if isAdmin();
     }
