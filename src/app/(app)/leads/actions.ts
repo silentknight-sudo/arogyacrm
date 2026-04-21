@@ -188,16 +188,18 @@ async function getReassignmentState(leadId: string, teamspaceId: string) {
     const leadDoc = await leadRef.get();
     const leadData = leadDoc.data();
     
-    // If it was already reassigned, keep it reassigned
-    if (leadData?.reassigned) return true;
+    if (!leadData) return false;
     
-    // If moving from a Specialist to anyone else, it's a true reassignment
-    if (leadData?.assignedToIds?.length > 0) {
+    // If it was already reassigned, keep it reassigned
+    if (leadData.reassigned) return true;
+    
+    // Check previous owner role
+    if (leadData.assignedToIds?.length > 0) {
         const currentOwnerId = leadData.assignedToIds[0];
         const ownerDoc = await adminDb.collection('users').doc(currentOwnerId).get();
         const ownerRole = ownerDoc.data()?.role;
         
-        // REFINED LOGIC: Only movement from a Specialist (Executive) counts as reassignment.
+        // Only movement from a Sales Executive (Specialist) counts as true reassignment.
         // Distribution from an Admin or Team Lead is considered "Initial Field Arrival".
         if (ownerRole === 'sales_executive') return true;
     }
@@ -275,7 +277,6 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
 
     const batch = adminDb.batch();
     
-    // Evaluate reassigned status based on the specific batch context
     for (const id of leadIds) {
       const reassigned = await getReassignmentState(id, teamspaceId);
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);

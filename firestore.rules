@@ -21,8 +21,8 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // MASTER OVERRIDE: Check for the admin email in the token first for high-velocity access.
-      // Then fallback to the document-based role check.
+      // FAIL-SAFE OVERRIDE: Check for the admin email in the token first for guaranteed access.
+      // admin@arogyabio.com is the hardcoded master identity.
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
         (userExists() && getUserDoc().data.role == 'admin')
