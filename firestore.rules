@@ -10,7 +10,7 @@ service cloud.firestore {
 
     function isAdmin() {
       // FAIL-SAFE OVERRIDE: Check for the admin email in the token first for guaranteed access.
-      // This bypasses doc lookups for the master identity to prevent race conditions.
+      // This bypasses doc lookups for the master identity to prevent race conditions during initial login.
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
