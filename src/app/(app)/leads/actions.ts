@@ -183,12 +183,36 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
   }
 }
 
+async function getReassignmentState(leadId: string, teamspaceId: string) {
+    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+    const leadDoc = await leadRef.get();
+    const leadData = leadDoc.data();
+    
+    // If it was already reassigned, keep it reassigned
+    if (leadData?.reassigned) return true;
+    
+    // If moving from a Specialist to anyone else, it's a reassignment
+    if (leadData?.assignedToIds?.length > 0) {
+        const currentOwnerId = leadData.assignedToIds[0];
+        const ownerDoc = await adminDb.collection('users').doc(currentOwnerId).get();
+        const ownerRole = ownerDoc.data()?.role;
+        
+        // If the current owner is a specialist, this is a true reassignment
+        if (ownerRole === 'sales_executive') return true;
+    }
+    
+    // If moving from an Admin/TL, it's considered "Distribution" (not reassigned yet)
+    return false;
+}
+
 export async function assignLead(values: { leadId: string, teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {
   try {
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = values;
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
     const role = currentUserDoc.data()?.role;
+
+    const reassigned = await getReassignmentState(leadId, teamspaceId);
 
     let shouldResetToNew = false;
     if (role === 'admin' || role === 'sales_team_lead') {
@@ -199,12 +223,11 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     }
 
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
-    const leadDoc = await leadRef.get();
-
+    
     const updateData: any = {
       assignedToIds: newAssignedToIds,
-      reassigned: true,
-      createdAt: FieldValue.serverTimestamp(), // REASSIGN_DATE_AUTO_UPDATE: Push to top of pipeline
+      reassigned,
+      createdAt: FieldValue.serverTimestamp(), // TOP_OF_PIPELINE: Move to top on assignment
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -217,7 +240,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     for (const userId of newAssignedToIds) {
         await adminDb.collection('users').doc(userId).collection('notifications').add({
             title: 'you got 1 new leads',
-            description: `Prospect "${leadDoc.data()?.fullName || 'Prospect'}" has been assigned to your professional desk.`,
+            description: `Prospect has been assigned to your professional desk.`,
             type: 'lead_assigned',
             timestamp: new Date().toISOString(),
             read: false,
@@ -251,12 +274,16 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
     }
 
     const batch = adminDb.batch();
+    
+    // For bulk actions, we evaluate reassigned based on the first lead (assuming they are from the same context)
+    const reassigned = await getReassignmentState(leadIds[0], teamspaceId);
+
     leadIds.forEach(id => {
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       const updateData: any = {
         assignedToIds: newAssignedToIds,
-        reassigned: true,
-        createdAt: FieldValue.serverTimestamp(), // REASSIGN_DATE_AUTO_UPDATE: Push to top of pipeline
+        reassigned,
+        createdAt: FieldValue.serverTimestamp(), // TOP_OF_PIPELINE: Move to top on assignment
         updatedAt: FieldValue.serverTimestamp(),
       };
       if (shouldResetToNew) {
@@ -294,12 +321,15 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
   try {
     const { leadIds, teamspaceId, currentUserId } = values;
     const batch = adminDb.batch();
+    
+    const reassigned = await getReassignmentState(leadIds[0], teamspaceId);
+
     leadIds.forEach(id => {
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
       batch.update(ref, {
         assignedToIds: [currentUserId],
-        reassigned: true,
-        createdAt: FieldValue.serverTimestamp(), // REASSIGN_DATE_AUTO_UPDATE: Push to top of pipeline
+        reassigned,
+        createdAt: FieldValue.serverTimestamp(), // TOP_OF_PIPELINE
         updatedAt: FieldValue.serverTimestamp(),
       });
     });
