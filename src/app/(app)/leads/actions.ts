@@ -199,8 +199,9 @@ async function getReassignmentState(leadId: string, teamspaceId: string) {
         const ownerDoc = await adminDb.collection('users').doc(currentOwnerId).get();
         const ownerRole = ownerDoc.data()?.role;
         
-        // Only movement from a Sales Executive (Specialist) counts as true reassignment.
-        // Distribution from an Admin or Team Lead is considered "Initial Field Arrival".
+        // INITIAL DISTRIBUTION BYPASS:
+        // Moving a lead from an Admin or Team Lead to a Specialist for the first time 
+        // does NOT count as reassignment. It is considered "Field Arrival".
         if (ownerRole === 'sales_executive') return true;
     }
     
