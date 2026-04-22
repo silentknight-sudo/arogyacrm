@@ -65,7 +65,6 @@ export default function LeadsPage() {
   }, []);
 
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
-  const isAdmin = currentUser?.role === 'admin';
   
   const displayFilters = currentUser?.role === 'sales_executive' 
     ? (['all', 'new'] as FilterType[])
@@ -421,7 +420,7 @@ export default function LeadsPage() {
                                     {isReclaiming ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
                                     Reclaim
                                 </Button>
-                                {isAdmin && (
+                                {isAdminOrTL && (
                                     <Button 
                                         variant="destructive" 
                                         className="rounded-xl shadow-lg px-4 font-bold h-10 flex items-center gap-2"

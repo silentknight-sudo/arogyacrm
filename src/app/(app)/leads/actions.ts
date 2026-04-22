@@ -207,7 +207,7 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
         if (leadData.assignedToIds?.length > 0) {
             const prevOwnerId = leadData.assignedToIds[0];
             const prevOwnerDoc = await adminDb.collection('users').doc(prevOwnerId).get();
-            if (prevOwnerDoc.data()?.role === 'sales_executive') {
+            if (prevOwnerDoc.exists && prevOwnerDoc.data()?.role === 'sales_executive') {
                 return true; 
             }
         }
@@ -415,8 +415,19 @@ export async function deleteLeads(values: { leadIds: string[], teamspaceId: stri
     const { leadIds, teamspaceId, currentUserId } = values;
 
     const userDoc = await adminDb.collection('users').doc(currentUserId).get();
-    if (userDoc.data()?.role !== 'admin') {
-      throw new Error('Unauthorized.');
+    const userData = userDoc.data();
+    const role = userData?.role;
+    const userTeamspaces = userData?.teamspaceIds || [];
+
+    // Team Leads can delete leads but only within their jurisdiction
+    if (role === 'admin') {
+        // Full access
+    } else if (role === 'sales_team_lead') {
+        if (!userTeamspaces.includes(teamspaceId)) {
+            throw new Error('Unauthorized: You can only manage assets within your assigned teamspaces.');
+        }
+    } else {
+        throw new Error('Unauthorized: Executive authority required for purging assets.');
     }
 
     const chunks = [];
