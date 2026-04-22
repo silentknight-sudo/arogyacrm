@@ -193,18 +193,19 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
     const actorRole = actorDoc.data()?.role;
 
+    // STRATEGIC DISTINCTION: Leadership moving leads to the field is DISTRIBUTION, not REASSIGNMENT.
     if (actorRole === 'admin' || actorRole === 'sales_team_lead') {
         if (leadData.assignedToIds?.length > 0) {
             const prevOwnerId = leadData.assignedToIds[0];
             const prevOwnerDoc = await adminDb.collection('users').doc(prevOwnerId).get();
             if (prevOwnerDoc.exists && prevOwnerDoc.data()?.role === 'sales_executive') {
-                return true; 
+                return true; // Moved from one specialist to another -> True reassignment
             }
         }
-        return false; 
+        return false; // Moved from Admin/TL or is unassigned -> Initial Distribution
     }
     
-    return true; 
+    return true; // Sales Executive moving it -> True reassignment
 }
 
 export async function assignLead(values: { leadId: string, teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {
@@ -229,7 +230,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     const updateData: any = {
       assignedToIds: newAssignedToIds,
       reassigned,
-      createdAt: FieldValue.serverTimestamp(), 
+      createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE FOR PIPELINE VELOCITY
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -283,7 +284,7 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
       const updateData: any = {
         assignedToIds: newAssignedToIds,
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), 
+        createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
         updatedAt: FieldValue.serverTimestamp(),
       };
       if (shouldResetToNew) {
@@ -328,7 +329,7 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), 
+        createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
         updatedAt: FieldValue.serverTimestamp(),
       });
     }

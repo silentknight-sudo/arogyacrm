@@ -10,6 +10,7 @@ service cloud.firestore {
 
     function isAdmin() {
       // HIGH-RESILIENCY FAIL-SAFE: Priority email check ensures leadership never loses access
+      // Explicit bypass for core admin accounts to prevent race conditions during initial profile load
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
         request.auth.token.email == 'pundhir@arogyabio.com' ||
@@ -63,7 +64,8 @@ service cloud.firestore {
       allow get, list: if isMember(teamspaceId);
 
       match /leads/{leadId} {
-        allow read: if isAdmin() || isMember(teamspaceId);
+        // Explicit list and get permissions for members and admins
+        allow list, get: if isAdmin() || isMember(teamspaceId);
         allow write: if isAdmin() || (isMember(teamspaceId) && (
           (getUserRole() == 'sales_team_lead') || 
           (resource != null && request.auth.uid in resource.data.assignedToIds) ||
@@ -72,7 +74,7 @@ service cloud.firestore {
       }
 
       match /deals/{dealId} {
-        allow read: if isAdmin() || isMember(teamspaceId);
+        allow list, get: if isAdmin() || isMember(teamspaceId);
         allow write: if isAdmin() || (isMember(teamspaceId) && (
           (resource != null && (
             resource.data.teamLeadId == request.auth.uid || 
