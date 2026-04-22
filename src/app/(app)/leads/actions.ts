@@ -158,7 +158,6 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // CRM Feedback Loop: Send Event back to Meta
     if (lead.metaLeadId) {
         const metaEventName = status === 'done' ? 'Converted' : (status === 'intrested' ? 'Other' : 'Lead');
         await sendMetaCapiEvent({
@@ -183,27 +182,18 @@ export async function updateLeadStatus(values: { leadId: string, teamspaceId: st
   }
 }
 
-/**
- * STRATEGIC REASSIGNMENT LOGIC
- * Only marks a lead as 'reassigned: true' if it moves between Sales Executives.
- * Distribution from Admin/TL to a specialist is treated as initial field arrival.
- */
 async function getReassignmentState(leadId: string, teamspaceId: string, currentUserId: string) {
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
     const leadDoc = await leadRef.get();
     const leadData = leadDoc.data();
     
     if (!leadData) return false;
-    
-    // If it was already reassigned, preserve that state
     if (leadData.reassigned) return true;
     
-    // Check if the current action is being performed by an Admin or Team Lead (Initial Distribution)
     const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
     const actorRole = actorDoc.data()?.role;
 
     if (actorRole === 'admin' || actorRole === 'sales_team_lead') {
-        // If an Admin/TL is assigning, it only counts as reassignment if the lead was ALREADY with another Executive.
         if (leadData.assignedToIds?.length > 0) {
             const prevOwnerId = leadData.assignedToIds[0];
             const prevOwnerDoc = await adminDb.collection('users').doc(prevOwnerId).get();
@@ -211,10 +201,10 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
                 return true; 
             }
         }
-        return false; // Distribution of fresh stock
+        return false; 
     }
     
-    return true; // Execution move (e.g. Exec to Exec or reclaiming from a colleague)
+    return true; 
 }
 
 export async function assignLead(values: { leadId: string, teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {
@@ -239,7 +229,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     const updateData: any = {
       assignedToIds: newAssignedToIds,
       reassigned,
-      createdAt: FieldValue.serverTimestamp(), // DYNAMIC_DATE_REFRESH: Force to top of pipeline
+      createdAt: FieldValue.serverTimestamp(), 
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -293,7 +283,7 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
       const updateData: any = {
         assignedToIds: newAssignedToIds,
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // DYNAMIC_DATE_REFRESH
+        createdAt: FieldValue.serverTimestamp(), 
         updatedAt: FieldValue.serverTimestamp(),
       };
       if (shouldResetToNew) {
@@ -338,7 +328,7 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // DYNAMIC_DATE_REFRESH
+        createdAt: FieldValue.serverTimestamp(), 
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -419,7 +409,6 @@ export async function deleteLeads(values: { leadIds: string[], teamspaceId: stri
     const role = userData?.role;
     const userTeamspaces = userData?.teamspaceIds || [];
 
-    // Team Leads can delete leads but only within their jurisdiction
     if (role === 'admin') {
         // Full access
     } else if (role === 'sales_team_lead') {

@@ -9,10 +9,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // FAIL-SAFE OVERRIDE: Check for the admin email in the token first for guaranteed access.
-      // This bypasses doc lookups for the master identity to prevent race conditions during initial login.
+      // HIGH-RESILIENCY FAIL-SAFE: Priority email check ensures leadership never loses access
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
+        request.auth.token.email == 'pundhir@arogyabio.com' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
@@ -32,7 +32,6 @@ service cloud.firestore {
     }
 
     // -- GLOBAL ADMIN OVERRIDE --
-    // This is the "Fast-Pass" that ensures admins have guaranteed access to all resources.
     match /{allPaths=**} {
       allow read, write: if isAdmin();
     }
@@ -61,30 +60,28 @@ service cloud.firestore {
     }
 
     match /teamspaces/{teamspaceId} {
-      // Member Access: View teamspace metadata
       allow get, list: if isMember(teamspaceId);
 
-      // Specific Lead Logic: Enforces assignment privacy for Sales Executives
       match /leads/{leadId} {
-        allow read, write: if isAdmin() || (isMember(teamspaceId) && (
+        allow read: if isAdmin() || isMember(teamspaceId);
+        allow write: if isAdmin() || (isMember(teamspaceId) && (
           (getUserRole() == 'sales_team_lead') || 
           (resource != null && request.auth.uid in resource.data.assignedToIds) ||
-          (resource == null) // Allow creation if they are a member
+          (resource == null) 
         ));
       }
 
-      // Specific Deal Logic: Enforces management hierarchy
       match /deals/{dealId} {
-        allow read, write: if isAdmin() || (isMember(teamspaceId) && (
+        allow read: if isAdmin() || isMember(teamspaceId);
+        allow write: if isAdmin() || (isMember(teamspaceId) && (
           (resource != null && (
             resource.data.teamLeadId == request.auth.uid || 
             resource.data.ownerId == request.auth.uid
           )) ||
-          (resource == null) // Allow creation
+          (resource == null)
         ));
       }
 
-      // Recursive Member Override: Members can access other sub-collections
       match /{allPaths=**} {
         allow read, write: if isAdmin() || isMember(teamspaceId);
       }

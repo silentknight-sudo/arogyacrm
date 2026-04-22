@@ -74,8 +74,7 @@ export default function LeadsPage() {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // STRATEGIC_SORTING: Always enforce descending chronological order for high-velocity response
-    let q = currentUser.role === 'admin' 
+    let q = (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead')
       ? query(leadsRef, orderBy('createdAt', 'desc')) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id), orderBy('createdAt', 'desc'));
 
@@ -99,12 +98,10 @@ export default function LeadsPage() {
     if (!rawLeads) return null;
     let filtered = rawLeads;
 
-    // 1. Assignee Filter
     if (assigneeFilter !== 'all') {
       filtered = filtered.filter(lead => lead.assignedToIds?.includes(assigneeFilter));
     }
 
-    // 2. Date Range Filter
     if (dateRange?.from) {
       const start = startOfDay(dateRange.from);
       const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
