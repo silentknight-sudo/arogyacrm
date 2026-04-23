@@ -418,7 +418,8 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
     revalidatePath('/leads');
     return { success: true, removedCount: toDelete.length };
   } catch (error: any) {
-    return { success: false, error: handleAdminSDKError(error) };
+    const errorMessage = handleAdminSDKError(error);
+    return { success: false, error: errorMessage };
   }
 }
 
