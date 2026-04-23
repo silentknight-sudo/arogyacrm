@@ -195,17 +195,18 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
 
     // STRATEGIC DISTINCTION: Leadership moving leads to the field is DISTRIBUTION, not REASSIGNMENT.
     if (actorRole === 'admin' || actorRole === 'sales_team_lead') {
-        if (leadData.assignedToIds?.length > 0) {
-            const prevOwnerId = leadData.assignedToIds[0];
-            const prevOwnerDoc = await adminDb.collection('users').doc(prevOwnerId).get();
-            if (prevOwnerDoc.exists && prevOwnerDoc.data()?.role === 'sales_executive') {
-                return true; // Moved from one specialist to another -> True reassignment
+        const currentOwners = leadData.assignedToIds || [];
+        if (currentOwners.length > 0) {
+            const firstOwnerId = currentOwners[0];
+            const firstOwnerDoc = await adminDb.collection('users').doc(firstOwnerId).get();
+            if (firstOwnerDoc.exists && firstOwnerDoc.data()?.role === 'sales_executive') {
+                return true; // Was with a specialist, now being moved -> True reassignment
             }
         }
         return false; // Moved from Admin/TL or is unassigned -> Initial Distribution
     }
     
-    return true; // Sales Executive moving it -> True reassignment
+    return true; // Sales Executive moving it or reclaiming it -> True reassignment
 }
 
 export async function assignLead(values: { leadId: string, teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {

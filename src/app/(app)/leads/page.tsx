@@ -72,6 +72,8 @@ export default function LeadsPage() {
 
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+    if (!currentUser.role) return null; // Ensure user profile is loaded
+
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
     let q = (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead')
@@ -129,7 +131,7 @@ export default function LeadsPage() {
     if (currentUser.role === 'sales_team_lead') {
         return query(
           collection(firestore, 'users'), 
-          where('createdBy', '==', currentUser.id)
+          where('teamspaceIds', 'array-contains', currentTeamspace.id)
         );
     }
     
