@@ -203,7 +203,7 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     const isLeadership = actorRole === 'admin' || actorRole === 'sales_team_lead' || ADMIN_EMAILS.includes(actorEmail || '');
 
     if (isLeadership) {
-        // PRECISION FIX: If the lead is still 'new', leadership moving it is Initial Distribution, never Reassignment.
+        // If the lead is still 'new', leadership moving it is Initial Distribution, never Reassignment.
         if (leadData.status === 'new') return false;
 
         const currentOwners = leadData.assignedToIds || [];
