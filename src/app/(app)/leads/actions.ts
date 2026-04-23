@@ -190,6 +190,7 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     const leadData = leadDoc.data();
     
     if (!leadData) return false;
+    
     // If it's already tagged as reassigned, preserve that state
     if (leadData.reassigned) return true;
     
@@ -207,13 +208,12 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
 
         const currentOwners = leadData.assignedToIds || [];
         if (currentOwners.length > 0) {
-            const firstOwnerId = currentOwners[0];
-            const firstOwnerDoc = await adminDb.collection('users').doc(firstOwnerId).get();
-            const firstOwnerData = firstOwnerDoc.data();
-            
             // It's only a "True Reassignment" if it was already in the hands of a Specialist.
-            if (firstOwnerDoc.exists && firstOwnerData?.role === 'sales_executive') {
-                return true; 
+            for (const ownerId of currentOwners) {
+              const ownerDoc = await adminDb.collection('users').doc(ownerId).get();
+              if (ownerDoc.exists && ownerDoc.data()?.role === 'sales_executive') {
+                  return true; 
+              }
             }
         }
         return false; 
