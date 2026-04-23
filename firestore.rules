@@ -10,7 +10,7 @@ service cloud.firestore {
 
     function isAdmin() {
       // HIGH-RESILIENCY FAIL-SAFE: Priority email check ensures leadership never loses access
-      // Token-based check bypasses Firestore document-load race conditions
+      // Token-based check bypasses Firestore document-load race conditions entirely.
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
         request.auth.token.email == 'pundhir@arogyabio.com' ||
@@ -33,6 +33,7 @@ service cloud.firestore {
     }
 
     // -- GLOBAL EXECUTIVE OVERRIDE --
+    // Grants unconditional access to specified administrators to prevent permission bottlenecks.
     match /{allPaths=**} {
       allow read, write: if isAdmin();
     }
@@ -61,6 +62,7 @@ service cloud.firestore {
     }
 
     match /teamspaces/{teamspaceId} {
+      // Traverse permission for teamspaces
       allow get, list: if isMember(teamspaceId);
 
       match /leads/{leadId} {

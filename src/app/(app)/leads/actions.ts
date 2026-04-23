@@ -7,6 +7,8 @@ import type { Lead, DealStage, LeadStatus, Deal, LineItem } from '@/types';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { sendMetaCapiEvent } from '@/lib/meta-capi';
 
+const ADMIN_EMAILS = ['admin@arogyabio.com', 'pundhir@arogyabio.com'];
+
 export async function syncDealForLead(leadId: string, teamspaceId: string) {
   try {
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
@@ -188,25 +190,35 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     const leadData = leadDoc.data();
     
     if (!leadData) return false;
+    // If it's already tagged as reassigned, preserve that state
     if (leadData.reassigned) return true;
     
     const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const actorRole = actorDoc.data()?.role;
+    const actorData = actorDoc.data();
+    const actorRole = actorData?.role;
+    const actorEmail = actorData?.email;
 
     // STRATEGIC DISTINCTION: Leadership moving leads to the field is DISTRIBUTION, not REASSIGNMENT.
-    if (actorRole === 'admin' || actorRole === 'sales_team_lead') {
+    const isLeadership = actorRole === 'admin' || actorRole === 'sales_team_lead' || ADMIN_EMAILS.includes(actorEmail || '');
+
+    if (isLeadership) {
         const currentOwners = leadData.assignedToIds || [];
         if (currentOwners.length > 0) {
             const firstOwnerId = currentOwners[0];
             const firstOwnerDoc = await adminDb.collection('users').doc(firstOwnerId).get();
-            if (firstOwnerDoc.exists && firstOwnerDoc.data()?.role === 'sales_executive') {
-                return true; // Was with a specialist, now being moved -> True reassignment
+            const firstOwnerData = firstOwnerDoc.data();
+            
+            // It's only a "True Reassignment" if it was already in the hands of a Specialist.
+            if (firstOwnerDoc.exists && firstOwnerData?.role === 'sales_executive') {
+                return true; 
             }
         }
-        return false; // Moved from Admin/TL or is unassigned -> Initial Distribution
+        // If it was with Leadership or unassigned, this move is Initial Distribution.
+        return false; 
     }
     
-    return true; // Sales Executive moving it or reclaiming it -> True reassignment
+    // Any move initiated by or affecting specialists directly is a Reassignment.
+    return true; 
 }
 
 export async function assignLead(values: { leadId: string, teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {
@@ -214,12 +226,15 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = values;
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const role = currentUserDoc.data()?.role;
+    const currentUserData = currentUserDoc.data();
+    const role = currentUserData?.role;
+    const email = currentUserData?.email;
 
     const reassigned = await getReassignmentState(leadId, teamspaceId, currentUserId);
 
+    // Automation: Reset status to 'new' when leadership distributes to the field
     let shouldResetToNew = false;
-    if (role === 'admin' || role === 'sales_team_lead') {
+    if (role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '')) {
         const target = await adminDb.collection('users').doc(newAssignedToIds[0]).get();
         if (target.data()?.role === 'sales_executive') {
             shouldResetToNew = true;
@@ -231,7 +246,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     const updateData: any = {
       assignedToIds: newAssignedToIds,
       reassigned,
-      createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE FOR PIPELINE VELOCITY
+      createdAt: FieldValue.serverTimestamp(), // TOP-OF-STACK VELOCITY REFRESH
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -267,10 +282,12 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
     const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = values;
 
     const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const role = currentUserDoc.data()?.role;
+    const currentUserData = currentUserDoc.data();
+    const role = currentUserData?.role;
+    const email = currentUserData?.email;
 
     let shouldResetToNew = false;
-    if (role === 'admin' || role === 'sales_team_lead') {
+    if (role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '')) {
         const target = await adminDb.collection('users').doc(newAssignedToIds[0]).get();
         if (target.data()?.role === 'sales_executive') {
             shouldResetToNew = true;
@@ -285,7 +302,7 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
       const updateData: any = {
         assignedToIds: newAssignedToIds,
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
+        createdAt: FieldValue.serverTimestamp(), // TOP-OF-STACK VELOCITY REFRESH
         updatedAt: FieldValue.serverTimestamp(),
       };
       if (shouldResetToNew) {
@@ -330,7 +347,7 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
+        createdAt: FieldValue.serverTimestamp(), // TOP-OF-STACK VELOCITY REFRESH
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -409,16 +426,17 @@ export async function deleteLeads(values: { leadIds: string[], teamspaceId: stri
     const userDoc = await adminDb.collection('users').doc(currentUserId).get();
     const userData = userDoc.data();
     const role = userData?.role;
+    const email = userData?.email;
     const userTeamspaces = userData?.teamspaceIds || [];
 
-    if (role === 'admin') {
-        // Full access
-    } else if (role === 'sales_team_lead') {
-        if (!userTeamspaces.includes(teamspaceId)) {
-            throw new Error('Unauthorized: You can only manage assets within your assigned teamspaces.');
-        }
-    } else {
+    const isAuthorized = role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '');
+
+    if (!isAuthorized) {
         throw new Error('Unauthorized: Executive authority required for purging assets.');
+    }
+
+    if (role === 'sales_team_lead' && !userTeamspaces.includes(teamspaceId)) {
+        throw new Error('Unauthorized: You can only manage assets within your assigned teamspaces.');
     }
 
     const chunks = [];
