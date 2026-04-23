@@ -8,19 +8,26 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
-    function isAdmin() {
-      // HIGH-RESILIENCY FAIL-SAFE: Priority email check ensures leadership never loses access
-      // Token-based check bypasses Firestore document-load race conditions entirely.
+    // HIGH-RESILIENCY EXECUTIVE BYPASS: Priority email check ensures leadership never loses access.
+    // This token-based check bypasses all document-load race conditions and resource limits.
+    function isExecutive() {
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
-        request.auth.token.email == 'pundhir@arogyabio.com' ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        request.auth.token.email == 'pundhir@arogyabio.com'
+      );
+    }
+
+    function isAdmin() {
+      return isExecutive() || (
+        isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }
 
     function isMember(teamspaceId) {
       return isSignedIn() && (
+        isExecutive() || 
         isAdmin() || 
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          teamspaceId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamspaceIds)
@@ -35,7 +42,7 @@ service cloud.firestore {
     // -- GLOBAL EXECUTIVE OVERRIDE --
     // Grants unconditional access to specified administrators to prevent permission bottlenecks.
     match /{allPaths=**} {
-      allow read, write: if isAdmin();
+      allow read, write: if isExecutive();
     }
 
     // -- CORE RULES --
@@ -66,25 +73,27 @@ service cloud.firestore {
       allow get, list: if isMember(teamspaceId);
 
       match /leads/{leadId} {
-        allow list, get: if isAdmin() || isMember(teamspaceId);
-        allow write: if isAdmin() || (isMember(teamspaceId) && (
+        allow list, get: if isMember(teamspaceId);
+        allow write: if isMember(teamspaceId) && (
+          isAdmin() ||
           (getUserRole() == 'sales_team_lead') || 
           (resource != null && request.auth.uid in resource.data.assignedToIds) ||
           (resource == null) 
-        ));
+        );
       }
 
       match /deals/{dealId} {
-        allow list, get: if isAdmin() || isMember(teamspaceId);
-        allow write: if isAdmin() || (isMember(teamspaceId) && (
+        allow list, get: if isMember(teamspaceId);
+        allow write: if isMember(teamspaceId) && (
+          isAdmin() ||
           (getUserRole() == 'sales_team_lead') ||
           (resource != null && request.auth.uid in resource.data.assignedToIds) ||
           (resource == null)
-        ));
+        );
       }
 
       match /{allPaths=**} {
-        allow read, write: if isAdmin() || isMember(teamspaceId);
+        allow read, write: if isMember(teamspaceId);
       }
     }
   }

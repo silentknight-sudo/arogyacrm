@@ -216,11 +216,9 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
                 return true; 
             }
         }
-        // If it was with Leadership or unassigned, this move is Initial Distribution.
         return false; 
     }
     
-    // Any move initiated by or affecting specialists directly is a Reassignment.
     return true; 
 }
 
@@ -235,7 +233,6 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
 
     const reassigned = await getReassignmentState(leadId, teamspaceId, currentUserId);
 
-    // Automation: Reset status to 'new' when leadership distributes to the field
     let shouldResetToNew = false;
     if (role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '')) {
         const target = await adminDb.collection('users').doc(newAssignedToIds[0]).get();
