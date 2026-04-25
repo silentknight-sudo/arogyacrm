@@ -191,7 +191,6 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     
     if (!leadData) return false;
     
-    // If it's already tagged as reassigned, preserve that state
     if (leadData.reassigned) return true;
     
     const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
@@ -199,16 +198,15 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     const actorRole = actorData?.role;
     const actorEmail = actorData?.email;
 
-    // STRATEGIC DISTINCTION: Leadership moving leads to the field is DISTRIBUTION, not REASSIGNMENT.
+    // STRATEGIC DISTINCTION: Leadership moving leads for the first time is INITIAL DISTRIBUTION.
     const isLeadership = actorRole === 'admin' || actorRole === 'sales_team_lead' || ADMIN_EMAILS.includes(actorEmail || '');
 
     if (isLeadership) {
-        // If the lead is still 'new', leadership moving it is Initial Distribution, never Reassignment.
+        // If status is new, leadership moving it is always distribution, not reassignment.
         if (leadData.status === 'new') return false;
 
         const currentOwners = leadData.assignedToIds || [];
         if (currentOwners.length > 0) {
-            // It's only a "True Reassignment" if it was already in the hands of a Specialist.
             for (const ownerId of currentOwners) {
               const ownerDoc = await adminDb.collection('users').doc(ownerId).get();
               if (ownerDoc.exists && ownerDoc.data()?.role === 'sales_executive') {
@@ -246,7 +244,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     const updateData: any = {
       assignedToIds: newAssignedToIds,
       reassigned,
-      createdAt: FieldValue.serverTimestamp(), // TOP-OF-STACK VELOCITY REFRESH
+      createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -302,7 +300,7 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
       const updateData: any = {
         assignedToIds: newAssignedToIds,
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // TOP-OF-STACK VELOCITY REFRESH
+        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK
         updatedAt: FieldValue.serverTimestamp(),
       };
       if (shouldResetToNew) {
@@ -347,7 +345,7 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // TOP-OF-STACK VELOCITY REFRESH
+        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -375,51 +373,6 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
   }
 }
 
-export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ success: boolean; removedCount?: number; error?: string }> {
-  try {
-    const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
-    const snapshot = await leadsRef.orderBy('createdAt', 'asc').get();
-    
-    const leads = snapshot.docs.map(doc => doc.data() as Lead);
-    const seenPhones = new Map<string, string>(); 
-    const toDelete: string[] = [];
-
-    leads.forEach(lead => {
-      const phone = lead.phone?.trim();
-      if (!phone) return;
-
-      if (seenPhones.has(phone)) {
-        toDelete.push(lead.id);
-      } else {
-        seenPhones.set(phone, lead.id);
-      }
-    });
-
-    if (toDelete.length === 0) {
-      return { success: true, removedCount: 0 };
-    }
-
-    const chunks = [];
-    for (let i = 0; i < toDelete.length; i += 500) {
-      chunks.push(toDelete.slice(i, i + 500));
-    }
-
-    for (const chunk of chunks) {
-      const batch = adminDb.batch();
-      chunk.forEach(id => {
-        batch.delete(leadsRef.doc(id));
-      });
-      await batch.commit();
-    }
-
-    revalidatePath('/leads');
-    return { success: true, removedCount: toDelete.length };
-  } catch (error: any) {
-    const errorMessage = handleAdminSDKError(error);
-    return { success: false, error: errorMessage };
-  }
-}
-
 export async function deleteLeads(values: { leadIds: string[], teamspaceId: string, currentUserId: string }): Promise<{ success: boolean; error?: string }> {
   try {
     const { leadIds, teamspaceId, currentUserId } = values;
@@ -428,16 +381,11 @@ export async function deleteLeads(values: { leadIds: string[], teamspaceId: stri
     const userData = userDoc.data();
     const role = userData?.role;
     const email = userData?.email;
-    const userTeamspaces = userData?.teamspaceIds || [];
 
     const isAuthorized = role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '');
 
     if (!isAuthorized) {
-        throw new Error('Unauthorized: Executive authority required for purging assets.');
-    }
-
-    if (role === 'sales_team_lead' && !userTeamspaces.includes(teamspaceId)) {
-        throw new Error('Unauthorized: You can only manage assets within your assigned teamspaces.');
+        throw new Error('Unauthorized: Asset decommissioning restricted to leadership.');
     }
 
     const chunks = [];

@@ -8,8 +8,8 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // HIGH-RESILIENCY EXECUTIVE BYPASS: Priority email check ensures leadership never loses access.
-    // This token-based check bypasses all document-load race conditions and resource limits.
+    // HIGH-RESILIENCY EXECUTIVE BYPASS
+    // Primary token check ensures leadership never loses access regardless of profile load speed.
     function isExecutive() {
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
@@ -40,7 +40,6 @@ service cloud.firestore {
     }
 
     // -- GLOBAL EXECUTIVE OVERRIDE --
-    // Grants unconditional access to specified administrators to prevent permission bottlenecks.
     match /{allPaths=**} {
       allow read, write: if isExecutive();
     }
@@ -51,9 +50,7 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         isAdmin() || 
         userId == request.auth.uid ||
-        (getUserRole() == 'sales_team_lead' && (
-            resource == null || resource.data.createdBy == request.auth.uid
-        ))
+        (getUserRole() == 'sales_team_lead')
       );
       
       allow write: if isAdmin() || (isSignedIn() && userId == request.auth.uid);
@@ -69,11 +66,11 @@ service cloud.firestore {
     }
 
     match /teamspaces/{teamspaceId} {
-      // Traverse permission for teamspaces
       allow get, list: if isMember(teamspaceId);
 
       match /leads/{leadId} {
         allow list, get: if isMember(teamspaceId);
+        allow delete: if isMember(teamspaceId) && (isAdmin() || getUserRole() == 'sales_team_lead');
         allow write: if isMember(teamspaceId) && (
           isAdmin() ||
           (getUserRole() == 'sales_team_lead') || 

@@ -1,12 +1,11 @@
-
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    Users, Contact, Handshake, Megaphone, Package,
+    Users, Handshake, Megaphone, Package,
     ShoppingCart, Receipt, Ticket, Undo2, ShieldAlert, LayoutDashboard,
-    Leaf, Shield, Calendar, Phone
+    Leaf, Shield, Calendar, Phone, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/app-context';
@@ -15,38 +14,34 @@ export function MainSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { currentUser } = useApp();
 
-  // DYNAMIC MENU ARCHITECTURE
   const isAdmin = currentUser?.role === 'admin';
   const isTL = currentUser?.role === 'sales_team_lead';
-  const isExec = currentUser?.role === 'sales_executive';
 
   const menu = [
     { title: "INSIGHTS", items: [{ href: '/dashboard', label: 'Overview', icon: LayoutDashboard }] },
     { title: 'PIPELINE', items: [
         { href: '/leads', label: 'Prospects', icon: Users },
-        ...(currentUser?.role !== 'sales_executive' ? [{ href: '/deals', label: 'Deals', icon: Handshake }] : []),
+        ...(currentUser?.role !== 'sales_executive' ? [{ href: '/deals', label: 'Revenue', icon: Handshake }] : []),
     ]},
   ];
 
-  // Admins and Team Leads see the full activities suite
   if (isAdmin || isTL) {
-    menu.push({ title: 'ACTIVITIES', items: [
-        { href: '/tasks', label: 'Tasks', icon: Calendar },
-        { href: '/meetings', label: 'Meetings', icon: Calendar },
-        { href: '/calls', label: 'Calls', icon: Phone },
+    menu.push({ title: 'OPERATIONS', items: [
+        { href: '/tasks', label: 'Workflows', icon: Calendar },
+        { href: '/meetings', label: 'Sessions', icon: Calendar },
+        { href: '/calls', label: 'Activities', icon: Phone },
     ]});
     
-    menu.push({ title: 'ECOMMERCE', items: [
+    menu.push({ title: 'COMMERCE', items: [
         { href: '/inventory/products', label: 'Catalog', icon: Package },
         { href: '/inventory/sales-orders', label: 'Orders', icon: ShoppingCart },
-        { href: '/inventory/invoices', label: 'Invoices', icon: Receipt },
+        { href: '/inventory/invoices', label: 'Billings', icon: Receipt },
     ]});
   }
 
-  // Admins see everything else
   if (isAdmin) {
-    menu.push({ title: 'GROWTH', items: [{ href: '/campaigns', label: 'Campaigns', icon: Megaphone }] });
-    menu.push({ title: 'SERVICE', items: [
+    menu.push({ title: 'GROWTH', items: [{ href: '/campaigns', label: 'Strategy', icon: Megaphone }] });
+    menu.push({ title: 'SUPPORT', items: [
         { href: '/support/tickets', label: 'Tickets', icon: Ticket },
         { href: '/support/refunds', label: 'Refunds', icon: Undo2 },
         { href: '/support/complaints', label: 'Escalations', icon: ShieldAlert },
@@ -55,22 +50,22 @@ export function MainSidebar({ className }: { className?: string }) {
 
   return (
     <aside className={cn("flex flex-col glass-sidebar h-screen sticky top-0", className)}>
-      <div className="h-28 flex items-center px-10">
+      <div className="h-32 flex items-center px-10">
         <Link href="/" className="flex items-center gap-4 group">
-           <div className="p-4 herbal-gradient rounded-[1.5rem] shadow-2xl shadow-primary/40 group-hover:scale-110 group-hover:rotate-12 transition-all duration-700">
-             <Leaf className="h-7 w-7 text-white" />
+           <div className="p-4 zen-gradient rounded-2xl shadow-2xl shadow-primary/20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+             <Sparkles className="h-7 w-7 text-accent" />
            </div>
            <div className="flex flex-col">
-             <span className="font-black text-3xl text-primary tracking-tighter leading-none">AROGYA</span>
-             <span className="text-[11px] font-black text-accent tracking-[0.4em] uppercase opacity-80">Premium</span>
+             <span className="font-black text-2xl text-primary tracking-tighter leading-none">AROGYA</span>
+             <span className="text-[10px] font-black text-accent tracking-[0.4em] uppercase opacity-80">Elite Hub</span>
            </div>
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 pb-12 space-y-10 scrollbar-hide pt-6">
+      <div className="flex-1 overflow-y-auto px-6 pb-12 space-y-10 scrollbar-hide pt-4">
         {(isAdmin || isTL) && (
             <div className="space-y-3">
-                <p className="px-5 text-[11px] font-black text-muted-foreground/40 uppercase tracking-[0.3em]">Governance</p>
+                <p className="px-5 text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.3em]">Governance</p>
                 <div className="space-y-1.5">
                     {isAdmin && (
                         <Link href="/admin" className={cn('sidebar-link', pathname === '/admin' && 'sidebar-link-active')}>
@@ -78,7 +73,7 @@ export function MainSidebar({ className }: { className?: string }) {
                         </Link>
                     )}
                     <Link href="/admin/users" className={cn('sidebar-link', pathname.startsWith('/admin/users') && 'sidebar-link-active')}>
-                        <Users className="h-4 w-4" /> <span>{isAdmin ? 'Global Management' : 'Team Management'}</span>
+                        <Users className="h-4 w-4" /> <span>{isAdmin ? 'Hierarchy' : 'My Team'}</span>
                     </Link>
                 </div>
             </div>
@@ -86,7 +81,7 @@ export function MainSidebar({ className }: { className?: string }) {
 
         {menu.map((section) => (
             <div key={section.title} className="space-y-3">
-                <p className="px-5 text-[11px] font-black text-muted-foreground/40 uppercase tracking-[0.3em]">{section.title}</p>
+                <p className="px-5 text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.3em]">{section.title}</p>
                 <div className="space-y-1.5">
                     {section.items.map((item) => {
                         const Icon = item.icon;
