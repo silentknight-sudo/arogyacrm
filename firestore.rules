@@ -2,59 +2,50 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- ATOMIC HELPERS --
+    // -- EXECUTIVE ATOMIC HELPERS --
 
     function isSignedIn() {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // HIGH-RESILIENCY EXECUTIVE BYPASS
-    // Primary token check ensures leadership never loses access regardless of profile load speed.
+    // HIGH-RESILIENCY EXECUTIVE OVERRIDE
+    // This allows Rajat and Admin to bypass EVERY other rule via prioritized token verification.
     function isExecutive() {
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
-        request.auth.token.email == 'pundhir@arogyabio.com'
+        request.auth.token.email == 'pundhir@arogyabio.com' ||
+        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
+        request.auth.uid == '9E06P0PsRtgyS5H60weu42iE0zH2'
       );
     }
 
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isAdmin() {
-      return isExecutive() || (
-        isSignedIn() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
+      return isExecutive() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin');
     }
 
     function isMember(teamspaceId) {
       return isSignedIn() && (
         isExecutive() || 
-        isAdmin() || 
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         teamspaceId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamspaceIds)
+         (getUserData().role == 'admin' || teamspaceId in getUserData().teamspaceIds))
       );
     }
 
-    function getUserRole() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : 'none';
-    }
-
-    // -- GLOBAL EXECUTIVE OVERRIDE --
+    // -- GLOBAL EXECUTIVE FAST-PASS --
     match /{allPaths=**} {
       allow read, write: if isExecutive();
     }
 
-    // -- CORE RULES --
+    // -- DOMAIN SPECIFIC RULES (For Non-Executive Specialists) --
 
     match /users/{userId} {
-      allow read: if isSignedIn() && (
-        isAdmin() || 
-        userId == request.auth.uid ||
-        (getUserRole() == 'sales_team_lead')
-      );
-      
+      allow read: if isSignedIn() && (isAdmin() || userId == request.auth.uid);
       allow write: if isAdmin() || (isSignedIn() && userId == request.auth.uid);
-
+      
       match /notifications/{notificationId} {
         allow read, write: if isSignedIn() && userId == request.auth.uid;
       }
@@ -70,10 +61,10 @@ service cloud.firestore {
 
       match /leads/{leadId} {
         allow list, get: if isMember(teamspaceId);
-        allow delete: if isMember(teamspaceId) && (isAdmin() || getUserRole() == 'sales_team_lead');
+        allow delete: if isMember(teamspaceId) && (isAdmin() || getUserData().role == 'sales_team_lead');
         allow write: if isMember(teamspaceId) && (
           isAdmin() ||
-          (getUserRole() == 'sales_team_lead') || 
+          (getUserData().role == 'sales_team_lead') || 
           (resource != null && request.auth.uid in resource.data.assignedToIds) ||
           (resource == null) 
         );
@@ -83,7 +74,7 @@ service cloud.firestore {
         allow list, get: if isMember(teamspaceId);
         allow write: if isMember(teamspaceId) && (
           isAdmin() ||
-          (getUserRole() == 'sales_team_lead') ||
+          (getUserData().role == 'sales_team_lead') ||
           (resource != null && request.auth.uid in resource.data.assignedToIds) ||
           (resource == null)
         );

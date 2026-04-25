@@ -191,6 +191,7 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     
     if (!leadData) return false;
     
+    // If it's already marked reassigned, keep it.
     if (leadData.reassigned) return true;
     
     const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
@@ -198,61 +199,38 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     const actorRole = actorData?.role;
     const actorEmail = actorData?.email;
 
-    // STRATEGIC DISTINCTION: Leadership moving leads for the first time is INITIAL DISTRIBUTION.
+    // STRATEGIC DISTINCTION: Leadership moving leads while status is NEW is INITIAL DISTRIBUTION.
     const isLeadership = actorRole === 'admin' || actorRole === 'sales_team_lead' || ADMIN_EMAILS.includes(actorEmail || '');
 
-    if (isLeadership) {
-        // If status is new, leadership moving it is always distribution, not reassignment.
-        if (leadData.status === 'new') return false;
-
-        const currentOwners = leadData.assignedToIds || [];
-        if (currentOwners.length > 0) {
-            for (const ownerId of currentOwners) {
-              const ownerDoc = await adminDb.collection('users').doc(ownerId).get();
-              if (ownerDoc.exists && ownerDoc.data()?.role === 'sales_executive') {
-                  return true; 
-              }
-            }
-        }
-        return false; 
+    if (isLeadership && leadData.status === 'new') {
+        return false; // Leadership distributing fresh inventory
     }
     
-    return true; 
+    // If any current owner was a sales_executive, moving it now counts as a reassignment.
+    const currentOwners = leadData.assignedToIds || [];
+    for (const ownerId of currentOwners) {
+      const ownerDoc = await adminDb.collection('users').doc(ownerId).get();
+      if (ownerDoc.exists && ownerDoc.data()?.role === 'sales_executive') {
+          return true; 
+      }
+    }
+    
+    return false; 
 }
 
 export async function assignLead(values: { leadId: string, teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {
   try {
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = values;
 
-    const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const currentUserData = currentUserDoc.data();
-    const role = currentUserData?.role;
-    const email = currentUserData?.email;
-
     const reassigned = await getReassignmentState(leadId, teamspaceId, currentUserId);
-
-    let shouldResetToNew = false;
-    if (role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '')) {
-        const target = await adminDb.collection('users').doc(newAssignedToIds[0]).get();
-        if (target.data()?.role === 'sales_executive') {
-            shouldResetToNew = true;
-        }
-    }
-
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
     
-    const updateData: any = {
+    await leadRef.update({
       assignedToIds: newAssignedToIds,
       reassigned,
-      createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK
+      createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK DATE REFRESH
       updatedAt: FieldValue.serverTimestamp(),
-    };
-
-    if (shouldResetToNew) {
-      updateData.status = 'new';
-    }
-
-    await leadRef.update(updateData);
+    });
 
     for (const userId of newAssignedToIds) {
         await adminDb.collection('users').doc(userId).collection('notifications').add({
@@ -278,35 +256,17 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
 export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {
   try {
     const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = values;
-
-    const currentUserDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const currentUserData = currentUserDoc.data();
-    const role = currentUserData?.role;
-    const email = currentUserData?.email;
-
-    let shouldResetToNew = false;
-    if (role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '')) {
-        const target = await adminDb.collection('users').doc(newAssignedToIds[0]).get();
-        if (target.data()?.role === 'sales_executive') {
-            shouldResetToNew = true;
-        }
-    }
-
     const batch = adminDb.batch();
     
     for (const id of leadIds) {
       const reassigned = await getReassignmentState(id, teamspaceId, currentUserId);
       const ref = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(id);
-      const updateData: any = {
+      batch.update(ref, {
         assignedToIds: newAssignedToIds,
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK
+        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK DATE REFRESH
         updatedAt: FieldValue.serverTimestamp(),
-      };
-      if (shouldResetToNew) {
-        updateData.status = 'new';
-      }
-      batch.update(ref, updateData);
+      });
     }
 
     await batch.commit();
@@ -345,7 +305,7 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK
+        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK DATE REFRESH
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
