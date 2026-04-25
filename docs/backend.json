@@ -42,7 +42,8 @@
           "format": "date-time"
         }
       },
-      "required": [
+      "required": 
+      [
         "id,
         "email",
         "displayName",
