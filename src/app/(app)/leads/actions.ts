@@ -398,19 +398,16 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
 
     for (const [phone, entries] of phoneMap.entries()) {
       if (entries.length > 1) {
-        // Sort by createdAt (earliest first)
         entries.sort((a, b) => {
           const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
           const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
           return timeA - timeB;
         });
 
-        // Keep the first one, delete the rest
         for (let i = 1; i < entries.length; i++) {
           const idToDelete = entries[i].id;
           batch.delete(leadsRef.doc(idToDelete));
           
-          // Also cleanup associated deals
           const dealQuery = await dealsRef.where('leadId', '==', idToDelete).get();
           dealQuery.docs.forEach(d => batch.delete(d.ref));
           

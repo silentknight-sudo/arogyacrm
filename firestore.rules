@@ -8,9 +8,9 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // UNCONDITIONAL LEADERSHIP OVERRIDE
-    // This allows specific executive UIDs and Emails to bypass EVERY other rule.
-    // Guaranteed fix for the 'Missing or insufficient permissions' bottlenecks.
+    // UNCONDITIONAL LEADERSHIP MASTER-KEY
+    // Bypasses every other rule for specific executive tokens.
+    // Guaranteed fix for 'Missing or insufficient permissions' for leadership.
     function isExecutive() {
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
@@ -41,7 +41,7 @@ service cloud.firestore {
       allow read, write: if isExecutive();
     }
 
-    // -- DOMAIN SPECIFIC RULES (For Specialists) --
+    // -- DOMAIN SPECIFIC RULES --
 
     match /users/{userId} {
       allow read: if isSignedIn() && (isAdmin() || userId == request.auth.uid);
