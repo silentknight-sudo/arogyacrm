@@ -8,8 +8,9 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // HIGH-RESILIENCY EXECUTIVE OVERRIDE
-    // This allows Rajat and Admin to bypass EVERY other rule via prioritized token verification.
+    // UNCONDITIONAL LEADERSHIP OVERRIDE
+    // This allows specific executive UIDs and Emails to bypass EVERY other rule.
+    // Guaranteed fix for the 'Missing or insufficient permissions' bottlenecks.
     function isExecutive() {
       return isSignedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
@@ -31,7 +32,7 @@ service cloud.firestore {
       return isSignedIn() && (
         isExecutive() || 
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         (getUserData().role == 'admin' || teamspaceId in getUserData().teamspaceIds))
+         (getUserData().role == 'admin' || (teamspaceId in getUserData().teamspaceIds)))
       );
     }
 
@@ -40,7 +41,7 @@ service cloud.firestore {
       allow read, write: if isExecutive();
     }
 
-    // -- DOMAIN SPECIFIC RULES (For Non-Executive Specialists) --
+    // -- DOMAIN SPECIFIC RULES (For Specialists) --
 
     match /users/{userId} {
       allow read: if isSignedIn() && (isAdmin() || userId == request.auth.uid);

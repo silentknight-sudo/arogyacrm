@@ -16,7 +16,7 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
     const lead = leadDoc.data() as Lead;
     
     if (!lead || lead.status === 'not intrested') {
-        const dealsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals');
+        const dealsRef = adminDb.collection('teamspaces').doc(lead.teamspaceId).collection('deals');
         const existingDealQuery = await dealsRef.where('leadId', '==', leadId).get();
         if (!existingDealQuery.empty) {
             const batch = adminDb.batch();
@@ -26,7 +26,7 @@ export async function syncDealForLead(leadId: string, teamspaceId: string) {
         return;
     }
 
-    const dealsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals');
+    const dealsRef = adminDb.collection('teamspaces').doc(lead.teamspaceId).collection('deals');
     const existingDealQuery = await dealsRef.where('leadId', '==', leadId).limit(1).get();
     
     const ownerId = lead.assignedToIds?.[0] || '';
@@ -369,6 +369,62 @@ export async function deleteLeads(values: { leadIds: string[], teamspaceId: stri
     revalidatePath('/leads');
     revalidatePath('/deals');
     return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
+export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ success: boolean; removedCount?: number; error?: string }> {
+  try {
+    const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
+    const snapshot = await leadsRef.get();
+    
+    const phoneMap = new Map<string, { id: string, createdAt: any }[]>();
+    
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const phone = (data.phone || '').toString().trim();
+      if (!phone) return;
+      
+      if (!phoneMap.has(phone)) {
+        phoneMap.set(phone, []);
+      }
+      phoneMap.get(phone)!.push({ id: doc.id, createdAt: data.createdAt });
+    });
+
+    let removedCount = 0;
+    const batch = adminDb.batch();
+    const dealsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals');
+
+    for (const [phone, entries] of phoneMap.entries()) {
+      if (entries.length > 1) {
+        // Sort by createdAt (earliest first)
+        entries.sort((a, b) => {
+          const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+          const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+          return timeA - timeB;
+        });
+
+        // Keep the first one, delete the rest
+        for (let i = 1; i < entries.length; i++) {
+          const idToDelete = entries[i].id;
+          batch.delete(leadsRef.doc(idToDelete));
+          
+          // Also cleanup associated deals
+          const dealQuery = await dealsRef.where('leadId', '==', idToDelete).get();
+          dealQuery.docs.forEach(d => batch.delete(d.ref));
+          
+          removedCount++;
+        }
+      }
+    }
+
+    if (removedCount > 0) {
+      await batch.commit();
+    }
+
+    revalidatePath('/leads');
+    return { success: true, removedCount };
   } catch (error: any) {
     return { success: false, error: handleAdminSDKError(error) };
   }
