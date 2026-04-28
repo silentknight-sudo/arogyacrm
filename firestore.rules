@@ -2,12 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- EXECUTIVE FAIL-SAFE (TOP PRIORITY) --
-    // Bypasses all resource limits and document-load race conditions.
+    // ⚡ UNCONDITIONAL EXECUTIVE MASTER-KEY ⚡
+    // This bypasses all document-load race conditions and resource limits for leadership.
+    // Specifically hardcoded for: pundhir@arogyabio.com (3oC7dLZCUsRpwNEPWlokfSGTmnx1)
     function isExecutive() {
       return request.auth != null && (
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' || 
-        request.auth.uid == '9E06P0PsRtgyS5H60weu42iE0zH2' ||
         request.auth.token.email == 'admin@arogyabio.com' ||
         request.auth.token.email == 'pundhir@arogyabio.com'
       );
@@ -38,24 +38,6 @@ service cloud.firestore {
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          (getUserData().role == 'admin' || (teamspaceId in getUserData().teamspaceIds)))
       );
-    }
-
-    // -- COLLECTION GROUP RULES (Required for Global Dashboard) --
-    
-    match /{path=**}/leads/{leadId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/deals/{dealId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/contacts/{contactId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/activityLogs/{logId} {
-      allow read: if isAdmin();
     }
 
     // -- DOMAIN SPECIFIC RULES --
