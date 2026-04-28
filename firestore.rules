@@ -8,15 +8,14 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // UNCONDITIONAL LEADERSHIP MASTER-KEY
-    // Bypasses every other rule for specific executive tokens.
-    // Guaranteed fix for 'Missing or insufficient permissions' for leadership.
+    // THE MASTER KEY: Unconditional bypass for leadership.
+    // Guaranteed fix for 'Missing or insufficient permissions' for the reported accounts.
     function isExecutive() {
       return isSignedIn() && (
+        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' || 
+        request.auth.uid == '9E06P0PsRtgyS5H60weu42iE0zH2' ||
         request.auth.token.email == 'admin@arogyabio.com' ||
-        request.auth.token.email == 'pundhir@arogyabio.com' ||
-        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
-        request.auth.uid == '9E06P0PsRtgyS5H60weu42iE0zH2'
+        request.auth.token.email == 'pundhir@arogyabio.com'
       );
     }
 

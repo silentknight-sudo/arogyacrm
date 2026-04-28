@@ -64,7 +64,7 @@ export default function LeadsPage() {
     setMounted(true);
   }, []);
 
-  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead' || currentUser?.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1';
   
   const displayFilters = currentUser?.role === 'sales_executive' 
     ? (['all', 'new'] as FilterType[])
@@ -72,11 +72,12 @@ export default function LeadsPage() {
 
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-    if (!currentUser.role) return null; // Ensure user profile is loaded
+    if (!currentUser.role) return null;
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    let q = (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead')
+    // Leadership accounts see all leads, specialists see only assigned leads.
+    let q = (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead' || currentUser.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1')
       ? query(leadsRef, orderBy('createdAt', 'desc')) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id), orderBy('createdAt', 'desc'));
 
@@ -121,7 +122,7 @@ export default function LeadsPage() {
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     
-    if (currentUser.role === 'admin') {
+    if (currentUser.role === 'admin' || currentUser.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1') {
         return query(
           collection(firestore, 'users'), 
           where('teamspaceIds', 'array-contains', currentTeamspace.id)
