@@ -206,16 +206,7 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
         return false; // Leadership distributing fresh inventory
     }
     
-    // If any current owner was a sales_executive, moving it now counts as a reassignment.
-    const currentOwners = leadData.assignedToIds || [];
-    for (const ownerId of currentOwners) {
-      const ownerDoc = await adminDb.collection('users').doc(ownerId).get();
-      if (ownerDoc.exists && ownerDoc.data()?.role === 'sales_executive') {
-          return true; 
-      }
-    }
-    
-    return false; 
+    return true; // Any other movement is reassignment
 }
 
 export async function assignLead(values: { leadId: string, teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {

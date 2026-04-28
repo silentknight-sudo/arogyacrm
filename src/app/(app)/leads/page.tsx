@@ -24,7 +24,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,7 +64,7 @@ export default function LeadsPage() {
     setMounted(true);
   }, []);
 
-  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead' || currentUser?.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1';
+  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead' || currentUser?.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1' || currentUser?.email === 'pundhir@arogyabio.com';
   
   const displayFilters = currentUser?.role === 'sales_executive' 
     ? (['all', 'new'] as FilterType[])
@@ -77,7 +77,7 @@ export default function LeadsPage() {
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
     // Leadership accounts see all leads, specialists see only assigned leads.
-    let q = (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead' || currentUser.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1')
+    let q = (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead' || currentUser.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1' || currentUser.email === 'pundhir@arogyabio.com')
       ? query(leadsRef, orderBy('createdAt', 'desc')) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id), orderBy('createdAt', 'desc'));
 
@@ -121,22 +121,7 @@ export default function LeadsPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-    
-    if (currentUser.role === 'admin' || currentUser.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1') {
-        return query(
-          collection(firestore, 'users'), 
-          where('teamspaceIds', 'array-contains', currentTeamspace.id)
-        );
-    }
-    
-    if (currentUser.role === 'sales_team_lead') {
-        return query(
-          collection(firestore, 'users'), 
-          where('teamspaceIds', 'array-contains', currentTeamspace.id)
-        );
-    }
-    
-    return null;
+    return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
@@ -260,12 +245,12 @@ export default function LeadsPage() {
     <div className="space-y-8 pb-16 pt-4">
         <div className="flex items-end justify-between flex-wrap gap-8">
             <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3 text-accent mb-1">
-                    <Target className="h-5 w-5 fill-accent" />
-                    <span className="text-xs font-black uppercase tracking-[0.3em]">Growth Engine</span>
+                <div className="flex items-center gap-3 text-primary mb-1">
+                    <Target className="h-5 w-5 fill-primary" />
+                    <span className="text-xs font-black uppercase tracking-[0.3em]">Pipeline Terminal</span>
                 </div>
-                <h1 className="text-6xl font-black tracking-tighter text-primary">Prospect Pipeline</h1>
-                <p className="text-2xl text-muted-foreground font-semibold">Strategic lead management.</p>
+                <h1 className="text-6xl font-black tracking-tighter text-[#0f172a]">Prospect Engine</h1>
+                <p className="text-2xl text-muted-foreground font-semibold">Strategic asset management.</p>
             </div>
              <div className="flex items-center gap-4">
               {isAdminOrTL && (
@@ -294,7 +279,7 @@ export default function LeadsPage() {
             </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-[2.5rem] bg-card border border-primary/5 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-[2.5rem] bg-white border border-primary/5 shadow-2xl">
             <div className="flex items-center gap-6">
                 <div className="flex items-center gap-3">
                     <Filter className="h-4 w-4 text-muted-foreground" />
@@ -319,52 +304,31 @@ export default function LeadsPage() {
                 <div className="h-10 w-px bg-primary/10 mx-2 hidden lg:block" />
 
                 <div className="flex items-center gap-3">
-                  <div className={cn("grid gap-2")}>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          id="date"
-                          variant={"outline"}
-                          className={cn(
-                            "w-[260px] justify-start text-left font-bold rounded-xl h-11 border-none bg-muted/30 hover:bg-muted/50",
-                            !dateRange && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                          {dateRange?.from ? (
-                            dateRange.to ? (
-                              <>
-                                {format(dateRange.from, "LLL dd, y")} -{" "}
-                                {format(dateRange.to, "LLL dd, y")}
-                              </>
-                            ) : (
-                              format(dateRange.from, "LLL dd, y")
-                            )
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[260px] justify-start text-left font-bold rounded-xl h-11 border-none bg-muted/30 hover:bg-muted/50",
+                          !dateRange && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                        {dateRange?.from ? (
+                          dateRange.to ? (
+                            <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
                           ) : (
-                            <span className="text-[10px] font-black uppercase tracking-widest">Temporal Filter</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 rounded-2xl border-none shadow-2xl" align="start">
-                        <div className="p-3 border-b border-muted/50 bg-muted/20 flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Date Range</span>
-                            {dateRange && (
-                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => setDateRange(undefined)}>
-                                    <X className="h-3 w-3" />
-                                </Button>
-                            )}
-                        </div>
-                        <Calendar
-                          initialFocus
-                          mode="range"
-                          defaultMonth={dateRange?.from}
-                          selected={dateRange}
-                          onSelect={setDateRange}
-                          numberOfMonths={2}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                            format(dateRange.from, "LLL dd, y")
+                          )
+                        ) : (
+                          <span className="text-[10px] font-black uppercase tracking-widest">Temporal Filter</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 rounded-2xl border-none shadow-2xl" align="start">
+                      <Calendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={2} />
+                    </PopoverContent>
+                  </Popover>
                 </div>
             </div>
 
@@ -372,22 +336,20 @@ export default function LeadsPage() {
                 <div className="flex items-center gap-4 bg-muted/20 p-2 rounded-2xl border border-primary/5">
                     <div className="flex items-center gap-2 px-3 border-r border-primary/10 mr-2 h-10">
                         <UsersIcon className="h-4 w-4 text-primary" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Specialist:</span>
                         <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                            <SelectTrigger className="w-[140px] h-9 rounded-xl bg-background border-none shadow-inner text-[10px] font-black uppercase tracking-tighter">
+                            <SelectTrigger className="w-[140px] h-9 rounded-xl bg-background border-none shadow-inner text-[10px] font-black uppercase">
                                 <SelectValue placeholder="All Members" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl border-none shadow-2xl bg-card/95 backdrop-blur-xl">
-                                <SelectItem value="all" className="text-[10px] font-black uppercase tracking-widest">All Specialists</SelectItem>
+                            <SelectContent>
+                                <SelectItem value="all">All Specialists</SelectItem>
                                 {users?.map((u) => (
-                                    <SelectItem key={u.id} value={u.id} className="text-[10px] font-black uppercase tracking-widest">{u.displayName}</SelectItem>
+                                    <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Qty:</span>
                         <Input 
                             type="text" 
                             placeholder="e.g. 1-10" 
@@ -395,42 +357,18 @@ export default function LeadsPage() {
                             onChange={(e) => setSelectCount(e.target.value)}
                             className="w-24 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
                         />
-                        <Button 
-                            variant="secondary" 
-                            size="sm" 
-                            onClick={handleSelectNLeads}
-                            className="rounded-xl font-bold px-4 h-10"
-                        >
-                            Select
-                        </Button>
+                        <Button variant="secondary" size="sm" onClick={handleSelectNLeads} className="rounded-xl font-bold px-4 h-10">Select</Button>
                         {selectedLeads.length > 0 && (
                             <div className="flex gap-2 ml-2">
-                                <Button 
-                                    className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10"
-                                    onClick={() => setBulkAssignOpen(true)}
-                                >
-                                    Delegate {selectedLeads.length}
-                                </Button>
-                                <Button 
-                                    variant="outline" 
-                                    className="rounded-xl border-primary/20 bg-background hover:bg-primary/5 px-4 font-bold h-10 text-primary flex items-center gap-2"
-                                    onClick={handleSelfAssign}
-                                    disabled={isReclaiming}
-                                >
+                                <Button className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10" onClick={() => setBulkAssignOpen(true)}>Delegate {selectedLeads.length}</Button>
+                                <Button variant="outline" className="rounded-xl border-primary/20 bg-background hover:bg-primary/5 px-4 font-bold h-10 text-primary flex items-center gap-2" onClick={handleSelfAssign} disabled={isReclaiming}>
                                     {isReclaiming ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
                                     Reclaim
                                 </Button>
-                                {isAdminOrTL && (
-                                    <Button 
-                                        variant="destructive" 
-                                        className="rounded-xl shadow-lg px-4 font-bold h-10 flex items-center gap-2"
-                                        onClick={() => setIsDeleteOpen(true)}
-                                        disabled={isDeleting}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                        Purge
-                                    </Button>
-                                )}
+                                <Button variant="destructive" className="rounded-xl shadow-lg px-4 font-bold h-10 flex items-center gap-2" onClick={() => setIsDeleteOpen(true)} disabled={isDeleting}>
+                                    <Trash2 className="h-4 w-4" />
+                                    Purge
+                                </Button>
                             </div>
                         )}
                     </div>
@@ -438,48 +376,31 @@ export default function LeadsPage() {
             )}
         </div>
         
-        {loading ? (
-            <div className="space-y-8">
-                <Skeleton className="h-24 w-full rounded-[2.5rem]" />
-                <Skeleton className="h-[600px] w-full rounded-[2.5rem]" />
-            </div>
-        ) : (
-            <div className="premium-card p-6 bg-card/40 backdrop-blur-2xl border-primary/5 overflow-hidden shadow-2xl">
-              <DataTable 
-                columns={columns} 
-                data={leads || []} 
-                users={users || []} 
-                products={products || []}
-                externalSelection={selectedLeads}
-                onSelectionChange={setSelectedLeads}
-              />
-            </div>
-        )}
+        <div className="premium-card p-6 bg-white/40 backdrop-blur-2xl border-primary/5 overflow-hidden shadow-2xl">
+          <DataTable 
+            columns={columns} 
+            data={leads || []} 
+            users={users || []} 
+            products={products || []}
+            externalSelection={selectedLeads}
+            onSelectionChange={setSelectedLeads}
+          />
+        </div>
 
-        <BulkAssignLeadsDialog 
-            open={isBulkAssignOpen}
-            onOpenChange={setBulkAssignOpen}
-            leads={selectedLeads}
-            users={users || []}
-        />
+        <BulkAssignLeadsDialog open={isBulkAssignOpen} onOpenChange={setBulkAssignOpen} leads={selectedLeads} users={users || []} />
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteOpen}>
-            <AlertDialogContent className="rounded-[2.5rem] bg-[#0D1F0B] text-white border-none shadow-2xl p-10">
+            <AlertDialogContent className="rounded-[2.5rem] bg-[#0f172a] text-white border-none shadow-2xl p-10">
                 <AlertDialogHeader className="mb-6">
                     <AlertDialogTitle className="text-3xl font-black text-[#ef4444]">Strategic Purge</AlertDialogTitle>
                     <AlertDialogDescription className="text-white/60 text-lg font-medium">
-                        You are about to permanently decommission <span className="text-white font-bold">{selectedLeads.length}</span> prospects and their associated deals. 
-                        This operation cannot be reversed.
+                        You are about to permanently decommission <span className="text-white font-bold">{selectedLeads.length}</span> prospects. This operation cannot be reversed.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="gap-4">
-                    <AlertDialogCancel className="h-14 px-8 rounded-xl border-white/10 bg-white/5 text-white hover:bg-white/10 font-bold">Cancel</AlertDialogCancel>
-                    <AlertDialogAction 
-                        onClick={handleDeleteLeads} 
-                        className="h-14 px-10 rounded-xl bg-[#ef4444] text-white hover:bg-[#dc2626] font-black shadow-xl"
-                        disabled={isDeleting}
-                    >
-                        {isDeleting ? 'Processing Decommission...' : 'Confirm Pipeline Purge'}
+                    <AlertDialogCancel className="h-14 px-8 rounded-xl border-white/10 bg-white/5 text-white">Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteLeads} className="h-14 px-10 rounded-xl bg-[#ef4444] text-white hover:bg-[#dc2626] font-black shadow-xl" disabled={isDeleting}>
+                        Confirm Purge
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

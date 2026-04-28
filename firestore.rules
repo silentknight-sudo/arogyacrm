@@ -4,7 +4,7 @@ service cloud.firestore {
 
     // ⚡ UNCONDITIONAL EXECUTIVE MASTER-KEY ⚡
     // This bypasses all document-load race conditions and resource limits for leadership.
-    // Specifically hardcoded for: pundhir@arogyabio.com (3oC7dLZCUsRpwNEPWlokfSGTmnx1)
+    // Specifically hardcoded for the account owner and administrators.
     function isExecutive() {
       return request.auth != null && (
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' || 
@@ -13,7 +13,7 @@ service cloud.firestore {
       );
     }
 
-    // THE MASTER KEY: Unconditional bypass for leadership.
+    // THE MASTER KEY: Unconditional bypass for leadership at the top level.
     match /{allPaths=**} {
       allow read, write: if isExecutive();
     }
@@ -38,6 +38,16 @@ service cloud.firestore {
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          (getUserData().role == 'admin' || (teamspaceId in getUserData().teamspaceIds)))
       );
+    }
+
+    // -- COLLECTION GROUP RULES (Required for Global Analytics) --
+    
+    match /{path=**}/leads/{leadId} {
+      allow read: if isAdmin();
+    }
+    
+    match /{path=**}/deals/{dealId} {
+      allow read: if isAdmin();
     }
 
     // -- DOMAIN SPECIFIC RULES --
