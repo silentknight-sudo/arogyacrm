@@ -44,7 +44,7 @@
       },
       "required": 
       [
-        "id,
+        "id",
         "email",
         "displayName",
         "role",
