@@ -3,14 +3,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 🛡️ UNSTOPPABLE EXECUTIVE MASTER-KEY 🛡️
-    // This allows Rajat Pundhir (pundhir@arogyabio.com) and the Admin account 
-    // total access to the entire database. This rule MUST be first and 
-    // uses token-based data to avoid race conditions and resource limits.
+    // This allows specific users total access, bypassing all document-load race conditions.
+    // We check UID and Email directly from the auth token to ensure zero-latency access.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
+        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
         request.auth.token.email == 'admin@arogyabio.com' ||
-        request.auth.token.email == 'pundhir@arogyabio.com' ||
-        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1'
+        request.auth.token.email == 'pundhir@arogyabio.com'
       );
     }
 
@@ -25,14 +24,17 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      let data = getUserData();
-      return isSignedIn() && data != null && data.role == 'admin';
+      return isSignedIn() && (
+        request.auth.token.email == 'admin@arogyabio.com' ||
+        request.auth.token.email == 'pundhir@arogyabio.com' ||
+        getUserData().role == 'admin'
+      );
     }
 
     function isMember(teamspaceId) {
       let data = getUserData();
-      return isSignedIn() && data != null && (
-        data.role == 'admin' || 
+      return isSignedIn() && (
+        isAdmin() || 
         (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
       );
     }

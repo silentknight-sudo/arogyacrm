@@ -8,6 +8,7 @@ import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { sendMetaCapiEvent } from '@/lib/meta-capi';
 
 const ADMIN_EMAILS = ['admin@arogyabio.com', 'pundhir@arogyabio.com'];
+const ADMIN_UIDS = ['3oC7dLZCUsRpwNEPWlokfSGTmnx1'];
 
 export async function syncDealForLead(leadId: string, teamspaceId: string) {
   try {
@@ -200,7 +201,7 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     const actorEmail = actorData?.email;
 
     // Check if the actor is leadership
-    const isLeadership = actorRole === 'admin' || actorRole === 'sales_team_lead' || ADMIN_EMAILS.includes(actorEmail || '') || currentUserId === '3oC7dLZCUsRpwNEPWlokfSGTmnx1';
+    const isLeadership = actorRole === 'admin' || actorRole === 'sales_team_lead' || ADMIN_EMAILS.includes(actorEmail || '') || ADMIN_UIDS.includes(currentUserId);
 
     // If leadership is moving a "new" lead, it's considered initial distribution, not a reassignment.
     if (isLeadership && leadData.status === 'new') {
@@ -221,7 +222,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     await leadRef.update({
       assignedToIds: newAssignedToIds,
       reassigned,
-      createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK SORTING
+      createdAt: FieldValue.serverTimestamp(), // BORN-AGAIN SORTING
       updatedAt: FieldValue.serverTimestamp(),
     });
 
@@ -257,7 +258,7 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: newAssignedToIds,
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK SORTING
+        createdAt: FieldValue.serverTimestamp(), // BORN-AGAIN SORTING
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -298,7 +299,7 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK SORTING
+        createdAt: FieldValue.serverTimestamp(), // BORN-AGAIN SORTING
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -336,7 +337,7 @@ export async function deleteLeads(values: { leadIds: string[], teamspaceId: stri
     const email = userData?.email;
 
     // Grant delete authority to Admins and Team Leads
-    const isAuthorized = role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '') || currentUserId === '3oC7dLZCUsRpwNEPWlokfSGTmnx1';
+    const isAuthorized = role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '') || ADMIN_UIDS.includes(currentUserId);
 
     if (!isAuthorized) {
         throw new Error('Unauthorized: Asset decommissioning restricted to leadership.');
