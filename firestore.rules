@@ -2,9 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 🛡️ HYPER-RESILIENT EXECUTIVE MASTER-KEY 🛡️
-    // Bypasses all document-read limits and race conditions for leadership.
-    // Prioritizes token-based identity for zero-latency access to the pipeline.
+    // 🛡️ UNSTOPPABLE EXECUTIVE MASTER-KEY 🛡️
+    // This allows Rajat Pundhir (pundhir@arogyabio.com) and the Admin account 
+    // total access to the entire database. This rule MUST be first and 
+    // uses only static data (UID/Email) to avoid race conditions.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.token.email == 'admin@arogyabio.com' ||
