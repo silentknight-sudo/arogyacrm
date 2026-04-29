@@ -2,9 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 🛡️ UNCONDITIONAL EXECUTIVE MASTER-KEY 🛡️
+    // 🛡️ HYPER-RESILIENT EXECUTIVE MASTER-KEY 🛡️
     // Bypasses all document-read limits and race conditions for leadership.
-    // Prioritizes token-based identity for zero-latency access.
+    // Prioritizes token-based identity for zero-latency access to the pipeline.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.token.email == 'admin@arogyabio.com' ||
