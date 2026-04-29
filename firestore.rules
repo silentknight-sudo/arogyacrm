@@ -6,7 +6,7 @@ service cloud.firestore {
     // This allows specific users total access, bypassing all document-load race conditions.
     // We check UID and Email directly from the auth token to ensure zero-latency access.
     match /{allPaths=**} {
-      allow read, write: if request.auth != null && (
+      allow read, write, list, get: if request.auth != null && (
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
         request.auth.token.email == 'admin@arogyabio.com' ||
         request.auth.token.email == 'pundhir@arogyabio.com'
