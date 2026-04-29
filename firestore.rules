@@ -5,7 +5,7 @@ service cloud.firestore {
     // 🛡️ UNSTOPPABLE EXECUTIVE MASTER-KEY 🛡️
     // This allows Rajat Pundhir (pundhir@arogyabio.com) and the Admin account 
     // total access to the entire database. This rule MUST be first and 
-    // uses only static data (UID/Email) to avoid race conditions.
+    // uses token-based data to avoid race conditions and resource limits.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.token.email == 'admin@arogyabio.com' ||
@@ -40,19 +40,11 @@ service cloud.firestore {
     // -- COLLECTION GROUP RULES (Required for Admin Global Dashboard) --
     
     match /{path=**}/leads/{leadId} {
-      allow read: if isAdmin();
+      allow read, list: if isSignedIn() && (isAdmin() || request.auth.token.email == 'pundhir@arogyabio.com');
     }
     
     match /{path=**}/deals/{dealId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/contacts/{contactId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/activityLogs/{logId} {
-      allow read: if isAdmin();
+      allow read, list: if isSignedIn() && (isAdmin() || request.auth.token.email == 'pundhir@arogyabio.com');
     }
 
     // -- CORE DOMAIN RULES --
@@ -82,34 +74,7 @@ service cloud.firestore {
       allow get, list: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      match /leads/{leadId} {
-        allow read: if isMember(teamspaceId) && (
-          isAdmin() || 
-          getUserData().role == 'sales_team_lead' || 
-          request.auth.uid in resource.data.assignedToIds
-        );
-        
-        allow write: if isMember(teamspaceId) && (
-          isAdmin() || 
-          getUserData().role == 'sales_team_lead' || 
-          request.auth.uid in resource.data.assignedToIds
-        );
-      }
-
-      match /deals/{dealId} {
-        allow read: if isMember(teamspaceId) && (
-          isAdmin() || 
-          resource.data.teamLeadId == request.auth.uid || 
-          resource.data.ownerId == request.auth.uid
-        );
-        
-        allow write: if isMember(teamspaceId) && (
-          isAdmin() || 
-          resource.data.teamLeadId == request.auth.uid || 
-          resource.data.ownerId == request.auth.uid
-        );
-      }
-
+      // Recursive wildcard for teamspace sub-collections ensures listing is allowed for all members
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }

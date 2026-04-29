@@ -23,7 +23,7 @@
     --border: 220 14% 88%;
     --input: 220 14% 88%;
     --ring: 243 75% 45%;
-    --radius: 1rem;
+    --radius: 1.25rem;
   }
 
   .dark {
@@ -60,7 +60,7 @@
 
 @layer components {
   .glass-sidebar {
-    @apply bg-[#0f172a]/95 backdrop-blur-2xl border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.1)];
+    @apply bg-[#0f172a]/95 backdrop-blur-3xl border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.1)];
   }
   .glass-header {
     @apply bg-background/60 backdrop-blur-xl border-b border-border/50 sticky top-0 z-50;
@@ -86,5 +86,11 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  .zen-gradient {
+    @apply bg-gradient-to-br from-[#1e1b4b] via-[#312e81] to-[#4338ca] text-white;
+  }
+  .accent-glow {
+    @apply shadow-[0_0_25px_rgba(67,56,202,0.4)];
   }
 }
