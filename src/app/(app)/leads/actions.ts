@@ -191,6 +191,7 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     
     if (!leadData) return false;
     
+    // If it's already marked as reassigned, keep it that way
     if (leadData.reassigned) return true;
     
     const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
@@ -198,12 +199,15 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     const actorRole = actorData?.role;
     const actorEmail = actorData?.email;
 
+    // Check if the actor is leadership
     const isLeadership = actorRole === 'admin' || actorRole === 'sales_team_lead' || ADMIN_EMAILS.includes(actorEmail || '') || currentUserId === '3oC7dLZCUsRpwNEPWlokfSGTmnx1';
 
+    // If leadership is moving a "new" lead, it's considered initial distribution, not a reassignment.
     if (isLeadership && leadData.status === 'new') {
         return false; 
     }
     
+    // Otherwise, any movement between accounts is considered reassignment
     return true; 
 }
 
@@ -217,7 +221,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     await leadRef.update({
       assignedToIds: newAssignedToIds,
       reassigned,
-      createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
+      createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK SORTING
       updatedAt: FieldValue.serverTimestamp(),
     });
 
@@ -253,7 +257,7 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: newAssignedToIds,
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
+        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK SORTING
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -294,7 +298,7 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
+        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK SORTING
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -331,6 +335,7 @@ export async function deleteLeads(values: { leadIds: string[], teamspaceId: stri
     const role = userData?.role;
     const email = userData?.email;
 
+    // Grant delete authority to Admins and Team Leads
     const isAuthorized = role === 'admin' || role === 'sales_team_lead' || ADMIN_EMAILS.includes(email || '') || currentUserId === '3oC7dLZCUsRpwNEPWlokfSGTmnx1';
 
     if (!isAuthorized) {

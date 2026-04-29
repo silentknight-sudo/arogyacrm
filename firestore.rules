@@ -36,7 +36,7 @@ service cloud.firestore {
       );
     }
 
-    // -- COLLECTION GROUP RULES (Required for Global Dashboard) --
+    // -- COLLECTION GROUP RULES (Required for Admin Global Dashboard) --
     
     match /{path=**}/leads/{leadId} {
       allow read: if isAdmin();
@@ -47,6 +47,10 @@ service cloud.firestore {
     }
     
     match /{path=**}/contacts/{contactId} {
+      allow read: if isAdmin();
+    }
+    
+    match /{path=**}/activityLogs/{logId} {
       allow read: if isAdmin();
     }
 
