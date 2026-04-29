@@ -191,7 +191,6 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     
     if (!leadData) return false;
     
-    // If it's already marked reassigned, keep it.
     if (leadData.reassigned) return true;
     
     const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
@@ -199,14 +198,13 @@ async function getReassignmentState(leadId: string, teamspaceId: string, current
     const actorRole = actorData?.role;
     const actorEmail = actorData?.email;
 
-    // STRATEGIC DISTINCTION: Leadership moving leads while status is NEW is INITIAL DISTRIBUTION.
     const isLeadership = actorRole === 'admin' || actorRole === 'sales_team_lead' || ADMIN_EMAILS.includes(actorEmail || '') || currentUserId === '3oC7dLZCUsRpwNEPWlokfSGTmnx1';
 
     if (isLeadership && leadData.status === 'new') {
-        return false; // Leadership distributing fresh inventory
+        return false; 
     }
     
-    return true; // Any other movement is reassignment
+    return true; 
 }
 
 export async function assignLead(values: { leadId: string, teamspaceId: string, newAssignedToIds: string[], currentUserId: string }) {
@@ -219,7 +217,7 @@ export async function assignLead(values: { leadId: string, teamspaceId: string, 
     await leadRef.update({
       assignedToIds: newAssignedToIds,
       reassigned,
-      createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK DATE REFRESH
+      createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
       updatedAt: FieldValue.serverTimestamp(),
     });
 
@@ -255,7 +253,7 @@ export async function bulkAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: newAssignedToIds,
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK DATE REFRESH
+        createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -296,7 +294,7 @@ export async function selfAssignLeads(values: { leadIds: string[], teamspaceId: 
       batch.update(ref, {
         assignedToIds: [currentUserId],
         reassigned,
-        createdAt: FieldValue.serverTimestamp(), // FORCE TOP-OF-STACK DATE REFRESH
+        createdAt: FieldValue.serverTimestamp(), // REFRESH ARRIVAL DATE
         updatedAt: FieldValue.serverTimestamp(),
       });
     }

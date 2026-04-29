@@ -76,7 +76,6 @@ export default function LeadsPage() {
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // Leadership accounts see all leads, specialists see only assigned leads.
     let q = (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead' || currentUser.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1')
       ? query(leadsRef, orderBy('createdAt', 'desc')) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id), orderBy('createdAt', 'desc'));

@@ -2,14 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ⚡ UNCONDITIONAL EXECUTIVE MASTER-KEY ⚡
-    // This bypasses all document-load bottlenecks and resource limits for leadership.
-    // Specifically prioritizes the account owner and administrators via Token Data.
+    // 🛡️ UNCONDITIONAL EXECUTIVE MASTER-KEY 🛡️
+    // Bypasses all document-read limits and race conditions for leadership.
+    // Prioritizes token-based identity for zero-latency access.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
-        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' || 
         request.auth.token.email == 'admin@arogyabio.com' ||
-        request.auth.token.email == 'pundhir@arogyabio.com'
+        request.auth.token.email == 'pundhir@arogyabio.com' ||
+        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1'
       );
     }
 
@@ -24,18 +24,19 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin';
+      let data = getUserData();
+      return isSignedIn() && data != null && data.role == 'admin';
     }
 
     function isMember(teamspaceId) {
-      return isSignedIn() && (
-        isAdmin() || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         (teamspaceId in getUserData().teamspaceIds))
+      let data = getUserData();
+      return isSignedIn() && data != null && (
+        data.role == 'admin' || 
+        (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
       );
     }
 
-    // -- COLLECTION GROUP RULES (Required for Global Analytics) --
+    // -- COLLECTION GROUP RULES (Required for Global Dashboard) --
     
     match /{path=**}/leads/{leadId} {
       allow read: if isAdmin();
@@ -44,21 +45,24 @@ service cloud.firestore {
     match /{path=**}/deals/{dealId} {
       allow read: if isAdmin();
     }
+    
+    match /{path=**}/contacts/{contactId} {
+      allow read: if isAdmin();
+    }
 
-    // -- DOMAIN SPECIFIC RULES --
+    // -- CORE DOMAIN RULES --
 
     match /users/{userId} {
       allow read: if isSignedIn() && (
         isAdmin() || 
         userId == request.auth.uid ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         getUserData().role == 'sales_team_lead' && (
+        (getUserData().role == 'sales_team_lead' && (
             resource == null || resource.data.createdBy == request.auth.uid
-         ))
+        ))
       );
       
-      allow write: if isAdmin() || (isSignedIn() && userId == request.auth.uid);
-      
+      allow write: if isAdmin();
+
       match /notifications/{notificationId} {
         allow read, write: if isSignedIn() && userId == request.auth.uid;
       }
@@ -76,13 +80,13 @@ service cloud.firestore {
       match /leads/{leadId} {
         allow read: if isMember(teamspaceId) && (
           isAdmin() || 
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'sales_team_lead') || 
+          getUserData().role == 'sales_team_lead' || 
           request.auth.uid in resource.data.assignedToIds
         );
         
         allow write: if isMember(teamspaceId) && (
           isAdmin() || 
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'sales_team_lead') || 
+          getUserData().role == 'sales_team_lead' || 
           request.auth.uid in resource.data.assignedToIds
         );
       }
