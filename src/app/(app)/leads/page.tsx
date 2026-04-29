@@ -10,7 +10,7 @@ import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download, Sparkles, Trash2, Calendar as CalendarIcon, X } from 'lucide-react';
+import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download, Sparkles, Trash2, Calendar as CalendarIcon } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/select';
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,7 +64,7 @@ export default function LeadsPage() {
     setMounted(true);
   }, []);
 
-  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead' || currentUser?.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1' || currentUser?.email === 'pundhir@arogyabio.com';
+  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead' || currentUser?.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1';
   
   const displayFilters = currentUser?.role === 'sales_executive' 
     ? (['all', 'new'] as FilterType[])
@@ -77,7 +77,7 @@ export default function LeadsPage() {
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
     // Leadership accounts see all leads, specialists see only assigned leads.
-    let q = (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead' || currentUser.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1' || currentUser.email === 'pundhir@arogyabio.com')
+    let q = (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead' || currentUser.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1')
       ? query(leadsRef, orderBy('createdAt', 'desc')) 
       : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id), orderBy('createdAt', 'desc'));
 
@@ -215,13 +215,14 @@ export default function LeadsPage() {
     
     const rows = dataToExport.map(lead => {
       const escape = (val: any) => `"${(val || '').toString().replace(/"/g, '""')}"`;
+      const dateStr = lead.createdAt?.toDate ? lead.createdAt.toDate().toISOString() : lead.createdAt;
       return [
         escape(lead.fullName),
         escape(lead.email),
         escape(lead.phone),
         escape(lead.status),
         escape(lead.source),
-        escape(lead.createdAt)
+        escape(dateStr)
       ].join(',');
     });
 
