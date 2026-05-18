@@ -2,30 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 🛡️ THE INVICTUS BYPASS 🛡️
-    // Evaluated FIRST and INDEPENDENTLY. 
-    // Absolute authority for verified leadership.
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null && (
-        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
-        request.auth.uid == '9E06P0PsRtgyS5H60weu42iE0zH2' ||
-        request.auth.token.email == 'admin@arogyabio.com' ||
-        request.auth.token.email == 'pundhir@arogyabio.com'
-      );
+    // -- CORE ATOMIC HELPERS --
+
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // -- ATOMIC HELPERS --
-
-    function isSignedIn() {
-      return request.auth != null && request.auth.uid != null;
-    }
-
-    function isExecutive() {
-      return request.auth != null && (
-        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
-        request.auth.uid == '9E06P0PsRtgyS5H60weu42iE0zH2' ||
+    function isAdmin() {
+      return signedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
-        request.auth.token.email == 'pundhir@arogyabio.com'
+        request.auth.token.email == 'pundhir@arogyabio.com' ||
+        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
+        request.auth.uid == '9E06P0PsRtgyS5H60weu42iE0zH2'
       );
     }
 
@@ -33,39 +21,41 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isAdmin() {
-      return isExecutive() || (isSignedIn() && getUserData().role == 'admin');
+    function isMember(teamspaceId) {
+      return isAdmin() || (
+        signedIn() && 
+        getUserData().teamspaceIds != null && 
+        teamspaceId in getUserData().teamspaceIds
+      );
     }
 
-    function isMember(teamspaceId) {
-      if (isExecutive()) return true;
-      let data = getUserData();
-      return isSignedIn() && (
-        (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
-      );
+    // 🛡️ THE EXECUTIVE MASTER-KEY 🛡️
+    // Evaluated at the root to ensure zero-latency authority for leadership.
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
     }
 
     // -- PROTECTED COLLECTIONS --
 
     match /users/{userId} {
-      allow read: if isSignedIn() && (isAdmin() || userId == request.auth.uid);
-      allow write: if isAdmin() || (isSignedIn() && userId == request.auth.uid);
+      allow read: if signedIn() && (isAdmin() || userId == request.auth.uid);
+      allow write: if isAdmin() || (signedIn() && userId == request.auth.uid);
       
       match /notifications/{id} {
-        allow read, write: if isSignedIn() && userId == request.auth.uid;
+        allow read, write: if signedIn() && userId == request.auth.uid;
       }
     }
 
     match /products/{productId} {
-      allow read: if isSignedIn();
+      allow read: if signedIn();
       allow write: if isAdmin();
     }
 
     match /teamspaces/{teamspaceId} {
-      allow get, list: if isMember(teamspaceId);
+      allow read: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      // Recursive permission for all teamspace sub-collections
+      // Recursive permission for all sub-modules (Leads, Deals, Tasks, etc.)
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }

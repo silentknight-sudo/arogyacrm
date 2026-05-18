@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { BulkAssignLeadsDialog } from './bulk-assign-leads-dialog';
 import { DeduplicateLeadsDialog } from './deduplicate-leads-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { selfAssignLeads, deleteLeads } from './actions';
+import { deleteLeads } from './actions';
 import {
   Select,
   SelectContent,
@@ -61,15 +61,12 @@ export default function LeadsPage() {
   [currentUser]);
 
   const leadsQuery = useMemoFirebase(() => {
-    // PROTECTIVE GUARD: Only run if essential context is present.
     if (!mounted || isUserLoading || !currentUser || !currentTeamspace?.id) return null;
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
-    
-    // 🔥 CRITICAL FIRESTORE RULE: Equality filters MUST be defined before orderBy.
     let constraints: any[] = [];
 
-    // 1. Core State Scoping (Equality)
+    // 🔥 FIRESTORE CRITICAL: Equality filters must be added BEFORE ordering.
     if (activeFilter === 'fresh_uploads') {
         constraints.push(where('status', '==', 'new'));
         constraints.push(where('reassigned', '==', false));
@@ -77,12 +74,10 @@ export default function LeadsPage() {
         constraints.push(where('status', '==', activeFilter));
     }
 
-    // 2. Access Scoping (Equality)
     if (!isAdminOrTL) {
         constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
 
-    // 3. Performance Ordering (Range/Sort - MUST BE AT END)
     constraints.push(orderBy('createdAt', 'desc'));
 
     return query(leadsRef, ...constraints);
