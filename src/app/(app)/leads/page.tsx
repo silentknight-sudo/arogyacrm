@@ -65,7 +65,6 @@ export default function LeadsPage() {
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
     // CRITICAL FIX: Equality filters MUST be defined before orderBy in Firestore.
-    // This order prevents permission errors during rule evaluation for specific queries.
     let constraints: any[] = [];
 
     // 1. Role-based scoping (Equality first)
@@ -81,7 +80,7 @@ export default function LeadsPage() {
         constraints.push(where('status', '==', activeFilter));
     }
 
-    // 3. Sorting (Required at the end of the query builder)
+    // 3. Sorting (Required at the end)
     constraints.push(orderBy('createdAt', 'desc'));
 
     return query(leadsRef, ...constraints);
