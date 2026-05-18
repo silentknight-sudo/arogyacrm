@@ -201,3 +201,46 @@ export async function createLead(values: any) {
         return { success: false, error: handleAdminSDKError(error) };
     }
 }
+
+export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ success: boolean; removedCount: number; error?: string }> {
+  try {
+    const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
+    const snapshot = await leadsRef.get();
+    
+    const leadsByPhone: Record<string, any[]> = {};
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const phone = (data.phone || '').trim();
+      if (phone) {
+        if (!leadsByPhone[phone]) leadsByPhone[phone] = [];
+        leadsByPhone[phone].push({ id: doc.id, createdAt: data.createdAt?.toDate() || new Date(0) });
+      }
+    });
+
+    let removedCount = 0;
+    const batch = adminDb.batch();
+
+    Object.values(leadsByPhone).forEach(duplicates => {
+      if (duplicates.length > 1) {
+        // Sort by creation date (ascending)
+        duplicates.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        
+        // Keep the first one, delete the rest
+        const toDelete = duplicates.slice(1);
+        toDelete.forEach(d => {
+          batch.delete(leadsRef.doc(d.id));
+          removedCount++;
+        });
+      }
+    });
+
+    if (removedCount > 0) {
+      await batch.commit();
+      revalidatePath('/leads');
+    }
+
+    return { success: true, removedCount };
+  } catch (error: any) {
+    return { success: false, removedCount: 0, error: handleAdminSDKError(error) };
+  }
+}
