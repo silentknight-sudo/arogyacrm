@@ -15,8 +15,8 @@
     --secondary: 120 15% 92%;
     --secondary-foreground: 142 45% 15%;
     --muted: 120 10% 94%;
-    --muted-foreground: 120 10% 40%;
-    --accent: 45 90% 45%;
+    --muted-foreground: 120 10% 35%; /* Increased contrast */
+    --accent: 45 95% 45%; /* Brighter gold */
     --accent-foreground: 142 45% 5%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 120 20% 98%;
@@ -38,13 +38,13 @@
     --secondary: 142 40% 12%;
     --secondary-foreground: 120 20% 98%;
     --muted: 142 40% 12%;
-    --muted-foreground: 120 10% 60%;
-    --accent: 45 90% 55%;
+    --muted-foreground: 120 10% 65%;
+    --accent: 45 95% 55%;
     --accent-foreground: 142 50% 3%;
-    --destructive: 0 62% 30%;
+    --destructive: 0 62% 35%;
     --destructive-foreground: 120 20% 98%;
-    --border: 142 40% 15%;
-    --input: 142 40% 15%;
+    --border: 142 40% 18%;
+    --input: 142 40% 18%;
     --ring: 120 20% 98%;
   }
 }
@@ -62,22 +62,22 @@
     @apply bg-gradient-to-br from-[#2D5A27] via-[#1B3019] to-[#0D1F0B] text-white border-none;
   }
   .gold-glow {
-    @apply shadow-[0_0_30px_rgba(212,175,55,0.25)];
+    @apply shadow-[0_0_40px_rgba(212,175,55,0.3)];
   }
   .glass-sidebar {
-    @apply bg-card/70 backdrop-blur-3xl border-r border-border/40 shadow-2xl;
+    @apply bg-card/80 backdrop-blur-3xl border-r border-border/40 shadow-2xl;
   }
   .zen-gradient {
     @apply bg-gradient-to-br from-[#2D5A27] to-[#0D1F0B] text-white;
   }
   .sidebar-link {
-    @apply flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all;
+    @apply flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all;
   }
   .sidebar-link-active {
-    @apply bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:text-primary-foreground hover:bg-primary;
+    @apply bg-primary text-primary-foreground shadow-xl shadow-primary/20 hover:text-primary-foreground hover:bg-primary;
   }
   .glass-header {
-    @apply sticky top-0 z-30 w-full bg-background/60 backdrop-blur-xl border-b border-border/40;
+    @apply sticky top-0 z-30 w-full bg-background/70 backdrop-blur-xl border-b border-border/40;
   }
 }
 

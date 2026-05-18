@@ -3,7 +3,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 🛡️ INDESTRUCTIBLE EXECUTIVE MASTER-KEY 🛡️
-    // Placed at the absolute top of the hierarchy to bypass all race conditions.
+    // This bypass is evaluated first and grants absolute authority to verified leadership.
+    // It relies on token metadata (UID/Email) to avoid get() call latency and document race conditions.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
@@ -18,21 +19,24 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
+    function isExecutive() {
+      return isSignedIn() && (
+        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
+        request.auth.token.email == 'pundhir@arogyabio.com' ||
+        request.auth.token.email == 'admin@arogyabio.com'
+      );
+    }
+
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
-        request.auth.token.email == 'pundhir@arogyabio.com' ||
-        request.auth.token.email == 'admin@arogyabio.com' ||
-        getUserData().role == 'admin'
-      );
+      return isExecutive() || (isSignedIn() && getUserData().role == 'admin');
     }
 
     function isMember(teamspaceId) {
-      if (isAdmin()) return true;
+      if (isExecutive()) return true;
       let data = getUserData();
       return isSignedIn() && (
         (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
@@ -43,7 +47,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isSignedIn() && (isAdmin() || userId == request.auth.uid);
-      allow write: if isAdmin();
+      allow write: if isAdmin() || (isSignedIn() && userId == request.auth.uid);
       
       match /notifications/{id} {
         allow read, write: if isSignedIn() && userId == request.auth.uid;
@@ -56,14 +60,20 @@ service cloud.firestore {
     }
 
     match /teamspaces/{teamspaceId} {
+      // Direct access for authorized members and executives
       allow get, list: if isMember(teamspaceId);
       allow write: if isAdmin();
 
+      // Explicit permissions for nested collections to prevent recursive search failures
       match /leads/{id} {
         allow read, write: if isMember(teamspaceId);
       }
 
       match /deals/{id} {
+        allow read, write: if isMember(teamspaceId);
+      }
+
+      match /contacts/{id} {
         allow read, write: if isMember(teamspaceId);
       }
 
