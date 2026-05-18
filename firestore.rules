@@ -2,9 +2,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 🛡️ UNSTOPPABLE EXECUTIVE MASTER-KEY 🛡️
+    // 🛡️ INDESTRUCTIBLE EXECUTIVE MASTER-KEY 🛡️
     // This allows specific users total access, bypassing all document-load race conditions.
-    // We check UID and Email directly from the auth token to ensure zero-latency access.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
@@ -24,31 +23,33 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == 'admin@arogyabio.com' ||
-        request.auth.token.email == 'pundhir@arogyabio.com' ||
-        getUserData().role == 'admin'
-      );
+      let data = getUserData();
+      return isSignedIn() && data != null && data.role == 'admin';
     }
 
     function isMember(teamspaceId) {
-      return isSignedIn() && (
-        isAdmin() || 
-        (getUserData().teamspaceIds != null && teamspaceId in getUserData().teamspaceIds)
+      let data = getUserData();
+      return isSignedIn() && data != null && (
+        data.role == 'admin' || 
+        (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
       );
     }
 
-    // -- COLLECTION GROUP RULES (Required for Admin Global Dashboard) --
+    // -- COLLECTION GROUP RULES --
     
     match /{path=**}/leads/{leadId} {
-      allow read, list: if isSignedIn() && (isAdmin() || request.auth.token.email == 'pundhir@arogyabio.com');
+      allow read: if isAdmin();
     }
     
     match /{path=**}/deals/{dealId} {
-      allow read, list: if isSignedIn() && (isAdmin() || request.auth.token.email == 'pundhir@arogyabio.com');
+      allow read: if isAdmin();
+    }
+    
+    match /{path=**}/contacts/{contactId} {
+      allow read: if isAdmin();
     }
 
-    // -- CORE DOMAIN RULES --
+    // -- CORE RULES --
 
     match /users/{userId} {
       allow read: if isSignedIn() && (
@@ -76,14 +77,33 @@ service cloud.firestore {
       allow write: if isAdmin();
 
       match /leads/{leadId} {
-        allow read, write: if isMember(teamspaceId);
+        allow read: if isMember(teamspaceId) && (
+          isAdmin() || 
+          getUserData().role == 'sales_team_lead' || 
+          request.auth.uid in resource.data.assignedToIds
+        );
+        
+        allow write: if isMember(teamspaceId) && (
+          isAdmin() || 
+          getUserData().role == 'sales_team_lead' || 
+          request.auth.uid in resource.data.assignedToIds
+        );
       }
 
       match /deals/{dealId} {
-        allow read, write: if isMember(teamspaceId);
+        allow read: if isMember(teamspaceId) && (
+          isAdmin() || 
+          resource.data.teamLeadId == request.auth.uid || 
+          resource.data.ownerId == request.auth.uid
+        );
+        
+        allow write: if isMember(teamspaceId) && (
+          isAdmin() || 
+          resource.data.teamLeadId == request.auth.uid || 
+          resource.data.ownerId == request.auth.uid
+        );
       }
 
-      // Recursive wildcard for other teamspace sub-collections
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }
