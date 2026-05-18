@@ -49,7 +49,6 @@ export default function LeadsPage() {
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteOpen] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
-  const [isReclaiming, startReclaim] = useTransition();
   const [isDeleting, startDelete] = useTransition();
   const [mounted, setMounted] = useState(false);
 
@@ -57,17 +56,20 @@ export default function LeadsPage() {
     setMounted(true);
   }, []);
 
-  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  const isAdminOrTL = useMemo(() => 
+    currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead',
+  [currentUser]);
 
   const leadsQuery = useMemoFirebase(() => {
+    // PROTECTIVE GUARD: Only run if essential context is present.
     if (!mounted || isUserLoading || !currentUser || !currentTeamspace?.id) return null;
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // CRITICAL FIX: Equality filters MUST be defined before orderBy in Firestore.
+    // 🔥 CRITICAL FIRESTORE RULE: Equality filters MUST be defined before orderBy.
     let constraints: any[] = [];
 
-    // 1. Tab-based filtering (Equality)
+    // 1. Core State Scoping (Equality)
     if (activeFilter === 'fresh_uploads') {
         constraints.push(where('status', '==', 'new'));
         constraints.push(where('reassigned', '==', false));
@@ -75,12 +77,12 @@ export default function LeadsPage() {
         constraints.push(where('status', '==', activeFilter));
     }
 
-    // 2. Role-based scoping (Equality)
+    // 2. Access Scoping (Equality)
     if (!isAdminOrTL) {
         constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
 
-    // 3. Sorting (Required at the end)
+    // 3. Performance Ordering (Range/Sort - MUST BE AT END)
     constraints.push(orderBy('createdAt', 'desc'));
 
     return query(leadsRef, ...constraints);
@@ -113,21 +115,6 @@ export default function LeadsPage() {
       const leadsToSelect = filteredLeads.slice(0, Math.min(filteredLeads.length, count));
       setSelectedLeads(leadsToSelect);
     }
-  };
-
-  const handleSelfAssign = () => {
-    if (!currentUser || !currentTeamspace?.id || selectedLeads.length === 0) return;
-    startReclaim(async () => {
-      const result = await selfAssignLeads({
-        leadIds: selectedLeads.map(l => l.id),
-        teamspaceId: currentTeamspace.id,
-        currentUserId: currentUser.id,
-      });
-      if (result.success) {
-        toast({ title: 'Reclaim Success', description: `${selectedLeads.length} leads assigned to you.` });
-        setSelectedLeads([]);
-      }
-    });
   };
 
   const handleDeleteLeads = () => {
@@ -180,7 +167,7 @@ export default function LeadsPage() {
             </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-[2.5rem] bg-card border border-primary/5 shadow-2xl">
+        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-[2.5rem] bg-card border border-primary/10 shadow-2xl">
             <div className="flex items-center gap-6">
                 <div className="flex items-center gap-3">
                     <Filter className="h-4 w-4 text-muted-foreground" />
@@ -199,7 +186,7 @@ export default function LeadsPage() {
             </div>
 
             {isAdminOrTL && (
-                <div className="flex items-center gap-4 bg-muted/20 p-2 rounded-2xl border border-primary/5">
+                <div className="flex items-center gap-4 bg-muted/30 p-2 rounded-2xl border border-primary/5">
                     <div className="flex items-center gap-2 px-3 border-r border-primary/10 mr-2 h-10">
                         <UsersIcon className="h-4 w-4 text-primary" />
                         <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
@@ -237,7 +224,7 @@ export default function LeadsPage() {
             )}
         </div>
         
-        <div className="premium-card p-6 bg-white/40 backdrop-blur-2xl border-primary/5 overflow-hidden shadow-2xl min-h-[400px]">
+        <div className="premium-card p-6 bg-white/50 backdrop-blur-2xl border-primary/10 overflow-hidden shadow-2xl min-h-[400px]">
           {loading ? (
              <div className="space-y-6">
                 <Skeleton className="h-12 w-full rounded-2xl" />
