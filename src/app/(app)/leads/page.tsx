@@ -67,17 +67,17 @@ export default function LeadsPage() {
     // CRITICAL FIX: Equality filters MUST be defined before orderBy in Firestore.
     let constraints: any[] = [];
 
-    // 1. Role-based scoping (Equality first)
-    if (!isAdminOrTL) {
-        constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
-    }
-
-    // 2. Tab-based filtering (Equality)
+    // 1. Tab-based filtering (Equality)
     if (activeFilter === 'fresh_uploads') {
         constraints.push(where('status', '==', 'new'));
         constraints.push(where('reassigned', '==', false));
     } else if (activeFilter !== 'all') {
         constraints.push(where('status', '==', activeFilter));
+    }
+
+    // 2. Role-based scoping (Equality)
+    if (!isAdminOrTL) {
+        constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
 
     // 3. Sorting (Required at the end)

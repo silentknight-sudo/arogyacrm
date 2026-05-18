@@ -10,19 +10,19 @@
     --card-foreground: 142 45% 4%;
     --popover: 0 0% 100%;
     --popover-foreground: 142 45% 4%;
-    --primary: 115 45% 18%; /* Rich Forest Ayurvedic Green (#1B3D17) */
+    --primary: 115 45% 16%; /* Richer Forest Ayurvedic Green */
     --primary-foreground: 110 20% 98%;
-    --secondary: 110 20% 92%;
-    --secondary-foreground: 115 50% 16%;
-    --muted: 110 10% 90%;
-    --muted-foreground: 115 15% 35%; /* Sharp contrast for high visibility */
-    --accent: 45 95% 48%; /* Radiant Wellness Gold (#EAB308) */
+    --secondary: 110 20% 90%;
+    --secondary-foreground: 115 50% 12%;
+    --muted: 110 10% 88%;
+    --muted-foreground: 115 20% 25%; /* Darker for perfect visibility */
+    --accent: 45 95% 55%; /* Vibrant Wellness Gold */
     --accent-foreground: 115 45% 10%;
     --destructive: 0 84% 45%;
     --destructive-foreground: 110 20% 98%;
-    --border: 115 10% 82%;
-    --input: 115 10% 82%;
-    --ring: 115 45% 18%;
+    --border: 115 10% 80%;
+    --input: 115 10% 80%;
+    --ring: 115 45% 16%;
     --radius: 1.5rem;
   }
 
@@ -39,7 +39,7 @@
     --secondary-foreground: 110 20% 98%;
     --muted: 142 40% 12%;
     --muted-foreground: 110 10% 75%;
-    --accent: 45 95% 55%;
+    --accent: 45 95% 60%;
     --accent-foreground: 142 50% 2%;
     --destructive: 0 62% 40%;
     --destructive-foreground: 110 20% 98%;
@@ -56,25 +56,25 @@
 
 @layer components {
   .premium-card {
-    @apply bg-card border border-border/50 shadow-[0_15px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_25px_80px_rgba(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-500 rounded-[2.5rem];
+    @apply bg-card border border-border/50 shadow-[0_15px_50px_rgba(0,0,0,0.06)] hover:shadow-[0_25px_80px_rgba(0,0,0,0.1)] hover:-translate-y-1.5 transition-all duration-500 rounded-[2.5rem];
   }
   .herbal-gradient {
     @apply bg-gradient-to-br from-[#1B3D17] via-[#142E11] to-[#0A1A08] text-white border-none;
   }
   .gold-glow {
-    @apply shadow-[0_0_50px_rgba(234,179,8,0.3)];
+    @apply shadow-[0_0_50px_rgba(234,179,8,0.4)];
   }
   .glass-sidebar {
     @apply bg-[#071406] backdrop-blur-3xl border-r border-white/10 shadow-2xl;
   }
   .sidebar-link {
-    @apply flex items-center gap-3 px-6 py-3.5 rounded-2xl text-sm font-black tracking-tight text-white/70 hover:text-white hover:bg-white/10 transition-all;
+    @apply flex items-center gap-3 px-6 py-3.5 rounded-2xl text-sm font-black tracking-tight text-white/80 hover:text-white hover:bg-white/10 transition-all;
   }
   .sidebar-link-active {
-    @apply bg-[#EAB308] text-[#071406] shadow-xl shadow-accent/20 hover:text-[#071406] hover:bg-[#FACC15];
+    @apply bg-[#EAB308] text-[#071406] shadow-2xl shadow-accent/40 hover:text-[#071406] hover:bg-[#FACC15];
   }
   .glass-header {
-    @apply sticky top-0 z-30 w-full bg-background/85 backdrop-blur-3xl border-b border-border/60 shadow-sm;
+    @apply sticky top-0 z-30 w-full bg-background/90 backdrop-blur-3xl border-b border-border/60 shadow-sm;
   }
 }
 
