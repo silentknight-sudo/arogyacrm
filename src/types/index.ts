@@ -263,6 +263,14 @@ export type Complaint = {
   updatedAt: any;
 };
 
+export type InteractionLog = {
+  id: string;
+  type: string;
+  date: string;
+  notes: string;
+  agent?: string;
+};
+
 export type Notification = {
   id: string;
   title: string;
