@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { adminDb, FieldValue } from '@/firebase/admin';
 
 /**
- * STRATEGIC META ADS DIRECT INGESTION
- * Real-time endpoint for Meta lead generation webhooks.
+ * META DIRECT INGESTION ENDPOINT
+ * High-velocity real-time capture for Meta Lead Ads.
  */
 
 export async function GET(request: Request) {
@@ -37,17 +37,17 @@ export async function POST(request: Request) {
   }
 }
 
-async function processMetaLead(leadId: string) {
-  const token = process.env.META_ACCESS_TOKEN;
-  if (!token) return;
+async function processMetaLead(metaLeadId: string) {
+  const accessToken = process.env.META_ACCESS_TOKEN;
+  if (!accessToken) return;
 
-  const res = await fetch(`https://graph.facebook.com/v21.0/${leadId}?access_token=${token}`);
+  const res = await fetch(`https://graph.facebook.com/v21.0/${metaLeadId}?access_token=${accessToken}`);
   const data = await res.json();
   if (data.error) return;
 
   const getVal = (name: string) => data.field_data?.find((f: any) => f.name === name)?.values?.[0] || '';
 
-  // Dynamic Routing: Find first admin/TL for initial allocation
+  // Route to Primary Hub
   const teamSnap = await adminDb.collection('teamspaces').limit(1).get();
   if (teamSnap.empty) return;
   const tsId = teamSnap.docs[0].id;
@@ -60,9 +60,9 @@ async function processMetaLead(leadId: string) {
     phone: (getVal('phone_number') || '').replace(/^p:/, '').trim(),
     source: 'Meta Ads',
     status: 'new',
-    assignedToIds: [], // Ready for strategic allocation
+    assignedToIds: [], 
     reassigned: false,
-    metaLeadId: leadId,
+    metaLeadId: metaLeadId,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });

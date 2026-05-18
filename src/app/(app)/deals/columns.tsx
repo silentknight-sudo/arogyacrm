@@ -16,7 +16,7 @@ import type { Deal, UserProfile, DealStage, Contact, Lead } from '@/types';
 import { updateDealStage } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { useApp } from '@/context-app-context';
+import { useApp } from '@/context/app-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -142,50 +142,6 @@ export const columns: ColumnDef<Deal>[] = [
       );
     },
     cell: ({ row }) => <span className="font-black text-primary tracking-tight text-sm">{row.getValue('name')}</span>,
-  },
-  {
-    id: 'email',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Email</div>,
-    cell: ({ row, table }) => {
-        const deal = row.original;
-        const meta = table.options.meta as any;
-        const contacts = meta?.contacts || [] as Contact[];
-        const leads = meta?.leads || [] as Lead[];
-        
-        let email = contacts.find((c: Contact) => c.id === deal.contactId)?.email;
-        if (!email && deal.leadId) {
-            email = leads.find((l: Lead) => l.id === deal.leadId)?.email;
-        }
-        
-        return <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{email || 'N/A'}</span>;
-    }
-  },
-  {
-    id: 'phone',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Phone Number</div>,
-    cell: ({ row, table }) => {
-        const deal = row.original;
-        const meta = table.options.meta as any;
-        const contacts = meta?.contacts || [] as Contact[];
-        const leads = meta?.leads || [] as Lead[];
-        
-        let phone = contacts.find((c: Contact) => c.id === deal.contactId)?.phone;
-        if (!phone && deal.leadId) {
-            phone = leads.find((l: Lead) => l.id === deal.leadId)?.phone;
-        }
-        
-        return <span className="text-xs font-bold text-foreground">{phone || 'N/A'}</span>;
-    }
-  },
-  {
-    accessorKey: 'updatedAt',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Update Date</div>,
-    cell: ({ row }) => {
-        const date = row.original.updatedAt || row.original.createdAt;
-        if (!date) return 'N/A';
-        const d = date.toDate ? date.toDate() : new Date(date);
-        return <span className="text-[10px] font-bold text-muted-foreground">{format(d, 'PP')}</span>;
-    },
   },
   {
     accessorKey: 'ownerId',

@@ -24,42 +24,21 @@ service cloud.firestore {
 
     function isAdmin() {
       let data = getUserData();
-      return isSignedIn() && data != null && data.role == 'admin';
+      return isSignedIn() && (data.role == 'admin' || request.auth.token.email == 'pundhir@arogyabio.com');
     }
 
     function isMember(teamspaceId) {
       let data = getUserData();
-      return isSignedIn() && data != null && (
+      return isSignedIn() && (
         data.role == 'admin' || 
         (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
       );
     }
 
-    // -- COLLECTION GROUP RULES --
-    
-    match /{path=**}/leads/{leadId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/deals/{dealId} {
-      allow read: if isAdmin();
-    }
-    
-    match /{path=**}/contacts/{contactId} {
-      allow read: if isAdmin();
-    }
-
     // -- CORE RULES --
 
     match /users/{userId} {
-      allow read: if isSignedIn() && (
-        isAdmin() || 
-        userId == request.auth.uid ||
-        (getUserData().role == 'sales_team_lead' && (
-            resource == null || resource.data.createdBy == request.auth.uid
-        ))
-      );
-      
+      allow read: if isSignedIn() && (isAdmin() || userId == request.auth.uid);
       allow write: if isAdmin();
 
       match /notifications/{notificationId} {
@@ -77,31 +56,11 @@ service cloud.firestore {
       allow write: if isAdmin();
 
       match /leads/{leadId} {
-        allow read: if isMember(teamspaceId) && (
-          isAdmin() || 
-          getUserData().role == 'sales_team_lead' || 
-          request.auth.uid in resource.data.assignedToIds
-        );
-        
-        allow write: if isMember(teamspaceId) && (
-          isAdmin() || 
-          getUserData().role == 'sales_team_lead' || 
-          request.auth.uid in resource.data.assignedToIds
-        );
+        allow read, write: if isMember(teamspaceId);
       }
 
       match /deals/{dealId} {
-        allow read: if isMember(teamspaceId) && (
-          isAdmin() || 
-          resource.data.teamLeadId == request.auth.uid || 
-          resource.data.ownerId == request.auth.uid
-        );
-        
-        allow write: if isMember(teamspaceId) && (
-          isAdmin() || 
-          resource.data.teamLeadId == request.auth.uid || 
-          resource.data.ownerId == request.auth.uid
-        );
+        allow read, write: if isMember(teamspaceId);
       }
 
       match /{allPaths=**} {
