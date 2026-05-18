@@ -3,8 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 🛡️ INDESTRUCTIBLE EXECUTIVE MASTER-KEY 🛡️
-    // Evaluated at the absolute top of the hierarchy to bypass all race conditions.
-    // Guaranteed bypass for Rajat Pundhir and Administrators.
+    // Placed at the absolute top of the hierarchy to bypass all race conditions.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
@@ -25,20 +24,17 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        getUserData().role == 'admin' || 
+        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
         request.auth.token.email == 'pundhir@arogyabio.com' ||
-        request.auth.token.email == 'admin@arogyabio.com'
+        request.auth.token.email == 'admin@arogyabio.com' ||
+        getUserData().role == 'admin'
       );
     }
 
     function isMember(teamspaceId) {
-      // Prioritize Executive Bypass in the helper as well
-      if (request.auth.token.email == 'pundhir@arogyabio.com' || request.auth.token.email == 'admin@arogyabio.com') {
-        return true;
-      }
+      if (isAdmin()) return true;
       let data = getUserData();
       return isSignedIn() && (
-        data.role == 'admin' || 
         (data.teamspaceIds != null && teamspaceId in data.teamspaceIds)
       );
     }
