@@ -60,11 +60,9 @@ service cloud.firestore {
     }
 
     match /teamspaces/{teamspaceId} {
-      // Direct access for authorized members and executives
       allow get, list: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      // Explicit permissions for nested collections to prevent recursive search failures
       match /leads/{id} {
         allow read, write: if isMember(teamspaceId);
       }

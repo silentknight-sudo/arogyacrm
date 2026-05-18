@@ -64,18 +64,26 @@ export default function LeadsPage() {
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
-    // Leadership accounts see everything, Specialists see assigned leads
-    let q = isAdminOrTL
-      ? query(leadsRef, orderBy('createdAt', 'desc')) 
-      : query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id), orderBy('createdAt', 'desc'));
+    // STRATEGIC REFACTOR: Equality filters MUST be defined before orderBy in Firestore.
+    let constraints: any[] = [];
 
-    if (activeFilter === 'fresh_uploads') {
-      q = query(q, where('status', '==', 'new'), where('reassigned', '==', false));
-    } else if (activeFilter !== 'all') {
-      q = query(q, where('status', '==', activeFilter));
+    // 1. Role-based scoping
+    if (!isAdminOrTL) {
+        constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
-    
-    return q;
+
+    // 2. Tab-based filtering (Equality)
+    if (activeFilter === 'fresh_uploads') {
+        constraints.push(where('status', '==', 'new'));
+        constraints.push(where('reassigned', '==', false));
+    } else if (activeFilter !== 'all') {
+        constraints.push(where('status', '==', activeFilter));
+    }
+
+    // 3. Sorting (Always at the end)
+    constraints.push(orderBy('createdAt', 'desc'));
+
+    return query(leadsRef, ...constraints);
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, activeFilter, isAdminOrTL]);
 
   const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
