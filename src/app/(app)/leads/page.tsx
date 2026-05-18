@@ -60,14 +60,15 @@ export default function LeadsPage() {
   const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   const leadsQuery = useMemoFirebase(() => {
-    if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+    if (!mounted || isUserLoading || !currentUser || !currentTeamspace?.id) return null;
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     
     // STRATEGIC REFACTOR: Equality filters MUST be defined before orderBy in Firestore.
+    // This order prevents permission errors during rule evaluation for specific queries.
     let constraints: any[] = [];
 
-    // 1. Role-based scoping
+    // 1. Role-based scoping (Equality)
     if (!isAdminOrTL) {
         constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
@@ -80,11 +81,11 @@ export default function LeadsPage() {
         constraints.push(where('status', '==', activeFilter));
     }
 
-    // 3. Sorting (Always at the end)
+    // 3. Sorting (Required at the end of the query builder)
     constraints.push(orderBy('createdAt', 'desc'));
 
     return query(leadsRef, ...constraints);
-  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, activeFilter, isAdminOrTL]);
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, activeFilter, isAdminOrTL, mounted]);
 
   const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 

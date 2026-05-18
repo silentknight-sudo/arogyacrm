@@ -2,9 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 🛡️ INDESTRUCTIBLE EXECUTIVE MASTER-KEY 🛡️
-    // This bypass is evaluated first and grants absolute authority to verified leadership.
-    // It relies on token metadata (UID/Email) to avoid get() call latency and document race conditions.
+    // 🛡️ THE INVICTUS BYPASS 🛡️
+    // This bypass is evaluated FIRST and grants absolute authority to verified leadership.
+    // It relies strictly on token metadata to avoid get() call latency and document race conditions.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
