@@ -67,6 +67,7 @@ export default function LeadsPage() {
     let constraints: any[] = [];
 
     // 🔥 FIRESTORE CRITICAL: Equality filters must be added BEFORE ordering.
+    // We add equality filters first, then the orderBy to satisfy Firestore requirements.
     if (activeFilter === 'fresh_uploads') {
         constraints.push(where('status', '==', 'new'));
         constraints.push(where('reassigned', '==', false));
@@ -78,6 +79,7 @@ export default function LeadsPage() {
         constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
 
+    // Always sort by arrival date (Born-Again protocol ensures assigned leads are forced to top)
     constraints.push(orderBy('createdAt', 'desc'));
 
     return query(leadsRef, ...constraints);

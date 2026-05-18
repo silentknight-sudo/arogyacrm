@@ -2,12 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- CORE ATOMIC HELPERS --
+    // -- ATOMIC IDENTITY HELPERS --
 
     function signedIn() {
       return request.auth != null;
     }
 
+    // Prioritized Master-Key Check (Fast-Path)
+    // Checks UID and Email directly from token to bypass get() call overhead.
     function isAdmin() {
       return signedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
@@ -55,7 +57,18 @@ service cloud.firestore {
       allow read: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      // Recursive permission for all sub-modules (Leads, Deals, Tasks, etc.)
+      // Ensure explicit access to sub-collections for list operations
+      match /leads/{leadId} {
+        allow read, list: if isMember(teamspaceId);
+        allow write: if isMember(teamspaceId);
+      }
+      
+      match /deals/{dealId} {
+        allow read, list: if isMember(teamspaceId);
+        allow write: if isMember(teamspaceId);
+      }
+
+      // Recursive catch-all for other modules
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }

@@ -10,19 +10,19 @@
     --card-foreground: 142 60% 4%;
     --popover: 0 0% 100%;
     --popover-foreground: 142 60% 4%;
-    --primary: 115 50% 12%; /* Darker Deep Forest Green for max contrast */
+    --primary: 115 50% 10%; /* Much darker Moss Green for perfect contrast */
     --primary-foreground: 110 20% 98%;
-    --secondary: 110 20% 92%;
-    --secondary-foreground: 115 50% 10%;
-    --muted: 110 15% 90%;
-    --muted-foreground: 115 40% 15%; /* Much darker for perfect readability */
-    --accent: 45 100% 48%; /* Radiant Wellness Gold */
+    --secondary: 110 25% 90%;
+    --secondary-foreground: 115 50% 8%;
+    --muted: 110 20% 88%;
+    --muted-foreground: 115 45% 12%; /* Darkened for maximum visibility on herbal white */
+    --accent: 45 100% 45%; /* Deep Wellness Gold */
     --accent-foreground: 115 50% 5%;
-    --destructive: 0 84% 45%;
+    --destructive: 0 84% 40%;
     --destructive-foreground: 110 20% 98%;
-    --border: 115 20% 80%;
-    --input: 115 20% 80%;
-    --ring: 115 50% 12%;
+    --border: 115 25% 75%;
+    --input: 115 25% 75%;
+    --ring: 115 50% 10%;
     --radius: 1.25rem;
   }
 
@@ -38,7 +38,7 @@
     --secondary: 142 45% 10%;
     --secondary-foreground: 110 20% 98%;
     --muted: 142 45% 12%;
-    --muted-foreground: 110 25% 85%;
+    --muted-foreground: 110 30% 90%;
     --accent: 45 100% 50%;
     --accent-foreground: 142 60% 2%;
     --destructive: 0 70% 40%;
@@ -51,27 +51,31 @@
 
 @layer base {
   * { @apply border-border transition-colors duration-200; }
-  body { @apply bg-background text-foreground antialiased font-sans; }
+  body { @apply bg-background text-foreground antialiased font-medium; }
+  h1, h2, h3, h4, h5, h6 { @apply font-black tracking-tight; }
 }
 
 @layer components {
   .premium-card {
-    @apply bg-card border border-border/80 shadow-[0_15px_50px_rgba(0,0,0,0.06)] hover:shadow-[0_25px_80px_rgba(0,0,0,0.12)] hover:-translate-y-1 transition-all duration-500 rounded-[2rem];
+    @apply bg-card border border-border/60 shadow-[0_20px_60px_rgba(0,0,0,0.05)] hover:shadow-[0_30px_90px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-500 rounded-[2.5rem];
   }
   .herbal-gradient {
     @apply bg-gradient-to-br from-[#1B3D17] via-[#122A0F] to-[#0A1A08] text-white border-none;
   }
   .gold-glow {
-    @apply shadow-[0_0_50px_rgba(245,158,11,0.35)];
+    @apply shadow-[0_0_40px_rgba(234,179,8,0.25)];
   }
   .glass-sidebar {
-    @apply bg-[#040C04] backdrop-blur-3xl border-r border-white/10 shadow-2xl;
+    @apply bg-[#040C04] backdrop-blur-3xl border-r border-white/5 shadow-2xl;
   }
   .sidebar-link {
-    @apply flex items-center gap-3 px-6 py-3.5 rounded-2xl text-sm font-black tracking-tight text-white/80 hover:text-white hover:bg-white/10 transition-all;
+    @apply flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-black tracking-tight text-white/70 hover:text-white hover:bg-white/10 transition-all;
   }
   .sidebar-link-active {
-    @apply bg-accent text-accent-foreground shadow-2xl shadow-accent/30 hover:text-accent-foreground hover:bg-accent/90 font-black scale-105;
+    @apply bg-accent text-accent-foreground shadow-2xl shadow-accent/20 hover:text-accent-foreground hover:bg-accent/90 font-black scale-105;
+  }
+  .glass-header {
+    @apply bg-white/70 backdrop-blur-3xl border-b border-primary/5 sticky top-0 z-50;
   }
 }
 
