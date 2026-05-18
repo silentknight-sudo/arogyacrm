@@ -63,17 +63,15 @@ service cloud.firestore {
       allow get, list: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      match /leads/{id} {
-        allow read, write: if isMember(teamspaceId);
-      }
+      // Explicit subcollection permissions to bypass query logic bottlenecks
+      match /leads/{id} { allow read, write: if isMember(teamspaceId); }
+      match /leads { allow list: if isMember(teamspaceId); }
+      
+      match /deals/{id} { allow read, write: if isMember(teamspaceId); }
+      match /deals { allow list: if isMember(teamspaceId); }
 
-      match /deals/{id} {
-        allow read, write: if isMember(teamspaceId);
-      }
-
-      match /contacts/{id} {
-        allow read, write: if isMember(teamspaceId);
-      }
+      match /contacts/{id} { allow read, write: if isMember(teamspaceId); }
+      match /contacts { allow list: if isMember(teamspaceId); }
 
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
