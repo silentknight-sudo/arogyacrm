@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 🛡️ INDESTRUCTIBLE EXECUTIVE MASTER-KEY 🛡️
-    // This allows specific users total access, bypassing all document-load race conditions.
+    // Evaluated at the absolute top of the hierarchy to bypass all race conditions.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
@@ -23,8 +23,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      let data = getUserData();
-      return isSignedIn() && (data.role == 'admin' || request.auth.token.email == 'pundhir@arogyabio.com');
+      return isSignedIn() && (
+        getUserData().role == 'admin' || 
+        request.auth.token.email == 'pundhir@arogyabio.com'
+      );
     }
 
     function isMember(teamspaceId) {
@@ -35,13 +37,13 @@ service cloud.firestore {
       );
     }
 
-    // -- CORE RULES --
+    // -- PROTECTED COLLECTIONS --
 
     match /users/{userId} {
       allow read: if isSignedIn() && (isAdmin() || userId == request.auth.uid);
       allow write: if isAdmin();
-
-      match /notifications/{notificationId} {
+      
+      match /notifications/{id} {
         allow read, write: if isSignedIn() && userId == request.auth.uid;
       }
     }
@@ -55,11 +57,11 @@ service cloud.firestore {
       allow get, list: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      match /leads/{leadId} {
+      match /leads/{id} {
         allow read, write: if isMember(teamspaceId);
       }
 
-      match /deals/{dealId} {
+      match /deals/{id} {
         allow read, write: if isMember(teamspaceId);
       }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, Suspense, useTransition, useEffect } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -10,7 +10,7 @@ import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, UserCheck, Loader2, Download, Sparkles, Trash2, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, Trash2, ShieldAlert } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -35,14 +35,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { DateRange } from 'react-day-picker';
-import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 type FilterType = LeadStatus | 'all' | 'fresh_uploads';
-
 const ALL_FILTERS: FilterType[] = ['all', 'fresh_uploads', 'new', 'intrested', 'CNP', 'done', 'not intrested'];
 
 export default function LeadsPage() {
@@ -51,7 +45,6 @@ export default function LeadsPage() {
   const firestore = useFirestore();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteOpen] = useState(false);
@@ -64,11 +57,7 @@ export default function LeadsPage() {
     setMounted(true);
   }, []);
 
-  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead' || currentUser?.id === '3oC7dLZCUsRpwNEPWlokfSGTmnx1';
-  
-  const displayFilters = currentUser?.role === 'sales_executive' 
-    ? (['all', 'new'] as FilterType[])
-    : ALL_FILTERS;
+  const isAdminOrTL = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
 
   const leadsQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
@@ -91,27 +80,11 @@ export default function LeadsPage() {
 
   const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  const leads = useMemo(() => {
-    if (!rawLeads) return null;
-    let filtered = rawLeads;
-
-    if (assigneeFilter !== 'all') {
-      filtered = filtered.filter(lead => lead.assignedToIds?.includes(assigneeFilter));
-    }
-
-    if (dateRange?.from) {
-      const start = startOfDay(dateRange.from);
-      const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-      
-      filtered = filtered.filter(lead => {
-        if (!lead.createdAt) return false;
-        const leadDate = lead.createdAt.toDate ? lead.createdAt.toDate() : new Date(lead.createdAt);
-        return isWithinInterval(leadDate, { start, end });
-      });
-    }
-
-    return filtered;
-  }, [rawLeads, assigneeFilter, dateRange]);
+  const filteredLeads = useMemo(() => {
+    if (!rawLeads) return [];
+    if (assigneeFilter === 'all') return rawLeads;
+    return rawLeads.filter(lead => lead.assignedToIds?.includes(assigneeFilter));
+  }, [rawLeads, assigneeFilter]);
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
@@ -126,49 +99,41 @@ export default function LeadsPage() {
   const loading = isUserLoading || isLoadingLeads || isLoadingUsers || isLoadingProducts || !mounted;
 
   const handleSelectNLeads = () => {
-    if (!leads || !selectCount) return;
+    if (!filteredLeads || !selectCount) return;
     const count = parseInt(selectCount);
     if (!isNaN(count) && count > 0) {
-      const leadsToSelect = leads.slice(0, Math.min(leads.length, count));
+      const leadsToSelect = filteredLeads.slice(0, Math.min(filteredLeads.length, count));
       setSelectedLeads(leadsToSelect);
     }
   };
 
   const handleSelfAssign = () => {
     if (!currentUser || !currentTeamspace?.id || selectedLeads.length === 0) return;
-    
     startReclaim(async () => {
       const result = await selfAssignLeads({
         leadIds: selectedLeads.map(l => l.id),
         teamspaceId: currentTeamspace.id,
         currentUserId: currentUser.id,
       });
-
       if (result.success) {
         toast({ title: 'Reclaim Success', description: `${selectedLeads.length} leads assigned to you.` });
         setSelectedLeads([]);
-      } else {
-        toast({ variant: 'destructive', title: 'Error', description: result.error });
       }
     });
   };
 
   const handleDeleteLeads = () => {
     if (!currentUser || !currentTeamspace?.id || selectedLeads.length === 0) return;
-    
     startDelete(async () => {
       const result = await deleteLeads({
         leadIds: selectedLeads.map(l => l.id),
         teamspaceId: currentTeamspace.id,
         currentUserId: currentUser.id,
       });
-
       if (result.success) {
         toast({ title: 'Purge Success', description: `Deleted ${selectedLeads.length} records.` });
         setSelectedLeads([]);
         setIsDeleteOpen(false);
-      } else {
-        toast({ variant: 'destructive', title: 'Error', description: result.error });
       }
     });
   };
@@ -176,15 +141,15 @@ export default function LeadsPage() {
   if (!mounted) return null;
 
   return (
-    <div className="space-y-8 pb-16 pt-4">
+    <div className="space-y-8 pb-16 pt-4 animate-in fade-in duration-700">
         <div className="flex items-end justify-between flex-wrap gap-8">
             <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 text-accent mb-1">
                     <Target className="h-5 w-5 fill-accent" />
-                    <span className="text-xs font-black uppercase tracking-[0.3em]">Pipeline Velocity</span>
+                    <span className="text-xs font-black uppercase tracking-[0.3em] opacity-70">Strategic Command</span>
                 </div>
                 <h1 className="text-6xl font-black tracking-tighter text-primary">Prospect Pipeline</h1>
-                <p className="text-2xl text-muted-foreground font-semibold">Strategic asset management.</p>
+                <p className="text-2xl text-muted-foreground font-semibold">Managing High-Intensity Wellness Assets.</p>
             </div>
              <div className="flex items-center gap-4">
               {isAdminOrTL && (
@@ -193,7 +158,7 @@ export default function LeadsPage() {
                   <UploadLeadsDialog users={users || []} isLoading={loading}>
                     <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-8 py-7 font-black tracking-tight text-base shadow-sm">
                       <Upload className="mr-3 h-5 w-5" />
-                      Bulk Import
+                      Bulk Ingest
                     </Button>
                   </UploadLeadsDialog>
                 </>
@@ -212,7 +177,7 @@ export default function LeadsPage() {
                 <div className="flex items-center gap-3">
                     <Filter className="h-4 w-4 text-muted-foreground" />
                     <div className="flex flex-wrap gap-2">
-                        {displayFilters.map((f) => (
+                        {ALL_FILTERS.map((f) => (
                             <Badge 
                                 key={f} 
                                 onClick={() => setActiveFilter(f)}
@@ -250,7 +215,7 @@ export default function LeadsPage() {
                             onChange={(e) => setSelectCount(e.target.value)}
                             className="w-16 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
                         />
-                        <Button variant="secondary" size="sm" onClick={handleSelectNLeads} className="rounded-xl font-bold px-4 h-10">Select</Button>
+                        <Button variant="secondary" size="sm" onClick={handleSelectNLeads} className="rounded-xl font-bold px-4 h-10">Grab</Button>
                         {selectedLeads.length > 0 && (
                             <div className="flex gap-2 ml-2">
                                 <Button className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10" onClick={() => setBulkAssignOpen(true)}>Delegate {selectedLeads.length}</Button>
@@ -264,31 +229,43 @@ export default function LeadsPage() {
             )}
         </div>
         
-        <div className="premium-card p-6 bg-white/40 backdrop-blur-2xl border-primary/5 overflow-hidden shadow-2xl">
-          <DataTable 
-            columns={columns} 
-            data={leads || []} 
-            users={users || []} 
-            products={products || []}
-            externalSelection={selectedLeads}
-            onSelectionChange={setSelectedLeads}
-          />
+        <div className="premium-card p-6 bg-white/40 backdrop-blur-2xl border-primary/5 overflow-hidden shadow-2xl min-h-[400px]">
+          {loading ? (
+             <div className="space-y-6">
+                <Skeleton className="h-12 w-full rounded-2xl" />
+                <Skeleton className="h-64 w-full rounded-2xl" />
+             </div>
+          ) : (
+            <DataTable 
+                columns={columns} 
+                data={filteredLeads} 
+                users={users || []} 
+                products={products || []}
+                externalSelection={selectedLeads}
+                onSelectionChange={setSelectedLeads}
+            />
+          )}
         </div>
 
         <BulkAssignLeadsDialog open={isBulkAssignOpen} onOpenChange={setBulkAssignOpen} leads={selectedLeads} users={users || []} />
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteOpen}>
-            <AlertDialogContent className="rounded-[2.5rem] bg-[#0D1F0B] text-white border-none shadow-2xl p-10">
+            <AlertDialogContent className="rounded-[2.5rem] bg-card border-none shadow-2xl p-10">
                 <AlertDialogHeader className="mb-6">
-                    <AlertDialogTitle className="text-3xl font-black text-[#ef4444]">Strategic Purge</AlertDialogTitle>
-                    <AlertDialogDescription className="text-white/60 text-lg font-medium">
-                        Decommission <span className="text-white font-bold">{selectedLeads.length}</span> prospects permanently?
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 bg-destructive/10 rounded-2xl">
+                             <ShieldAlert className="h-8 w-8 text-destructive" />
+                        </div>
+                        <AlertDialogTitle className="text-3xl font-black text-primary tracking-tighter">Strategic Purge</AlertDialogTitle>
+                    </div>
+                    <AlertDialogDescription className="text-muted-foreground text-lg font-medium leading-relaxed">
+                        Decommission <span className="text-primary font-black">{selectedLeads.length}</span> wellness prospects permanently? This action cannot be reversed within the Arogya ecosystem.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="gap-4">
-                    <AlertDialogCancel className="h-14 px-8 rounded-xl border-white/10 bg-white/5 text-white">Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteLeads} className="h-14 px-10 rounded-xl bg-[#ef4444] text-white hover:bg-[#dc2626] font-black" disabled={isDeleting}>
-                        Confirm Purge
+                    <AlertDialogCancel className="h-14 px-8 rounded-xl border-primary/10 font-bold">Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteLeads} className="h-14 px-10 rounded-xl bg-destructive text-white hover:bg-destructive/90 font-black shadow-xl" disabled={isDeleting}>
+                        {isDeleting ? 'Processing...' : 'Confirm Purge'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
