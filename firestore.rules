@@ -3,8 +3,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 🛡️ THE INVICTUS BYPASS 🛡️
-    // This bypass is evaluated FIRST and grants absolute authority to verified leadership.
-    // It relies strictly on token metadata to avoid get() call latency and document race conditions.
+    // Evaluated FIRST. Absolute authority for verified leadership.
+    // Uses token metadata to bypass document-load race conditions.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
@@ -63,16 +63,7 @@ service cloud.firestore {
       allow get, list: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      // Explicit subcollection permissions to bypass query logic bottlenecks
-      match /leads/{id} { allow read, write: if isMember(teamspaceId); }
-      match /leads { allow list: if isMember(teamspaceId); }
-      
-      match /deals/{id} { allow read, write: if isMember(teamspaceId); }
-      match /deals { allow list: if isMember(teamspaceId); }
-
-      match /contacts/{id} { allow read, write: if isMember(teamspaceId); }
-      match /contacts { allow list: if isMember(teamspaceId); }
-
+      // Recursive permission for all teamspace sub-collections
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }
