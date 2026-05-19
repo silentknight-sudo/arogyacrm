@@ -41,16 +41,29 @@ service cloud.firestore {
       );
     }
 
+    function sharesAnyTeamspaceWithUser(userData) {
+      let currentUserData = getUserData();
+      return isSignedIn() &&
+        currentUserData.teamspaceIds != null &&
+        userData.teamspaceIds != null &&
+        userData.teamspaceIds.size() > 0 &&
+        currentUserData.teamspaceIds.hasAny(userData.teamspaceIds);
+    }
+
     // -- CORE RULES --
 
-    match /users/{userId} {
-      allow read: if isSignedIn() && (userId == request.auth.uid || isAdmin());
-      allow write: if isAdmin();
+match /users/{userId} {
+  allow read: if isSignedIn() && (
+    isAdmin() ||
+    userId == request.auth.uid ||
+    sharesAnyTeamspaceWithUser(resource.data)
+  );
+  allow write: if isAdmin();
 
-      match /notifications/{notificationId} {
-        allow read, write: if isSignedIn() && userId == request.auth.uid;
-      }
-    }
+  match /notifications/{notificationId} {
+    allow read, write: if isSignedIn() && userId == request.auth.uid;
+  }
+}
 
     match /products/{productId} {
       allow read: if isSignedIn();

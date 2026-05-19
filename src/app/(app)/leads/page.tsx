@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition, useEffect } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, documentId } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -97,8 +97,16 @@ export default function LeadsPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-    return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
-  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
+    const memberIds = currentTeamspace.memberIds || [];
+
+    if (currentUser.role === 'sales_executive') {
+      return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
+    }
+
+    return memberIds.length > 0
+      ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds))
+      : null;
+  }, [firestore, currentTeamspace?.id, currentTeamspace?.memberIds, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 

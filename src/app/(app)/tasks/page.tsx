@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useApp } from '@/context/app-context';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, documentId } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateTaskDialog } from './create-task-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -116,17 +116,17 @@ export default function TasksPage() {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     
     if (currentUser.role === 'admin') {
-        return query(
-          collection(firestore, 'users'), 
-          where('teamspaceIds', 'array-contains', currentTeamspace.id)
-        );
+        const memberIds = currentTeamspace.memberIds || [];
+        return memberIds.length > 0
+          ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds))
+          : null;
     }
     
     if (currentUser.role === 'sales_team_lead') {
-        return query(
-          collection(firestore, 'users'), 
-          where('createdBy', '==', currentUser.id)
-        );
+        const memberIds = currentTeamspace.memberIds || [];
+        return memberIds.length > 0
+          ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds))
+          : null;
     }
     
     return null;

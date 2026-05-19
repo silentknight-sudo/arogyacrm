@@ -46,7 +46,7 @@ function serializeData(data: any): any {
 }
 
 export function useCollection<T = any>(
-    memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
+  memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & { __memo?: boolean }) | null | undefined,
 ): UseCollectionResult<T> {
   const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -75,36 +75,36 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
+        // Keep denied background queries from crashing the whole app.
+        // The calling screen can decide how to render with null data.
         const auth = getAuth();
-        if (!auth.currentUser) {
+        if (!auth.currentUser || err.code === 'permission-denied') {
           setData(null);
+          setError(err);
           setIsLoading(false);
           return;
         }
 
         const path: string = memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
+          ? (memoizedTargetRefOrQuery as CollectionReference).path
+          : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
           path,
         });
 
-        // 🛡️ LIFECYCLE SAFETY: Defer emission to avoid "update during render" warnings.
-        setTimeout(() => {
-          setError(contextualError);
-          setData(null);
-          setIsLoading(false);
-          errorEmitter.emit('permission-error', contextualError);
-        }, 0);
+        setError(contextualError);
+        setData(null);
+        setIsLoading(false);
+        errorEmitter.emit('permission-error', contextualError);
       }
     );
 
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]);
 
-  if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
+  if (memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
   }
 

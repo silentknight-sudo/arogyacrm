@@ -5,17 +5,17 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
- * Hyper-Resilient Error Boundary Bridge.
- * Ensures Firestore permission errors are thrown safely outside the render cycle.
+ * Listens for Firestore permission errors without crashing the whole app.
+ * The failing hook already keeps the error locally, so we only log it here.
  */
 export function FirebaseErrorListener() {
-  const [errorToThrow, setErrorToThrow] = useState<FirestorePermissionError | null>(null);
+  const [lastError, setLastError] = useState<FirestorePermissionError | null>(null);
 
   useEffect(() => {
     const handleError = (err: FirestorePermissionError) => {
-      // Defer state update to avoid React's "update during render" warning.
+      console.error('FIRESTORE_PERMISSION_ERROR:', err);
       setTimeout(() => {
-        setErrorToThrow(err);
+        setLastError(err);
       }, 0);
     };
 
@@ -23,12 +23,10 @@ export function FirebaseErrorListener() {
     return () => errorEmitter.off('permission-error', handleError);
   }, []);
 
-  // Throw error in effect to let ErrorBoundary catch it safely
   useEffect(() => {
-    if (errorToThrow) {
-      throw errorToThrow;
-    }
-  }, [errorToThrow]);
+    if (!lastError) return;
+    setLastError(null);
+  }, [lastError]);
 
   return null;
 }
