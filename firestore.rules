@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 🛡️ EXECUTIVE MASTER-KEY (Indestructible Bypass)
+    // 🛡️ EXECUTIVE MASTER-KEY (Absolute Root Bypass)
     // Validates identity directly from the auth token to ensure zero-latency authority.
     function isExecutive() {
       return request.auth != null && (
@@ -14,27 +14,24 @@ service cloud.firestore {
     }
 
     // 🏆 GLOBAL AUTHORITY 🏆
-    // This rule short-circuits all evaluation for administrators.
+    // This rule short-circuits all evaluation for administrators at the absolute root.
     match /{allPaths=**} {
       allow read, write: if isExecutive();
     }
 
-    // -- PROTECTED PATHS (For Standard Users) --
+    // -- PROTECTED PATHS (For Standard Specialists) --
 
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isExecutive());
-      allow write: if request.auth != null && (request.auth.uid == userId || isExecutive());
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /products/{productId} {
       allow read: if request.auth != null;
-      allow write: if isExecutive();
     }
 
     match /teamspaces/{teamspaceId} {
       function isMember() {
         return request.auth != null && (
-          isExecutive() || 
           teamspaceId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamspaceIds
         );
       }

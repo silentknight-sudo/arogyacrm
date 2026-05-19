@@ -68,7 +68,7 @@ export default function LeadsPage() {
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     let constraints: any[] = [];
 
-    // 1. Equality Constraints First (Rule Compliance)
+    // 1. EQUALITY FILTERS FIRST (Mandatory for Performance & Rules)
     if (activeFilter === 'fresh_uploads') {
         constraints.push(where('status', '==', 'new'));
         constraints.push(where('reassigned', '==', false));
@@ -76,11 +76,12 @@ export default function LeadsPage() {
         constraints.push(where('status', '==', activeFilter));
     }
 
+    // 2. TEAM JURISDICTION (For standard specialists)
     if (!isAdminOrTL) {
         constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
 
-    // 2. Ordering Constraints Last
+    // 3. SORTING CONSTRAINTS LAST
     constraints.push(orderBy('createdAt', 'desc'));
 
     return query(leadsRef, ...constraints);
@@ -135,7 +136,7 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-8 pb-16 pt-4 animate-in fade-in duration-700">
-        <div className="flex items-end justify-between flex-wrap gap-8">
+        <div className="flex items-end justify-between flex-wrap gap-8 px-2">
             <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 text-accent mb-1">
                     <Target className="h-5 w-5 fill-accent" />
@@ -165,7 +166,7 @@ export default function LeadsPage() {
             </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-[2.5rem] bg-card border border-primary/10 shadow-2xl">
+        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-[2.5rem] bg-card border border-primary/10 shadow-xl">
             <div className="flex items-center gap-6">
                 <div className="flex items-center gap-3">
                     <Filter className="h-4 w-4 text-muted-foreground" />
@@ -174,7 +175,7 @@ export default function LeadsPage() {
                             <Badge 
                                 key={f} 
                                 onClick={() => setActiveFilter(f)}
-                                className={`cursor-pointer px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}
+                                className={`cursor-pointer px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg' : 'bg-muted/80 text-muted-foreground hover:bg-muted'}`}
                             >
                                 {f.replace(/_/g, ' ')}
                             </Badge>
@@ -184,8 +185,8 @@ export default function LeadsPage() {
             </div>
 
             {isAdminOrTL && (
-                <div className="flex items-center gap-4 bg-muted/30 p-2 rounded-2xl border border-primary/5">
-                    <div className="flex items-center gap-2 px-3 border-r border-primary/10 mr-2 h-10">
+                <div className="flex items-center gap-4 bg-muted/40 p-2 rounded-2xl border border-primary/10">
+                    <div className="flex items-center gap-2 px-3 border-r border-primary/20 mr-2 h-10">
                         <UsersIcon className="h-4 w-4 text-primary" />
                         <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
                             <SelectTrigger className="w-[140px] h-9 rounded-xl bg-background border-none shadow-inner text-[10px] font-black uppercase">
@@ -222,7 +223,7 @@ export default function LeadsPage() {
             )}
         </div>
         
-        <div className="premium-card p-6 bg-white/50 backdrop-blur-2xl border-primary/10 overflow-hidden shadow-2xl min-h-[400px]">
+        <div className="premium-card p-6 bg-white/40 backdrop-blur-2xl border-primary/10 overflow-hidden shadow-2xl min-h-[400px]">
           {loading ? (
              <div className="space-y-6">
                 <Skeleton className="h-12 w-full rounded-2xl" />
