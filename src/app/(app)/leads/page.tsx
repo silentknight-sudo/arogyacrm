@@ -139,10 +139,10 @@ export default function LeadsPage() {
         <div className="flex items-end justify-between flex-wrap gap-8 px-2">
             <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 text-accent mb-1">
-                    <Target className="h-5 w-5 fill-accent" />
-                    <span className="text-xs font-black uppercase tracking-[0.3em] opacity-70">Strategic Command</span>
+                    <Target className="h-6 w-6 fill-accent" />
+                    <span className="text-xs font-black uppercase tracking-[0.4em] opacity-70">Strategic Command</span>
                 </div>
-                <h1 className="text-6xl font-black tracking-tighter text-primary">Prospect Pipeline</h1>
+                <h1 className="text-7xl font-black tracking-tighter text-primary">Prospect Pipeline</h1>
                 <p className="text-2xl text-muted-foreground font-semibold">Managing High-Intensity Wellness Assets.</p>
             </div>
              <div className="flex items-center gap-4">
@@ -150,7 +150,7 @@ export default function LeadsPage() {
                 <>
                   <DeduplicateLeadsDialog />
                   <UploadLeadsDialog users={users || []} isLoading={loading}>
-                    <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-8 py-7 font-black tracking-tight text-base shadow-sm">
+                    <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-8 py-8 font-black tracking-tight text-base shadow-sm">
                       <Upload className="mr-3 h-5 w-5" />
                       Bulk Ingest
                     </Button>
@@ -158,24 +158,24 @@ export default function LeadsPage() {
                 </>
               )}
               <CreateLeadDialog products={products || []} isLoading={loading}>
-                  <Button className="rounded-2xl herbal-gradient shadow-2xl shadow-primary/30 px-10 py-7 text-lg font-black gold-glow scale-105 hover:scale-110 active:scale-95 transition-all">
-                      <PlusCircle className="mr-3 h-6 w-6" />
+                  <Button className="rounded-2xl herbal-gradient shadow-2xl shadow-primary/30 px-12 py-8 text-lg font-black gold-glow scale-105 hover:scale-110 active:scale-95 transition-all">
+                      <PlusCircle className="mr-3 h-7 w-7" />
                       Add Prospect
                   </Button>
               </CreateLeadDialog>
             </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-[2.5rem] bg-card border border-primary/10 shadow-xl">
-            <div className="flex items-center gap-6">
-                <div className="flex items-center gap-3">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-6 p-8 rounded-[3rem] bg-card border border-primary/10 shadow-xl">
+            <div className="flex items-center gap-8">
+                <div className="flex items-center gap-4">
+                    <Filter className="h-5 w-5 text-primary/40" />
+                    <div className="flex flex-wrap gap-3">
                         {ALL_FILTERS.map((f) => (
                             <Badge 
                                 key={f} 
                                 onClick={() => setActiveFilter(f)}
-                                className={`cursor-pointer px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg' : 'bg-muted/80 text-muted-foreground hover:bg-muted'}`}
+                                className={`cursor-pointer px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg scale-105' : 'bg-muted/80 text-muted-foreground hover:bg-muted'}`}
                             >
                                 {f.replace(/_/g, ' ')}
                             </Badge>
@@ -185,36 +185,36 @@ export default function LeadsPage() {
             </div>
 
             {isAdminOrTL && (
-                <div className="flex items-center gap-4 bg-muted/40 p-2 rounded-2xl border border-primary/10">
-                    <div className="flex items-center gap-2 px-3 border-r border-primary/20 mr-2 h-10">
-                        <UsersIcon className="h-4 w-4 text-primary" />
+                <div className="flex items-center gap-4 bg-muted/40 p-2.5 rounded-[2rem] border border-primary/10">
+                    <div className="flex items-center gap-3 px-4 border-r border-primary/20 mr-2 h-11">
+                        <UsersIcon className="h-5 w-5 text-primary" />
                         <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                            <SelectTrigger className="w-[140px] h-9 rounded-xl bg-background border-none shadow-inner text-[10px] font-black uppercase">
+                            <SelectTrigger className="w-[180px] h-10 rounded-xl bg-background border-none shadow-inner text-[11px] font-black uppercase tracking-tight">
                                 <SelectValue placeholder="All Members" />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Specialists</SelectItem>
+                            <SelectContent className="rounded-2xl border-none shadow-2xl">
+                                <SelectItem value="all" className="text-[11px] font-black uppercase">All Specialists</SelectItem>
                                 {users?.map((u) => (
-                                    <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>
+                                    <SelectItem key={u.id} value={u.id} className="text-[11px] font-black uppercase">{u.displayName}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 pr-2">
                         <Input 
                             type="text" 
                             placeholder="Qty" 
                             value={selectCount}
                             onChange={(e) => setSelectCount(e.target.value)}
-                            className="w-16 h-10 rounded-xl bg-background border-none shadow-inner text-center font-bold"
+                            className="w-20 h-11 rounded-xl bg-background border-none shadow-inner text-center font-black text-lg"
                         />
-                        <Button variant="secondary" size="sm" onClick={handleSelectNLeads} className="rounded-xl font-bold px-4 h-10">Grab</Button>
+                        <Button variant="secondary" size="sm" onClick={handleSelectNLeads} className="rounded-xl font-black uppercase tracking-widest px-6 h-11">Grab</Button>
                         {selectedLeads.length > 0 && (
-                            <div className="flex gap-2 ml-2">
-                                <Button className="rounded-xl herbal-gradient shadow-lg px-6 font-bold h-10" onClick={() => setBulkAssignOpen(true)}>Delegate {selectedLeads.length}</Button>
-                                <Button variant="destructive" className="rounded-xl shadow-lg px-4 font-bold h-10" onClick={() => setIsDeleteOpen(true)} disabled={isDeleting}>
-                                    <Trash2 className="h-4 w-4" />
+                            <div className="flex gap-2 ml-4">
+                                <Button className="rounded-xl herbal-gradient shadow-lg px-8 font-black h-11 uppercase tracking-widest text-[11px]" onClick={() => setBulkAssignOpen(true)}>Delegate {selectedLeads.length}</Button>
+                                <Button variant="destructive" className="rounded-xl shadow-lg px-5 font-black h-11" onClick={() => setIsDeleteOpen(true)} disabled={isDeleting}>
+                                    <Trash2 className="h-5 w-5" />
                                 </Button>
                             </div>
                         )}
@@ -223,11 +223,11 @@ export default function LeadsPage() {
             )}
         </div>
         
-        <div className="premium-card p-6 bg-white/40 backdrop-blur-2xl border-primary/10 overflow-hidden shadow-2xl min-h-[400px]">
+        <div className="premium-card p-1 bg-white/40 backdrop-blur-2xl border-primary/10 overflow-hidden shadow-2xl min-h-[500px]">
           {loading ? (
-             <div className="space-y-6">
-                <Skeleton className="h-12 w-full rounded-2xl" />
-                <Skeleton className="h-64 w-full rounded-2xl" />
+             <div className="p-12 space-y-8">
+                <Skeleton className="h-16 w-full rounded-2xl" />
+                <Skeleton className="h-80 w-full rounded-2xl" />
              </div>
           ) : (
             <DataTable 
@@ -244,21 +244,21 @@ export default function LeadsPage() {
         <BulkAssignLeadsDialog open={isBulkAssignOpen} onOpenChange={setBulkAssignOpen} leads={selectedLeads} users={users || []} />
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteOpen}>
-            <AlertDialogContent className="rounded-[2.5rem] bg-card border-none shadow-2xl p-10">
-                <AlertDialogHeader className="mb-6">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="p-3 bg-destructive/10 rounded-2xl">
-                             <ShieldAlert className="h-8 w-8 text-destructive" />
+            <AlertDialogContent className="rounded-[3rem] bg-card border-none shadow-2xl p-12">
+                <AlertDialogHeader className="mb-8">
+                    <div className="flex items-center gap-6 mb-4">
+                        <div className="p-5 bg-destructive/10 rounded-[1.5rem] shadow-inner">
+                             <ShieldAlert className="h-10 w-10 text-destructive" />
                         </div>
-                        <AlertDialogTitle className="text-3xl font-black text-primary tracking-tighter">Strategic Purge</AlertDialogTitle>
+                        <AlertDialogTitle className="text-4xl font-black text-primary tracking-tighter">Strategic Purge</AlertDialogTitle>
                     </div>
-                    <AlertDialogDescription className="text-muted-foreground text-lg font-medium leading-relaxed">
-                        Decommission <span className="text-primary font-black">{selectedLeads.length}</span> wellness prospects permanently? This action cannot be reversed within the Arogya ecosystem.
+                    <AlertDialogDescription className="text-muted-foreground text-xl font-medium leading-relaxed">
+                        Decommission <span className="text-primary font-black underline decoration-destructive/30">{selectedLeads.length}</span> wellness prospects permanently? This action is irreversible within the Arogya ecosystem.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="gap-4">
-                    <AlertDialogCancel className="h-14 px-8 rounded-xl border-primary/10 font-bold">Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteLeads} className="h-14 px-10 rounded-xl bg-destructive text-white hover:bg-destructive/90 font-black shadow-xl" disabled={isDeleting}>
+                <AlertDialogFooter className="gap-6">
+                    <AlertDialogCancel className="h-16 px-10 rounded-2xl border-primary/10 font-black uppercase tracking-widest text-xs hover:bg-muted/50">Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteLeads} className="h-16 px-12 rounded-2xl bg-destructive text-white hover:bg-destructive/90 font-black shadow-2xl text-lg active:scale-95 transition-all" disabled={isDeleting}>
                         {isDeleting ? 'Processing...' : 'Confirm Purge'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
