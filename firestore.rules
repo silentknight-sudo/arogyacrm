@@ -8,8 +8,9 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Prioritized Master-Key Check (Fast-Path)
-    // Checks UID and Email directly from token to bypass get() call overhead.
+    // 🛡️ THE IMMUTABLE EXECUTIVE MASTER-KEY 🛡️
+    // Evaluated at the absolute root to ensure zero-latency authority for leadership.
+    // Checks UID and Email directly from token metadata to bypass all get() call overhead.
     function isAdmin() {
       return signedIn() && (
         request.auth.token.email == 'admin@arogyabio.com' ||
@@ -18,6 +19,13 @@ service cloud.firestore {
         request.auth.uid == '9E06P0PsRtgyS5H60weu42iE0zH2'
       );
     }
+
+    // Direct Root Bypass for Administrators
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // -- MEMBERSHIP LOGIC --
 
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
@@ -29,12 +37,6 @@ service cloud.firestore {
         getUserData().teamspaceIds != null && 
         teamspaceId in getUserData().teamspaceIds
       );
-    }
-
-    // 🛡️ THE EXECUTIVE MASTER-KEY 🛡️
-    // Evaluated at the root to ensure zero-latency authority for leadership.
-    match /{allPaths=**} {
-      allow read, write: if isAdmin();
     }
 
     // -- PROTECTED COLLECTIONS --
@@ -57,7 +59,7 @@ service cloud.firestore {
       allow read: if isMember(teamspaceId);
       allow write: if isAdmin();
 
-      // Ensure explicit access to sub-collections for list operations
+      // Ensure explicit authority for specific CRM modules
       match /leads/{leadId} {
         allow read, list: if isMember(teamspaceId);
         allow write: if isMember(teamspaceId);
@@ -68,7 +70,7 @@ service cloud.firestore {
         allow write: if isMember(teamspaceId);
       }
 
-      // Recursive catch-all for other modules
+      // Recursive catch-all for workspace sub-modules
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
       }

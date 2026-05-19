@@ -66,8 +66,10 @@ export default function LeadsPage() {
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     let constraints: any[] = [];
 
-    // 🔥 FIRESTORE CRITICAL: Equality filters must be added BEFORE ordering.
-    // We add equality filters first, then the orderBy to satisfy Firestore requirements.
+    /**
+     * 🔥 FIRESTORE CRITICAL QUERY ORDER 🔥
+     * All equality filters (where '==') MUST be added before any range or sorting constraints.
+     */
     if (activeFilter === 'fresh_uploads') {
         constraints.push(where('status', '==', 'new'));
         constraints.push(where('reassigned', '==', false));
@@ -79,7 +81,7 @@ export default function LeadsPage() {
         constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
 
-    // Always sort by arrival date (Born-Again protocol ensures assigned leads are forced to top)
+    // Sorting must follow equality constraints to satisfy rules and indexing requirements
     constraints.push(orderBy('createdAt', 'desc'));
 
     return query(leadsRef, ...constraints);
@@ -123,7 +125,7 @@ export default function LeadsPage() {
         currentUserId: currentUser.id,
       });
       if (result.success) {
-        toast({ title: 'Purge Success', description: `Deleted ${selectedLeads.length} records.` });
+        toast({ title: 'Strategic Purge Success', description: `Permanently removed ${selectedLeads.length} prospects.` });
         setSelectedLeads([]);
         setIsDeleteOpen(false);
       }
