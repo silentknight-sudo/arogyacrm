@@ -52,7 +52,9 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
       return users.filter(u => u.role === 'sales_team_lead');
     }
     if (currentUser.role === 'sales_team_lead') {
-      return users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
+      const createdExecutives = users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
+      if (createdExecutives.length > 0) return createdExecutives;
+      return users.filter(u => u.role === 'sales_executive');
     }
     return [];
   }, [users, currentUser]);
@@ -141,7 +143,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                         <div className="text-center text-sm text-white/30 font-medium py-16 italic px-4">
                           {currentUser?.role === 'admin' 
                             ? 'No Team Leaders available for global delegation.' 
-                            : 'No Sales Executives found among your onboarded recruits.'}
+                            : 'No Sales Executives found in this workspace.'}
                         </div>
                     )}
                     </div>

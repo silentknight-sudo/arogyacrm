@@ -1,9 +1,10 @@
+import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { adminDb, FieldValue } from '@/firebase/admin';
 
 /**
  * META DIRECT INGESTION ENDPOINT
- * Rebuilt for high-velocity real-time capture and automatic deal syncing.
+ * High-velocity real-time capture for Meta Lead Ads.
  */
 
 export async function GET(request: Request) {
@@ -20,16 +21,22 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const rawBody = await request.text();
+    if (!isValidMetaSignature(rawBody, request.headers.get('x-hub-signature-256'))) {
+      return NextResponse.json({ success: false, error: 'Invalid Meta signature' }, { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody);
     if (body.object === 'page') {
       for (const entry of body.entry) {
         for (const change of entry.changes) {
-          if (change.field === 'leadgen') {
-            await processMetaLead(change.value.leadgen_id);
+          if (change.field === 'leadgen' && change.value?.leadgen_id) {
+            await processMetaLead(change.value.leadgen_id, change.value);
           }
         }
       }
     }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('META_WEBHOOK_FAILURE:', error);
@@ -37,46 +44,119 @@ export async function POST(request: Request) {
   }
 }
 
-async function processMetaLead(metaLeadId: string) {
+type MetaLeadgenChangeValue = {
+  ad_id?: string;
+  adgroup_id?: string;
+  created_time?: number;
+  form_id?: string;
+  leadgen_id?: string;
+  page_id?: string;
+};
+
+function isValidMetaSignature(rawBody: string, signatureHeader: string | null): boolean {
+  const appSecret = process.env.META_APP_SECRET;
+
+  // Allow local/dev setups to work without signature enforcement if no app secret is configured.
+  if (!appSecret) return true;
+  if (!signatureHeader?.startsWith('sha256=')) return false;
+
+  const expected = crypto
+    .createHmac('sha256', appSecret)
+    .update(rawBody, 'utf8')
+    .digest('hex');
+
+  const provided = signatureHeader.slice(7);
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+}
+
+function getConfiguredTeamspaceId(): string | null {
+  return process.env.META_TEAMSPACE_ID || process.env.NEXT_PUBLIC_DEFAULT_TEAMSPACE_ID || null;
+}
+
+function splitFullName(fullName: string) {
+  const normalized = fullName.trim().replace(/\s+/g, ' ');
+  if (!normalized) return { firstName: '', lastName: '' };
+
+  const parts = normalized.split(' ');
+  return {
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+async function processMetaLead(metaLeadId: string, webhookValue?: MetaLeadgenChangeValue) {
   const accessToken = process.env.META_ACCESS_TOKEN;
   if (!accessToken) return;
 
   const res = await fetch(`https://graph.facebook.com/v21.0/${metaLeadId}?access_token=${accessToken}`);
   const data = await res.json();
-  if (data.error) return;
+  if (data.error) {
+    console.error('META_LEAD_FETCH_ERROR:', data.error);
+    return;
+  }
 
   const getVal = (name: string) => data.field_data?.find((f: any) => f.name === name)?.values?.[0] || '';
+  const rawName = getVal('full_name') || [getVal('first_name'), getVal('last_name')].filter(Boolean).join(' ').trim();
+  const { firstName, lastName } = splitFullName(rawName || 'Meta Prospect');
+  const normalizedPhone = String(getVal('phone_number') || '').replace(/^p:/, '').trim();
 
-  // Strategic Routing: Find first available teamspace
-  const teamSnap = await adminDb.collection('teamspaces').limit(1).get();
-  if (teamSnap.empty) return;
-  const tsId = teamSnap.docs[0].id;
+  const existingLeadSnap = await adminDb
+    .collectionGroup('leads')
+    .where('metaLeadId', '==', metaLeadId)
+    .limit(1)
+    .get();
+
+  if (!existingLeadSnap.empty) {
+    console.log(`META_LEAD_DUPLICATE_SKIPPED: ${metaLeadId}`);
+    return;
+  }
+
+  let tsId = getConfiguredTeamspaceId();
+  if (!tsId) {
+    const teamSnap = await adminDb.collection('teamspaces').limit(1).get();
+    if (teamSnap.empty) return;
+    tsId = teamSnap.docs[0].id;
+  }
+
+  const teamspaceRef = adminDb.collection('teamspaces').doc(tsId);
+  const teamspaceSnap = await teamspaceRef.get();
+  if (!teamspaceSnap.exists) {
+    console.error(`META_LEAD_TEAMSPACE_NOT_FOUND: ${tsId}`);
+    return;
+  }
+
+  const teamspace = teamspaceSnap.data() as { ownerId?: string };
+  const adminOwnerId = teamspace.ownerId || null;
 
   const leadRef = adminDb.collection('teamspaces').doc(tsId).collection('leads').doc();
-  const leadId = leadRef.id;
-
   const newLeadData = {
-    id: leadId,
-    fullName: getVal('full_name') || 'Meta Prospect',
+    id: leadRef.id,
+    fullName: rawName || 'Meta Prospect',
+    firstName,
+    lastName,
     email: getVal('email') || '',
-    phone: (getVal('phone_number') || '').replace(/^p:/, '').trim(),
+    phone: normalizedPhone,
     source: 'Meta Ads',
     status: 'new',
-    assignedToIds: [], 
+    assignedToIds: adminOwnerId ? [adminOwnerId] : [],
     reassigned: false,
+    teamspaceId: tsId,
     metaLeadId: metaLeadId,
+    metaPageId: webhookValue?.page_id || data.page_id || '',
+    metaFormId: webhookValue?.form_id || data.form_id || '',
+    metaCampaign: {
+      adId: webhookValue?.ad_id || '',
+      adgroupId: webhookValue?.adgroup_id || '',
+      createdTime: webhookValue?.created_time || data.created_time || null,
+    },
+    attribution: {
+      source: 'meta',
+      channel: 'paid_social',
+      platform: 'facebook_instagram',
+    },
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
 
   await leadRef.set(newLeadData);
-  
-  // High-intensity alerting for admins
-  await adminDb.collection('notifications').add({
-    title: 'Meta Arrival',
-    description: `New prospect "${newLeadData.fullName}" captured from ads.`,
-    timestamp: new Date().toISOString(),
-    type: 'system',
-    link: '/leads'
-  });
 }
