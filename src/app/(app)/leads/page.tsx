@@ -231,6 +231,40 @@ export default function LeadsPage() {
                         ))}
                     </div>
                 </div>
+
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className={cn(
+                                "rounded-2xl border-primary/10 bg-background/70 px-4 h-10 font-bold",
+                                !dateRange && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from
+                                ? dateRange.to
+                                    ? `${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}`
+                                    : format(dateRange.from, 'MMM dd, yyyy')
+                                : 'Date Filter'}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                        />
+                        <div className="flex justify-end border-t p-3">
+                            <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)}>
+                                Clear
+                            </Button>
+                        </div>
+                    </PopoverContent>
+                </Popover>
             </div>
 
             {isAdminOrTL && (

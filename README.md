@@ -27,14 +27,24 @@ To receive leads directly from Facebook/Instagram ads into your CRM and send con
 | Key | Description |
 | :--- | :--- |
 | `META_VERIFY_TOKEN` | The secret string you used in Step 2. |
+| `META_APP_SECRET` | Your Meta App Secret. Used to verify webhook signatures. |
 | `META_ACCESS_TOKEN` | The Page Access Token from Step 3. |
 | `META_DATASET_ID` | Your Pixel/Dataset ID from Events Manager. |
+| `META_TEAMSPACE_ID` | Optional but recommended. The exact teamspace where Meta leads should be inserted. |
 | `FIREBASE_PROJECT_ID` | Your Firebase Project ID. |
 | `FIREBASE_CLIENT_EMAIL` | Your Firebase Service Account Email. |
 | `FIREBASE_PRIVATE_KEY` | Your Firebase Service Account Private Key. |
 
 ### 5. Testing
 Use the [Meta Lead Ads Testing Tool](https://developers.facebook.com/tools/lead-ads-testing) to send a test lead. It will appear instantly in your **Prospect Pipeline** under the "New" status. Use the **Payload Helper** in Events Manager to verify conversion events are arriving.
+
+### 6. Production Reliability Checklist
+- Put your Meta app in **Live** mode before expecting real customer leads.
+- Subscribe the app to the exact **Facebook Page** that owns the instant form.
+- Confirm the **leadgen** field is subscribed under the **Page** webhook object.
+- Use a long-lived access token with permission to retrieve lead data for that Page.
+- Set `META_TEAMSPACE_ID` so leads always go to the admin-owned workspace instead of the first teamspace in Firestore.
+- Keep `META_APP_SECRET` configured so spoofed webhook calls are rejected.
 
 ---
 

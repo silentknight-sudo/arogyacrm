@@ -52,7 +52,9 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
       return users.filter(u => u.role === 'sales_team_lead');
     }
     if (currentUser.role === 'sales_team_lead') {
-      return users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
+      const createdExecutives = users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
+      if (createdExecutives.length > 0) return createdExecutives;
+      return users.filter(u => u.role === 'sales_executive');
     }
     return [];
   }, [users, currentUser]);
@@ -141,7 +143,7 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
                         </Label>
                       </div>
                     )) : (
-                        <div className="text-center text-xs text-muted-foreground py-8 italic">No authorized recipients available.</div>
+                        <div className="text-center text-xs text-muted-foreground py-8 italic">No sales executives available in this workspace.</div>
                     )}
                     </div>
                   </ScrollArea>
