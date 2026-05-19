@@ -2,7 +2,6 @@
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 import type { LeadStatus } from '@/types';
 
 /**
@@ -34,9 +33,9 @@ export async function assignLead(values: {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // Persistent Alerts
+    // Notify Specialists
     for (const uid of newAssignedToIds) {
-      if (uid === currentUserId) continue; // Don't notify self
+      if (uid === currentUserId) continue;
       await adminDb.collection('users').doc(uid).collection('notifications').add({
         title: 'Lead Allocated',
         description: `Prospect "${leadData?.fullName}" assigned to you.`,
@@ -61,7 +60,7 @@ export async function bulkAssignLeads(values: {
   currentUserId: string 
 }) {
   try {
-    const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = values;
+    const { leadIds, teamspaceId, newAssignedToIds } = values;
     const batch = adminDb.batch();
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
 
@@ -69,7 +68,7 @@ export async function bulkAssignLeads(values: {
       batch.update(leadsRef.doc(id), {
         assignedToIds: newAssignedToIds,
         reassigned: true,
-        createdAt: FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(), // Born-Again sorting
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
@@ -80,6 +79,58 @@ export async function bulkAssignLeads(values: {
   } catch (error: any) {
     return { success: false, error: handleAdminSDKError(error) };
   }
+}
+
+export async function updateLeadStatus(values: { 
+  leadId: string, 
+  teamspaceId: string, 
+  status: LeadStatus 
+}) {
+  try {
+    const { leadId, teamspaceId, status } = values;
+    await adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId).update({
+      status,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    
+    // Automatically trigger deal sync if converted to "done"
+    if (status === 'done') {
+        await syncDealForLead(leadId, teamspaceId);
+    }
+
+    revalidatePath('/leads');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
+export async function syncDealForLead(leadId: string, teamspaceId: string) {
+    try {
+        const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+        const leadDoc = await leadRef.get();
+        const leadData = leadDoc.data();
+        if (!leadData) return;
+
+        const dealRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals').doc();
+        await dealRef.set({
+            id: dealRef.id,
+            leadId: leadId,
+            teamspaceId,
+            name: `${leadData.fullName} - Wellness Deal`,
+            amount: 0,
+            stage: 'new',
+            type: 'Initial Order',
+            closeDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            contactId: leadId,
+            ownerId: leadData.assignedToIds?.[0] || '',
+            lineItems: [],
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+        });
+    } catch (e) {
+        console.error("DEAL_SYNC_FAILURE:", e);
+    }
 }
 
 export async function selfAssignLeads(values: { 
@@ -109,38 +160,13 @@ export async function selfAssignLeads(values: {
   }
 }
 
-export async function updateLeadStatus(values: { 
-  leadId: string, 
-  teamspaceId: string, 
-  status: LeadStatus 
-}) {
-  try {
-    const { leadId, teamspaceId, status } = values;
-    await adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId).update({
-      status,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    revalidatePath('/leads');
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: handleAdminSDKError(error) };
-  }
-}
-
 export async function deleteLeads(values: { 
   leadIds: string[], 
   teamspaceId: string, 
   currentUserId: string 
 }) {
   try {
-    const { leadIds, teamspaceId, currentUserId } = values;
-    const userDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const role = userDoc.data()?.role;
-
-    if (role !== 'admin' && role !== 'sales_team_lead') {
-      throw new Error('Unauthorized: Purge restricted to leadership.');
-    }
-
+    const { leadIds, teamspaceId } = values;
     const batch = adminDb.batch();
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
     
@@ -176,32 +202,45 @@ export async function createLead(values: any) {
     }
 }
 
-export async function cleanupDuplicateLeads(teamspaceId: string) {
-    try {
-        const leadsSnap = await adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').get();
-        const seenPhones = new Map<string, string>();
-        const toDelete: string[] = [];
+export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ success: boolean; removedCount: number; error?: string }> {
+  try {
+    const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
+    const snapshot = await leadsRef.get();
+    
+    const leadsByPhone: Record<string, any[]> = {};
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const phone = (data.phone || '').trim();
+      if (phone) {
+        if (!leadsByPhone[phone]) leadsByPhone[phone] = [];
+        leadsByPhone[phone].push({ id: doc.id, createdAt: data.createdAt?.toDate() || new Date(0) });
+      }
+    });
 
-        leadsSnap.docs.forEach(doc => {
-            const data = doc.data();
-            const phone = data.phone?.toString().trim();
-            if (!phone) return;
+    let removedCount = 0;
+    const batch = adminDb.batch();
 
-            if (seenPhones.has(phone)) {
-                toDelete.push(doc.id);
-            } else {
-                seenPhones.set(phone, doc.id);
-            }
-        });
-
-        const batch = adminDb.batch();
-        const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
-        toDelete.forEach(id => batch.delete(leadsRef.doc(id)));
+    Object.values(leadsByPhone).forEach(duplicates => {
+      if (duplicates.length > 1) {
+        // Sort by creation date (ascending)
+        duplicates.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
         
-        await batch.commit();
-        revalidatePath('/leads');
-        return { success: true, removedCount: toDelete.length };
-    } catch (error: any) {
-        return { success: false, error: handleAdminSDKError(error) };
+        // Keep the first one, delete the rest
+        const toDelete = duplicates.slice(1);
+        toDelete.forEach(d => {
+          batch.delete(leadsRef.doc(d.id));
+          removedCount++;
+        });
+      }
+    });
+
+    if (removedCount > 0) {
+      await batch.commit();
+      revalidatePath('/leads');
     }
+
+    return { success: true, removedCount };
+  } catch (error: any) {
+    return { success: false, removedCount: 0, error: handleAdminSDKError(error) };
+  }
 }

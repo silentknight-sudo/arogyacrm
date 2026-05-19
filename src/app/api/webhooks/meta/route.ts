@@ -36,6 +36,7 @@ export async function POST(request: Request) {
         }
       }
     }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('META_WEBHOOK_FAILURE:', error);
@@ -128,7 +129,7 @@ async function processMetaLead(metaLeadId: string, webhookValue?: MetaLeadgenCha
   const adminOwnerId = teamspace.ownerId || null;
 
   const leadRef = adminDb.collection('teamspaces').doc(tsId).collection('leads').doc();
-  await leadRef.set({
+  const newLeadData = {
     id: leadRef.id,
     fullName: rawName || 'Meta Prospect',
     firstName,
@@ -155,5 +156,7 @@ async function processMetaLead(metaLeadId: string, webhookValue?: MetaLeadgenCha
     },
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-  });
+  };
+
+  await leadRef.set(newLeadData);
 }

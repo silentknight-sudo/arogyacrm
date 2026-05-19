@@ -3,12 +3,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 🛡️ INDESTRUCTIBLE EXECUTIVE MASTER-KEY 🛡️
-    // This allows specific users total access, bypassing all document-load race conditions.
+    // This allows specific users total access based on token identity.
+    // Absolute prioritization at the root prevents rule shadowing.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && (
-        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
         request.auth.token.email == 'admin@arogyabio.com' ||
-        request.auth.token.email == 'pundhir@arogyabio.com'
+        request.auth.token.email == 'pundhir@arogyabio.com' ||
+        request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
+        request.auth.uid == '9E06P0PsRtgyS5H60weu42iE0zH2'
       );
     }
 
@@ -24,7 +26,11 @@ service cloud.firestore {
 
     function isAdmin() {
       let data = getUserData();
-      return isSignedIn() && (data.role == 'admin' || request.auth.token.email == 'pundhir@arogyabio.com');
+      return isSignedIn() && (
+        data.role == 'admin' || 
+        request.auth.token.email == 'pundhir@arogyabio.com' ||
+        request.auth.token.email == 'admin@arogyabio.com'
+      );
     }
 
     function isMember(teamspaceId) {
@@ -46,18 +52,18 @@ service cloud.firestore {
 
     // -- CORE RULES --
 
-    match /users/{userId} {
-      allow read: if isSignedIn() && (
-        isAdmin() ||
-        userId == request.auth.uid ||
-        sharesAnyTeamspaceWithUser(resource.data)
-      );
-      allow write: if isAdmin();
+match /users/{userId} {
+  allow read: if isSignedIn() && (
+    isAdmin() ||
+    userId == request.auth.uid ||
+    sharesAnyTeamspaceWithUser(resource.data)
+  );
+  allow write: if isAdmin();
 
-      match /notifications/{notificationId} {
-        allow read, write: if isSignedIn() && userId == request.auth.uid;
-      }
-    }
+  match /notifications/{notificationId} {
+    allow read, write: if isSignedIn() && userId == request.auth.uid;
+  }
+}
 
     match /products/{productId} {
       allow read: if isSignedIn();
@@ -67,14 +73,6 @@ service cloud.firestore {
     match /teamspaces/{teamspaceId} {
       allow get, list: if isMember(teamspaceId);
       allow write: if isAdmin();
-
-      match /leads/{leadId} {
-        allow read, write: if isMember(teamspaceId);
-      }
-
-      match /deals/{dealId} {
-        allow read, write: if isMember(teamspaceId);
-      }
 
       match /{allPaths=**} {
         allow read, write: if isMember(teamspaceId);
