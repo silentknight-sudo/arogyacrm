@@ -60,16 +60,15 @@ export default function LeadsPage() {
     currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead',
   [currentUser]);
 
+  // 🔥 FIRESTORE CRITICAL QUERY ORDER 🔥
+  // All equality filters (where '==') MUST be added before any range or sorting constraints.
   const leadsQuery = useMemoFirebase(() => {
     if (!mounted || isUserLoading || !currentUser || !currentTeamspace?.id) return null;
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     let constraints: any[] = [];
 
-    /**
-     * 🔥 FIRESTORE CRITICAL QUERY ORDER 🔥
-     * All equality filters (where '==') MUST be added before any range or sorting constraints.
-     */
+    // 1. Equality Constraints First (Rule Compliance)
     if (activeFilter === 'fresh_uploads') {
         constraints.push(where('status', '==', 'new'));
         constraints.push(where('reassigned', '==', false));
@@ -81,7 +80,7 @@ export default function LeadsPage() {
         constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
 
-    // Sorting must follow equality constraints to satisfy rules and indexing requirements
+    // 2. Ordering Constraints Last
     constraints.push(orderBy('createdAt', 'desc'));
 
     return query(leadsRef, ...constraints);

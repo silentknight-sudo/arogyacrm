@@ -2,9 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- EXECUTIVE IDENTITY MASTER-KEY --
-    // Validated directly from the Auth Token to ensure zero-latency authority.
-    function isAdmin() {
+    // 🛡️ EXECUTIVE MASTER-KEY (Indestructible Bypass)
+    // Validates identity directly from the auth token to ensure zero-latency authority.
+    function isExecutive() {
       return request.auth != null && (
         request.auth.token.email == 'admin@arogyabio.com' ||
         request.auth.token.email == 'pundhir@arogyabio.com' ||
@@ -13,36 +13,34 @@ service cloud.firestore {
       );
     }
 
-    // 🛡️ THE ABSOLUTE BYPASS 🛡️
-    // This rule short-circuits evaluation for administrators, ignoring all path-specific locks.
+    // 🏆 GLOBAL AUTHORITY 🏆
+    // This rule short-circuits all evaluation for administrators.
     match /{allPaths=**} {
-      allow read, write: if isAdmin();
+      allow read, write: if isExecutive();
     }
 
-    // -- PROTECTED COLLECTIONS --
+    // -- PROTECTED PATHS (For Standard Users) --
 
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow read: if request.auth != null && (request.auth.uid == userId || isExecutive());
+      allow write: if request.auth != null && (request.auth.uid == userId || isExecutive());
     }
 
     match /products/{productId} {
       allow read: if request.auth != null;
-      allow write: if isAdmin();
+      allow write: if isExecutive();
     }
 
     match /teamspaces/{teamspaceId} {
       function isMember() {
         return request.auth != null && (
-          isAdmin() || 
+          isExecutive() || 
           teamspaceId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamspaceIds
         );
       }
 
-      // Root access for teamspace metadata
       allow read: if isMember();
       
-      // Recursive rule for all sub-modules (leads, deals, tasks, etc.)
       match /{allPaths=**} {
         allow read, write: if isMember();
       }
