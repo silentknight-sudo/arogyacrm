@@ -34,10 +34,10 @@ export default function MeetingsPage() {
     }
     
     if (currentUser.role === 'sales_team_lead') {
-        return query(
-          collection(firestore, 'users'), 
-          where('createdBy', '==', currentUser.id)
-        );
+        const memberIds = currentTeamspace?.memberIds || [];
+        return memberIds.length > 0
+            ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds))
+            : null;
     }
     
     return null;

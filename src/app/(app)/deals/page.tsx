@@ -101,7 +101,8 @@ export default function SalesPipelinePage() {
     }
     
     if (currentUser.role === 'sales_team_lead') {
-        return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
+        const memberIds = currentTeamspace.memberIds || [];
+        return memberIds.length > 0 ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds)) : null;
     }
     
     return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
