@@ -23,12 +23,12 @@ export function FirebaseErrorListener() {
     return () => errorEmitter.off('permission-error', handleError);
   }, []);
 
-  // Throw error during render to let ErrorBoundary catch it
-  if (errorToThrow) {
-    const err = errorToThrow;
-    // Note: We don't reset state here to prevent infinite re-renders before catch
-    throw err;
-  }
+  // Throw error in effect to let ErrorBoundary catch it safely
+  useEffect(() => {
+    if (errorToThrow) {
+      throw errorToThrow;
+    }
+  }, [errorToThrow]);
 
   return null;
 }

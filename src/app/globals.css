@@ -4,48 +4,48 @@
 
 @layer base {
   :root {
-    --background: 110 30% 98%;
-    --foreground: 142 60% 4%;
+    --background: 120 20% 98%; /* Soft Herbal White */
+    --foreground: 145 60% 4%; /* Deepest Moss Green */
     --card: 0 0% 100%;
-    --card-foreground: 142 60% 4%;
+    --card-foreground: 145 60% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 142 60% 4%;
-    --primary: 142 60% 10%; /* Deepest Forest Green */
-    --primary-foreground: 110 20% 98%;
-    --secondary: 110 25% 90%;
-    --secondary-foreground: 142 60% 10%;
-    --muted: 110 20% 85%;
-    --muted-foreground: 142 40% 15%; /* Darkened Moss for maximum visibility */
-    --accent: 38 95% 45%; /* Sterling Gold */
-    --accent-foreground: 142 60% 2%;
+    --popover-foreground: 145 60% 4%;
+    --primary: 145 60% 12%; /* Rich Deep Forest */
+    --primary-foreground: 120 20% 98%;
+    --secondary: 120 20% 92%;
+    --secondary-foreground: 145 60% 12%;
+    --muted: 120 15% 90%;
+    --muted-foreground: 145 40% 20%; /* High-Contrast Muted Text */
+    --accent: 45 100% 45%; /* Sterling Wellness Gold */
+    --accent-foreground: 145 60% 2%;
     --destructive: 0 84% 45%;
-    --destructive-foreground: 110 20% 98%;
-    --border: 142 20% 88%;
-    --input: 142 20% 88%;
-    --ring: 142 60% 10%;
+    --destructive-foreground: 120 20% 98%;
+    --border: 145 20% 88%;
+    --input: 145 20% 88%;
+    --ring: 145 60% 12%;
     --radius: 1rem;
   }
 
   .dark {
-    --background: 142 60% 2%;
-    --foreground: 110 20% 98%;
-    --card: 142 60% 4%;
-    --card-foreground: 110 20% 98%;
-    --popover: 142 60% 4%;
-    --popover-foreground: 110 20% 98%;
-    --primary: 115 45% 45%;
-    --primary-foreground: 110 20% 98%;
-    --secondary: 142 45% 10%;
-    --secondary-foreground: 110 20% 98%;
-    --muted: 142 45% 12%;
-    --muted-foreground: 110 30% 90%;
-    --accent: 45 100% 50%;
-    --accent-foreground: 142 60% 2%;
+    --background: 145 60% 2%; /* Midnight Forest Obsidian */
+    --foreground: 120 25% 98%;
+    --card: 145 60% 4%;
+    --card-foreground: 120 25% 98%;
+    --popover: 145 60% 4%;
+    --popover-foreground: 120 25% 98%;
+    --primary: 120 40% 45%; /* Forest Sage */
+    --primary-foreground: 145 60% 2%;
+    --secondary: 145 45% 10%;
+    --secondary-foreground: 120 25% 98%;
+    --muted: 145 45% 12%;
+    --muted-foreground: 120 20% 85%;
+    --accent: 45 100% 50%; /* Luminous Gold */
+    --accent-foreground: 145 60% 2%;
     --destructive: 0 70% 45%;
-    --destructive-foreground: 110 20% 98%;
-    --border: 142 45% 15%;
-    --input: 142 45% 15%;
-    --ring: 115 45% 45%;
+    --destructive-foreground: 120 25% 98%;
+    --border: 145 45% 15%;
+    --input: 145 45% 15%;
+    --ring: 120 40% 45%;
   }
 }
 
@@ -63,13 +63,13 @@
     @apply bg-gradient-to-br from-[#1B3D17] via-[#122A0F] to-[#0A1A08] text-white border-none;
   }
   .gold-glow {
-    @apply shadow-[0_0_30px_rgba(217,119,6,0.3)];
+    @apply shadow-[0_0_30px_rgba(234,179,8,0.3)];
   }
   .glass-sidebar {
     @apply bg-[#040C04] border-r border-white/5 shadow-2xl;
   }
   .sidebar-link {
-    @apply flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-black tracking-tight text-white/80 hover:text-white hover:bg-white/10 transition-all;
+    @apply flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-black tracking-tight text-white/70 hover:text-white hover:bg-white/10 transition-all;
   }
   .sidebar-link-active {
     @apply bg-accent text-accent-foreground shadow-2xl shadow-accent/40 font-black scale-105;

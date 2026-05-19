@@ -75,8 +75,6 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // SUPPRESS TRANSIENT PERMISSION ERRORS: During login/logout or initial load, Firestore
-        // might throw a momentary permission denial before the auth token is attached.
         const auth = getAuth();
         if (!auth.currentUser) {
           setData(null);
@@ -93,10 +91,13 @@ export function useCollection<T = any>(
           path,
         });
 
-        setError(contextualError);
-        setData(null);
-        setIsLoading(false);
-        errorEmitter.emit('permission-error', contextualError);
+        // 🛡️ LIFECYCLE SAFETY: Defer emission to avoid "update during render" warnings.
+        setTimeout(() => {
+          setError(contextualError);
+          setData(null);
+          setIsLoading(false);
+          errorEmitter.emit('permission-error', contextualError);
+        }, 0);
       }
     );
 
