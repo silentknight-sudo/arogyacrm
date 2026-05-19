@@ -10,13 +10,13 @@
     --card-foreground: 142 60% 4%;
     --popover: 0 0% 100%;
     --popover-foreground: 142 60% 4%;
-    --primary: 115 50% 12%; /* Deep, visible Moss Green */
+    --primary: 115 50% 12%; /* Deep Forest Green */
     --primary-foreground: 110 20% 98%;
     --secondary: 110 25% 90%;
     --secondary-foreground: 115 50% 8%;
     --muted: 110 20% 88%;
     --muted-foreground: 115 45% 15%; /* High contrast dark green for labels */
-    --accent: 38 92% 50%; /* Vibrant Wellness Gold */
+    --accent: 38 92% 50%; /* Sterling Wellness Gold */
     --accent-foreground: 115 50% 5%;
     --destructive: 0 84% 40%;
     --destructive-foreground: 110 20% 98%;
@@ -63,19 +63,22 @@
     @apply bg-gradient-to-br from-[#1B3D17] via-[#122A0F] to-[#0A1A08] text-white border-none;
   }
   .gold-glow {
-    @apply shadow-[0_0_40px_rgba(217,119,6,0.2)];
+    @apply shadow-[0_0_40px_rgba(217,119,6,0.3)];
   }
   .glass-sidebar {
     @apply bg-[#040C04] backdrop-blur-3xl border-r border-white/5 shadow-2xl;
   }
   .sidebar-link {
-    @apply flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-black tracking-tight text-white/60 hover:text-white hover:bg-white/10 transition-all;
+    @apply flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-black tracking-tight text-white/80 hover:text-white hover:bg-white/10 transition-all;
   }
   .sidebar-link-active {
-    @apply bg-accent text-accent-foreground shadow-2xl shadow-accent/20 hover:text-accent-foreground hover:bg-accent/90 font-black scale-105;
+    @apply bg-accent text-accent-foreground shadow-2xl shadow-accent/40 hover:text-accent-foreground hover:bg-accent/90 font-black scale-105;
   }
   .glass-header {
     @apply bg-white/80 backdrop-blur-3xl border-b border-primary/5 sticky top-0 z-50;
+  }
+  .accent-glow {
+    @apply shadow-[0_0_30px_rgba(217,119,6,0.4)];
   }
 }
 

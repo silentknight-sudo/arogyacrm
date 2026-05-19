@@ -2,17 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -- ATOMIC IDENTITY HELPERS --
-
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    // 🛡️ THE IMMUTABLE EXECUTIVE MASTER-KEY 🛡️
-    // Evaluated at the absolute root to ensure zero-latency authority for leadership.
-    // Checks UID and Email directly from token metadata to bypass all get() call overhead.
+    // -- EXECUTIVE IDENTITY MASTER-KEY --
+    // Validated directly from the Auth Token to ensure zero-latency authority.
     function isAdmin() {
-      return signedIn() && (
+      return request.auth != null && (
         request.auth.token.email == 'admin@arogyabio.com' ||
         request.auth.token.email == 'pundhir@arogyabio.com' ||
         request.auth.uid == '3oC7dLZCUsRpwNEPWlokfSGTmnx1' ||
@@ -20,59 +13,38 @@ service cloud.firestore {
       );
     }
 
-    // Direct Root Bypass for Administrators
+    // 🛡️ THE ABSOLUTE BYPASS 🛡️
+    // This rule short-circuits evaluation for administrators, ignoring all path-specific locks.
     match /{allPaths=**} {
       allow read, write: if isAdmin();
-    }
-
-    // -- MEMBERSHIP LOGIC --
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isMember(teamspaceId) {
-      return isAdmin() || (
-        signedIn() && 
-        getUserData().teamspaceIds != null && 
-        teamspaceId in getUserData().teamspaceIds
-      );
     }
 
     // -- PROTECTED COLLECTIONS --
 
     match /users/{userId} {
-      allow read: if signedIn() && (isAdmin() || userId == request.auth.uid);
-      allow write: if isAdmin() || (signedIn() && userId == request.auth.uid);
-      
-      match /notifications/{id} {
-        allow read, write: if signedIn() && userId == request.auth.uid;
-      }
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
     }
 
     match /products/{productId} {
-      allow read: if signedIn();
+      allow read: if request.auth != null;
       allow write: if isAdmin();
     }
 
     match /teamspaces/{teamspaceId} {
-      allow read: if isMember(teamspaceId);
-      allow write: if isAdmin();
-
-      // Ensure explicit authority for specific CRM modules
-      match /leads/{leadId} {
-        allow read, list: if isMember(teamspaceId);
-        allow write: if isMember(teamspaceId);
+      function isMember() {
+        return request.auth != null && (
+          isAdmin() || 
+          teamspaceId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamspaceIds
+        );
       }
+
+      // Root access for teamspace metadata
+      allow read: if isMember();
       
-      match /deals/{dealId} {
-        allow read, list: if isMember(teamspaceId);
-        allow write: if isMember(teamspaceId);
-      }
-
-      // Recursive catch-all for workspace sub-modules
+      // Recursive rule for all sub-modules (leads, deals, tasks, etc.)
       match /{allPaths=**} {
-        allow read, write: if isMember(teamspaceId);
+        allow read, write: if isMember();
       }
     }
   }
