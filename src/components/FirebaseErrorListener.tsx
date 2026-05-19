@@ -13,6 +13,7 @@ export function FirebaseErrorListener() {
 
   useEffect(() => {
     const handleError = (err: FirestorePermissionError) => {
+      console.error('FIRESTORE_PERMISSION_ERROR:', err);
       // Use setTimeout to defer the state update to the next tick.
       // This prevents the "Cannot update a component while rendering a different component" warning.
       setTimeout(() => {
@@ -27,10 +28,13 @@ export function FirebaseErrorListener() {
     };
   }, []);
 
-  // On re-render, if an error exists in state, throw it.
-  if (error) {
-    throw error;
-  }
+  useEffect(() => {
+    if (!error) return;
+
+    // Keep the app usable even when a background Firestore query is denied.
+    // The failing hook already stores the error locally and clears its own data.
+    setError(null);
+  }, [error]);
 
   // This component renders nothing.
   return null;

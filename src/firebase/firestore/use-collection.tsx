@@ -75,11 +75,12 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // SUPPRESS TRANSIENT PERMISSION ERRORS: During login/logout or initial load, Firestore
-        // might throw a momentary permission denial before the auth token is attached.
+        // Keep denied background queries from crashing the whole app.
+        // The calling screen can decide how to render with null data.
         const auth = getAuth();
-        if (!auth.currentUser) {
+        if (!auth.currentUser || err.code === 'permission-denied') {
           setData(null);
+          setError(err);
           setIsLoading(false);
           return;
         }
