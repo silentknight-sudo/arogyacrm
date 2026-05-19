@@ -3,7 +3,7 @@ import { adminDb, FieldValue } from '@/firebase/admin';
 
 /**
  * META DIRECT INGESTION ENDPOINT
- * High-velocity real-time capture for Meta Lead Ads.
+ * Rebuilt for high-velocity real-time capture and automatic deal syncing.
  */
 
 export async function GET(request: Request) {
@@ -47,14 +47,16 @@ async function processMetaLead(metaLeadId: string) {
 
   const getVal = (name: string) => data.field_data?.find((f: any) => f.name === name)?.values?.[0] || '';
 
-  // Route to Primary Hub
+  // Strategic Routing: Find first available teamspace
   const teamSnap = await adminDb.collection('teamspaces').limit(1).get();
   if (teamSnap.empty) return;
   const tsId = teamSnap.docs[0].id;
 
   const leadRef = adminDb.collection('teamspaces').doc(tsId).collection('leads').doc();
-  await leadRef.set({
-    id: leadRef.id,
+  const leadId = leadRef.id;
+
+  const newLeadData = {
+    id: leadId,
     fullName: getVal('full_name') || 'Meta Prospect',
     email: getVal('email') || '',
     phone: (getVal('phone_number') || '').replace(/^p:/, '').trim(),
@@ -65,5 +67,16 @@ async function processMetaLead(metaLeadId: string) {
     metaLeadId: metaLeadId,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  await leadRef.set(newLeadData);
+  
+  // High-intensity alerting for admins
+  await adminDb.collection('notifications').add({
+    title: 'Meta Arrival',
+    description: `New prospect "${newLeadData.fullName}" captured from ads.`,
+    timestamp: new Date().toISOString(),
+    type: 'system',
+    link: '/leads'
   });
 }
