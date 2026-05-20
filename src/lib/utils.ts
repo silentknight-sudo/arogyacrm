@@ -11,8 +11,7 @@ export function getPublicAppUrl() {
     return configuredUrl.replace(/\/+$/, "");
   }
 
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "studio-3238704164-621f1";
-  return `https://${projectId}.web.app`;
+  return "https://studio-3238704164-621f1.us-central1.hosted.app";
 }
 
 export function buildPublicUrl(path?: string | null) {
