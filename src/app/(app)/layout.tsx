@@ -7,6 +7,7 @@ import { MainSidebar } from '@/components/main-sidebar';
 import { MainHeader } from '@/components/main-header';
 import { useUser } from '@/firebase';
 import { LeadAlertListener } from '@/components/lead-alert-listener';
+import { LeadReminderListener } from '@/components/lead-reminder-listener';
 
 
 export default function AppLayout({
@@ -34,6 +35,7 @@ export default function AppLayout({
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[256px_1fr]">
       <LeadAlertListener />
+      <LeadReminderListener />
       <MainSidebar className="hidden w-64 lg:flex" />
       <div className="flex flex-col">
         <MainHeader />

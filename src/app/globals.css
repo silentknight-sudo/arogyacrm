@@ -61,11 +61,20 @@
   .herbal-gradient {
     @apply bg-gradient-to-br from-[#1B3019] via-[#2D5A27] to-[#1B3019] text-white border-none;
   }
+  .zen-gradient {
+    @apply bg-gradient-to-br from-[#17321F] via-[#245433] to-[#102217] text-white border-none;
+  }
+  .accent-glow {
+    @apply shadow-[0_0_30px_rgba(52,211,153,0.22)];
+  }
   .gold-glow {
     @apply shadow-[0_0_25px_rgba(212,175,55,0.2)];
   }
   .glass-sidebar {
     @apply bg-card/70 backdrop-blur-3xl border-r border-border/40 shadow-xl;
+  }
+  .glass-header {
+    @apply sticky top-0 z-50 bg-background/75 backdrop-blur-2xl border-b border-border/30;
   }
   .mission-control-header {
     @apply sticky top-0 z-50 bg-background/60 backdrop-blur-2xl border-b border-border/20;

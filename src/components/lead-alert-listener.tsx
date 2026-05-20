@@ -43,7 +43,7 @@ export function LeadAlertListener() {
           const data = change.doc.data();
           
           // Trigger the high-priority visual alert and audio ping
-          setActiveAlert(data.title || 'Strategic Assignment Received');
+          setActiveAlert(data.description || data.title || 'Strategic Assignment Received');
           audioRef.current?.play().catch(() => {});
           
           const timer = setTimeout(() => {
@@ -67,7 +67,7 @@ export function LeadAlertListener() {
           <BellRing className="h-6 w-6 text-white" />
         </div>
         <div className="flex-1 text-white">
-          <p className="font-black uppercase tracking-[0.2em] text-[10px] opacity-70 mb-0.5">High Intensity Assignment</p>
+          <p className="font-black uppercase tracking-[0.2em] text-[10px] opacity-70 mb-0.5">Action Alert</p>
           <p className="font-bold text-lg leading-tight tracking-tight">{activeAlert}</p>
         </div>
         <button 

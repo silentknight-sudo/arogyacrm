@@ -57,7 +57,8 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
 
     // 3. CREATE PROFILE
     const userDocRef = adminDb.collection('users').doc(newUserId);
-    await userDocRef.set({
+    const batch = adminDb.batch();
+    batch.set(userDocRef, {
       id: newUserId,
       displayName: validatedInput.displayName,
       email: validatedInput.email,
@@ -68,6 +69,16 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
       avatar: `https://picsum.photos/seed/${newUserId}/100/100`,
       createdBy: validatedInput.creatorId,
     });
+
+    validatedInput.teamspaceIds.forEach(teamspaceId => {
+      const teamspaceRef = adminDb.collection('teamspaces').doc(teamspaceId);
+      batch.update(teamspaceRef, {
+        memberIds: FieldValue.arrayUnion(newUserId),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
     
     await adminAuth.setCustomUserClaims(newUserId, { role: validatedInput.role });
 

@@ -79,12 +79,13 @@ export function CreateSalesOrderDialog({ children, contacts, products, isLoading
   const handleProductChange = (index: number, productId: string) => {
     const product = products.find(p => p.id === productId);
     if (product) {
+      const unitPrice = product.price ?? 0;
       update(index, {
         productId: product.id,
         productName: product.name,
-        unitPrice: product.price,
+        unitPrice,
         quantity: fields[index].quantity || 1,
-        subtotal: product.price * (fields[index].quantity || 1),
+        subtotal: unitPrice * (fields[index].quantity || 1),
       });
     }
   };

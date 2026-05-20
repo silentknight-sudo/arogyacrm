@@ -11,11 +11,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+} from '../../../components/ui/alert-dialog';
+import { Button } from '../../../components/ui/button';
+import { useToast } from '../../../hooks/use-toast';
 import { resetAllData } from './actions';
-import { useApp } from '@/context/app-context';
+import { useApp } from '../../../context/app-context';
 import { Loader2 } from 'lucide-react';
 
 export function ResetDataButton() {

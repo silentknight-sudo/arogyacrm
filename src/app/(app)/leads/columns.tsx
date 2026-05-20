@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, ExternalLink, Loader2, ClipboardList } from 'lucide-react';
+import { ArrowUpDown, ExternalLink, Loader2, ClipboardList, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Lead, UserProfile, LeadStatus } from '@/types';
-import { updateLeadStatus } from './actions';
+import { setLeadReminder, updateLeadStatus } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -119,6 +119,54 @@ const StatusSelector = ({ lead }: { lead: Lead }) => {
   );
 };
 
+const ReminderSelector = ({ lead }: { lead: Lead }) => {
+  const { toast } = useToast();
+  const { currentTeamspace } = useApp();
+  const [isPending, startTransition] = useTransition();
+  const reminderDays = typeof lead.reminderDays === 'number' ? String(lead.reminderDays) : '0';
+
+  const handleReminderChange = (value: string) => {
+    if (!currentTeamspace) return;
+    const days = Number(value);
+
+    startTransition(async () => {
+      const result = await setLeadReminder({
+        leadId: lead.id,
+        teamspaceId: currentTeamspace.id,
+        reminderDays: days,
+      });
+
+      if (result.success) {
+        toast({
+          title: days === 0 ? 'Reminder Cleared' : 'Reminder Scheduled',
+          description: days === 0
+            ? `Reminder removed for ${lead.fullName}.`
+            : `Team leader will be reminded in ${days} day${days === 1 ? '' : 's'} for ${lead.fullName}.`,
+        });
+      } else {
+        toast({ variant: 'destructive', title: 'Reminder Failed', description: result.error });
+      }
+    });
+  };
+
+  return (
+    <Select disabled={isPending} value={reminderDays} onValueChange={handleReminderChange}>
+      <SelectTrigger className="h-8 w-[116px] rounded-lg text-[10px] font-black uppercase tracking-widest bg-muted/30 border-none">
+        {isPending ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <BellRing className="mr-2 h-3 w-3 text-primary" />}
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="0" className="text-[10px] font-black uppercase">No Reminder</SelectItem>
+        {Array.from({ length: 15 }, (_, index) => index + 1).map(day => (
+          <SelectItem key={day} value={String(day)} className="text-[10px] font-black uppercase">
+            {day} Day{day === 1 ? '' : 's'}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
 const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], users: UserProfile[] }) => {
     const assignedUsers = (assignedToIds || []).map(id => users.find(u => u.id === id)).filter(Boolean) as UserProfile[];
     if (assignedUsers.length === 0) return <span className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">Unassigned</span>;
@@ -191,6 +239,7 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     accessorKey: 'fullName',
+    filterFn: 'includesString',
     header: ({ column }) => {
       return (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="font-black uppercase tracking-widest text-[10px] hover:bg-transparent px-0">
@@ -219,6 +268,7 @@ export const columns: ColumnDef<Lead>[] = [
   },
   {
     accessorKey: 'phone',
+    filterFn: 'includesString',
     header: () => <div className="font-black uppercase tracking-widest text-[10px]">Phone</div>,
     cell: ({ row }) => <span className="text-xs font-bold text-foreground">{row.getValue('phone') || 'N/A'}</span>
   },
@@ -226,6 +276,11 @@ export const columns: ColumnDef<Lead>[] = [
     accessorKey: 'source',
     header: () => <div className="font-black uppercase tracking-widest text-[10px]">Source</div>,
     cell: ({ row }) => <Badge variant="secondary" className="text-[9px] font-black uppercase">{row.getValue('source') || 'Direct'}</Badge>
+  },
+  {
+    accessorKey: 'reminderDays',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Reminder</div>,
+    cell: ({ row }) => <ReminderSelector lead={row.original} />
   },
   {
     accessorKey: 'status',

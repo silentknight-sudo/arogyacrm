@@ -85,38 +85,39 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 grid lg:grid-cols-2">
       <div className="hidden lg:flex flex-col justify-center p-20 zen-gradient text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full -mr-64 -mt-64 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full -ml-48 -mb-48 blur-2xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,212,59,0.18),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(74,222,128,0.14),transparent_28%)]" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/12 rounded-full -mr-64 -mt-64 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/8 rounded-full -ml-48 -mb-48 blur-2xl" />
         
         <div className="relative z-10 space-y-12">
             <div className="flex items-center gap-5">
                 <div className="p-5 bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20">
                     <Sparkles className="h-10 w-10 text-accent" />
                 </div>
-                <h1 className="text-5xl font-black tracking-tighter">AROGYA ELITE</h1>
+                <h1 className="text-5xl font-black tracking-tighter text-white">AROGYA ELITE</h1>
             </div>
             
             <div className="space-y-8">
-                <h2 className="text-7xl font-black leading-[1.1] tracking-tighter">
+                <h2 className="text-7xl font-black leading-[1.1] tracking-tighter text-white">
                     Precision CRM for <br />
-                    <span className="text-accent italic">Wellness Leaders.</span>
+                    <span className="text-[#F7D14A] italic">Wellness Leaders.</span>
                 </h2>
-                <p className="text-2xl text-white/70 max-w-xl font-medium leading-relaxed">
+                <p className="text-2xl text-white/88 max-w-xl font-medium leading-relaxed">
                     Automated lead prioritization and high-velocity distribution 
                     for the modern Ayurvedic enterprise.
                 </p>
             </div>
 
             <div className="grid grid-cols-2 gap-8 pt-10">
-                <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-sm">
-                    <ShieldCheck className="h-8 w-8 text-accent mb-4" />
-                    <p className="font-black text-xl">Elite Security</p>
-                    <p className="text-sm text-white/50 font-medium">Bypass-resistant encryption.</p>
+                <div className="p-8 rounded-[2.5rem] bg-white/10 border border-white/15 backdrop-blur-sm shadow-xl">
+                    <ShieldCheck className="h-8 w-8 text-[#F7D14A] mb-4" />
+                    <p className="font-black text-xl text-white">Elite Security</p>
+                    <p className="text-sm text-white/80 font-medium">Bypass-resistant encryption.</p>
                 </div>
-                <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-sm">
-                    <TrendingUp className="h-8 w-8 text-accent mb-4" />
-                    <p className="font-black text-xl">Velocity Engine</p>
-                    <p className="text-sm text-white/50 font-medium">Top-of-stack distribution.</p>
+                <div className="p-8 rounded-[2.5rem] bg-white/10 border border-white/15 backdrop-blur-sm shadow-xl">
+                    <TrendingUp className="h-8 w-8 text-[#F7D14A] mb-4" />
+                    <p className="font-black text-xl text-white">Velocity Engine</p>
+                    <p className="text-sm text-white/80 font-medium">Top-of-stack distribution.</p>
                 </div>
             </div>
         </div>

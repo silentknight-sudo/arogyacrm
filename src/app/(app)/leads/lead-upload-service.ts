@@ -2,7 +2,6 @@
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { syncDealForLead } from './actions';
 
 const UploadLeadsSchema = z.object({
   rawLeads: z.array(z.any()),
@@ -21,7 +20,6 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
       throw new Error('No leads detected in the ingestion batch.');
     }
     
-    const createdLeadIds: string[] = [];
     const chunks = [];
     for (let i = 0; i < rawLeads.length; i += 500) {
         chunks.push(rawLeads.slice(i, i + 500));
@@ -40,7 +38,6 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
 
             const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
             const id = leadRef.id;
-            createdLeadIds.push(id);
             
             const rawPhone = (getVal(['phone_number', 'phone', 'contact_number']) || '').toString();
             const cleanPhone = rawPhone.replace(/^p:/i, '').trim();
@@ -73,11 +70,6 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
         read: false,
         link: '/leads'
     });
-
-    // Sync Automated Revenue Pipeline
-    for (const id of createdLeadIds) {
-      await syncDealForLead(id, teamspaceId);
-    }
 
     revalidatePath('/leads');
     revalidatePath('/deals');

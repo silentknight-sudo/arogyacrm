@@ -105,10 +105,10 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-[2.5rem] p-10 border-none shadow-2xl bg-[#0D1F0B]/95 backdrop-blur-3xl text-white">
+      <DialogContent className="sm:max-w-md rounded-[2.5rem] p-10 border border-border/60 bg-card text-card-foreground shadow-2xl">
         <DialogHeader className="mb-8">
-          <DialogTitle className="text-3xl font-black tracking-tight text-[#4ade80]">{title}</DialogTitle>
-          <DialogDescription className="text-lg font-medium text-white/60">
+          <DialogTitle className="text-3xl font-black tracking-tight text-primary">{title}</DialogTitle>
+          <DialogDescription className="text-lg font-medium text-muted-foreground">
             {description}
           </DialogDescription>
         </DialogHeader>
@@ -119,8 +119,8 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
               name="assignedToIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40 px-2">Authorized Recipients</FormLabel>
-                  <ScrollArea className="h-72 rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-inner">
+                  <FormLabel className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground px-2">Authorized Recipients</FormLabel>
+                  <ScrollArea className="h-72 rounded-[2rem] border border-border bg-muted/20 p-6 shadow-inner">
                     <div className="space-y-6">
                     {filteredUsers.length > 0 ? filteredUsers.map((user) => (
                       <div key={user.id} className="flex flex-row items-center space-x-4 space-y-0 group">
@@ -132,15 +132,15 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                               ? field.onChange([...(field.value || []), user.id])
                               : field.onChange(field.value?.filter(v => v !== user.id))
                           }}
-                          className="rounded-full h-6 w-6 border-2 border-[#4ade80]/30 data-[state=checked]:bg-[#4ade80] data-[state=checked]:border-[#4ade80]"
+                          className="rounded-full h-6 w-6 border-2 border-primary/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
-                        <Label htmlFor={`user-${user.id}`} className="text-sm font-bold cursor-pointer group-hover:text-[#4ade80] transition-colors flex flex-col gap-0.5">
+                        <Label htmlFor={`user-${user.id}`} className="text-sm font-bold cursor-pointer group-hover:text-primary transition-colors flex flex-col gap-0.5">
                           {user.displayName}
-                          <span className="text-[10px] text-white/40 font-black uppercase tracking-[0.1em]">{user.role.replace(/_/g, ' ')}</span>
+                          <span className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.1em]">{user.role.replace(/_/g, ' ')}</span>
                         </Label>
                       </div>
                     )) : (
-                        <div className="text-center text-sm text-white/30 font-medium py-16 italic px-4">
+                        <div className="text-center text-sm text-muted-foreground font-medium py-16 italic px-4">
                           {currentUser?.role === 'admin' 
                             ? 'No Team Leaders available for global delegation.' 
                             : 'No Sales Executives found in this workspace.'}

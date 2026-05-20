@@ -115,16 +115,13 @@ export default function LeadsPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
-    const memberIds = currentTeamspace.memberIds || [];
 
     if (currentUser.role === 'sales_executive') {
       return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
     }
 
-    return memberIds.length > 0
-      ? query(collection(firestore, 'users'), where(documentId(), 'in', memberIds))
-      : null;
-  }, [firestore, currentTeamspace?.id, currentTeamspace?.memberIds, currentUser, isUserLoading]);
+    return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
   
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
@@ -268,7 +265,7 @@ export default function LeadsPage() {
             </div>
 
             {isAdminOrTL && (
-                <div className="flex items-center gap-4 bg-muted/20 p-2 rounded-2xl border border-primary/5">
+            <div className="flex items-center gap-4 bg-muted/20 p-2 rounded-2xl border border-primary/5">
                     <div className="flex items-center gap-2 px-3 border-r border-primary/10 mr-2 h-10">
                         <UsersIcon className="h-4 w-4 text-primary" />
                         <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
@@ -320,15 +317,15 @@ export default function LeadsPage() {
         <BulkAssignLeadsDialog open={isBulkAssignOpen} onOpenChange={setBulkAssignOpen} leads={selectedLeads} users={users || []} />
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteOpen}>
-            <AlertDialogContent className="rounded-[2.5rem] bg-[#0D1F0B] text-white border-none shadow-2xl p-10">
+            <AlertDialogContent className="rounded-[2.5rem] bg-card text-card-foreground border border-border shadow-2xl p-10">
                 <AlertDialogHeader className="mb-6">
-                    <AlertDialogTitle className="text-3xl font-black text-[#ef4444]">Strategic Purge</AlertDialogTitle>
-                    <AlertDialogDescription className="text-white/60 text-lg font-medium">
-                        Decommission <span className="text-white font-bold">{selectedLeads.length}</span> prospects permanently?
+                    <AlertDialogTitle className="text-3xl font-black text-destructive">Strategic Purge</AlertDialogTitle>
+                    <AlertDialogDescription className="text-muted-foreground text-lg font-medium">
+                        Decommission <span className="text-foreground font-bold">{selectedLeads.length}</span> prospects permanently?
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="gap-4">
-                    <AlertDialogCancel className="h-14 px-8 rounded-xl border-white/10 bg-white/5 text-white">Cancel</AlertDialogCancel>
+                    <AlertDialogCancel className="h-14 px-8 rounded-xl">Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteLeads} className="h-14 px-10 rounded-xl bg-[#ef4444] text-white hover:bg-[#dc2626] font-black" disabled={isDeleting}>
                         Confirm Purge
                     </AlertDialogAction>
