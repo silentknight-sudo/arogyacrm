@@ -26,31 +26,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createCampaign } from './actions';
 import { useApp } from '@/context/app-context';
-import type { CampaignStatus } from '@/types';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 const campaignStatuses = ['Planned', 'Active', 'Completed', 'Paused', 'Cancelled'] as const;
-const campaignTypes = ['Email Marketing', 'Social Media Ad', 'Event Promotion', 'Content Marketing', 'Referral Program'];
+const campaignTypes = ['Landing Page Campaign', 'Social Media Ad', 'Event Promotion', 'Content Marketing', 'Referral Program'];
 
 const formSchema = z.object({
   name: z.string().min(2, 'Campaign name must be at least 2 characters.'),
   type: z.string().min(2, 'Campaign type is required.'),
   status: z.enum(campaignStatuses),
   budget: z.coerce.number().min(0, 'Budget must be a positive number.'),
-  startDate: z.date({ required_error: 'Start date is required.' }),
-  endDate: z.date({ required_error: 'End date is required.' }),
+  budgetInterval: z.enum(['Daily', 'Weekly']),
   description: z.string().optional(),
+  landingPageEnabled: z.boolean().default(true),
+  locale: z.enum(['hi', 'en']).default('hi'),
+  headline: z.string().optional(),
+  subheadline: z.string().optional(),
+  ctaText: z.string().optional(),
+  productName: z.string().optional(),
+  currentPrice: z.coerce.number().optional(),
+  originalPrice: z.coerce.number().optional(),
 });
 
 type CreateCampaignDialogProps = {
@@ -68,8 +70,18 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
     defaultValues: {
       name: '',
       description: '',
-      status: 'Planned',
-      budget: 0,
+      status: 'Active',
+      type: 'Landing Page Campaign',
+      budget: 5000,
+      budgetInterval: 'Daily',
+      landingPageEnabled: true,
+      locale: 'hi',
+      headline: 'जोड़ों के दर्द से छुटकारा पाएं!',
+      subheadline: '100% आयुर्वेदिक गाउटहेल्थ ऑयल के साथ राहत, लचीलापन और बेहतर जीवन।',
+      ctaText: 'अभी ऑर्डर करें',
+      productName: 'Arogya Bio Gouthealth Oil',
+      currentPrice: 1999,
+      originalPrice: 2499,
     },
   });
 
@@ -81,8 +93,6 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
     startTransition(async () => {
       const result = await createCampaign({
           ...values,
-          startDate: values.startDate.toISOString(),
-          endDate: values.endDate.toISOString(),
           ownerId: currentUser.id,
           teamspaceId: currentTeamspace.id,
       });
@@ -111,7 +121,7 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
         <DialogHeader>
           <DialogTitle>Create New Campaign</DialogTitle>
           <DialogDescription>
-            Fill out the form to launch a new marketing campaign.
+            Create a campaign with its own landing-page link and direct CRM lead capture.
           </DialogDescription>
         </DialogHeader>
         <div className="overflow-y-auto max-h-[60vh] pr-4">
@@ -129,15 +139,41 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
                 <FormField control={form.control} name="budget" render={({ field }) => (
                     <FormItem><FormLabel>Budget (₹)</FormLabel><FormControl><Input type="number" placeholder="5000" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="startDate" render={({ field }) => (
-                    <FormItem className="flex flex-col"><FormLabel>Start Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="endDate" render={({ field }) => (
-                    <FormItem className="flex flex-col"><FormLabel>End Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                <FormField control={form.control} name="budgetInterval" render={({ field }) => (
+                    <FormItem><FormLabel>Budget Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select budget type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Daily">Daily Budget</SelectItem><SelectItem value="Weekly">Weekly Budget</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                 )} />
                  <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Objectives, target audience, etc." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
+                <div className="rounded-2xl border border-primary/10 bg-muted/20 p-4 space-y-4">
+                    <p className="text-sm font-black uppercase tracking-[0.2em] text-primary">Landing Page Setup</p>
+                    <FormField control={form.control} name="landingPageEnabled" render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-xl bg-background p-3">
+                            <div>
+                                <FormLabel>Enable Landing Page Link</FormLabel>
+                                <p className="text-xs text-muted-foreground font-medium">Use this campaign with Meta ads instead of instant forms.</p>
+                            </div>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="headline" render={({ field }) => (
+                        <FormItem><FormLabel>Hindi Headline</FormLabel><FormControl><Input {...field} placeholder="जोड़ों के दर्द से छुटकारा पाएं!" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="subheadline" render={({ field }) => (
+                        <FormItem><FormLabel>Subheadline</FormLabel><FormControl><Textarea {...field} placeholder="100% आयुर्वेदिक देखभाल..." /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField control={form.control} name="originalPrice" render={({ field }) => (
+                            <FormItem><FormLabel>Original Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="currentPrice" render={({ field }) => (
+                            <FormItem><FormLabel>Offer Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </div>
+                    <FormField control={form.control} name="ctaText" render={({ field }) => (
+                        <FormItem><FormLabel>Button Text</FormLabel><FormControl><Input {...field} placeholder="अभी ऑर्डर करें" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </div>
                 <Button type="submit" disabled={isPending} className="w-full">
                     {isPending ? 'Creating Campaign...' : 'Create Campaign'}
                 </Button>

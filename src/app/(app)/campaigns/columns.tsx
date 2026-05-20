@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,10 +14,36 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { buildPublicUrl } from '@/lib/utils';
 import type { Campaign } from '@/types';
-import { format } from 'date-fns';
 
 const CampaignActions = ({ campaign }: { campaign: Campaign }) => {
+  const { toast } = useToast();
+
+  const copyText = async (value: string, successMessage: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = value;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'absolute';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+
+      toast({ title: 'Copied', description: successMessage });
+    } catch (error) {
+      console.error('COPY_CAMPAIGN_VALUE_FAILED:', error);
+      toast({ variant: 'destructive', title: 'Copy failed', description: 'Please try again or copy manually.' });
+    }
+  };
+
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -27,9 +54,14 @@ const CampaignActions = ({ campaign }: { campaign: Campaign }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(campaign.id)}>
+          <DropdownMenuItem onClick={() => copyText(campaign.id, 'Campaign ID copied to clipboard.')}>
             Copy campaign ID
           </DropdownMenuItem>
+          {campaign.landingPath && (
+            <DropdownMenuItem onClick={() => copyText(buildPublicUrl(campaign.landingPath), 'Landing page link copied to clipboard.')}>
+              Copy landing page link
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
   );
@@ -72,6 +104,31 @@ export const columns: ColumnDef<Campaign>[] = [
     cell: ({ row }) => <div className="font-medium">{row.getValue('name')}</div>
   },
   {
+    id: 'view',
+    header: 'View',
+    cell: ({ row }) => {
+      const campaign = row.original;
+      const landingUrl = buildPublicUrl(campaign.landingPath);
+      return (
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="rounded-xl">
+            <Link href={`/campaigns/${campaign.id}`}>Open</Link>
+          </Button>
+          {campaign.landingPath && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={() => window.open(landingUrl, '_blank', 'noopener,noreferrer')}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      );
+    },
+  },
+  {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => {
@@ -88,6 +145,15 @@ export const columns: ColumnDef<Campaign>[] = [
     header: 'Type',
   },
   {
+    accessorKey: 'landingPath',
+    header: 'Landing Link',
+    cell: ({ row }) => {
+      const landingPath = row.original.landingPath;
+      if (!landingPath) return <span className="text-muted-foreground">Disabled</span>;
+      return <span className="text-xs font-medium">{landingPath}</span>;
+    },
+  },
+  {
     accessorKey: 'budget',
     header: () => <div className="text-right">Budget</div>,
     cell: ({ row }) => {
@@ -101,14 +167,9 @@ export const columns: ColumnDef<Campaign>[] = [
     },
   },
   {
-    accessorKey: 'startDate',
-    header: 'Start Date',
-     cell: ({ row }) => format(new Date(row.getValue('startDate')), 'PP'),
-  },
-  {
-    accessorKey: 'endDate',
-    header: 'End Date',
-     cell: ({ row }) => format(new Date(row.getValue('endDate')), 'PP'),
+    accessorKey: 'budgetInterval',
+    header: 'Budget Type',
+    cell: ({ row }) => <Badge variant="outline">{(row.getValue('budgetInterval') as string) || 'Daily'}</Badge>,
   },
   {
     id: 'actions',

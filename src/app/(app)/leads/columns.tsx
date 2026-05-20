@@ -1,8 +1,8 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, ExternalLink, Loader2, ClipboardList, BellRing } from 'lucide-react';
+import { ArrowUpDown, Loader2, BellRing, PencilLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -20,6 +20,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 const statuses: LeadStatus[] = ['new', 'intrested', 'CNP', 'done', 'not intrested'];
 
@@ -35,135 +46,151 @@ const normalizeStatus = (status: string): LeadStatus => {
   return map[status.toLowerCase()] || (status as LeadStatus);
 };
 
-const getPrefilledGoogleFormUrl = (lead: Lead, currentUser: UserProfile | null) => {
-  const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSfAnhtLkqtbd408RGQ31Ad9m6EfwE3dx_UmtPFgI-yyuQykug/viewform';
-  const params = new URLSearchParams();
-  
-  params.append('usp', 'pp_url');
-  params.append('entry.1165241773', currentUser?.displayName || ''); // Sale Person
-  params.append('entry.1228229865', lead.fullName || '');             // Customer Name
-  params.append('entry.1741544755', lead.phone || '');                // Phone No.
-  params.append('entry.492500057', lead.email || '');                 // Mail
-  params.append('entry.2001479836', lead.demographicData?.country || ''); // Address/Location
-  params.append('entry.1444985794', normalizeStatus(lead.status));    // Response
-  
-  return `${baseUrl}?${params.toString()}`;
-};
-
-const StatusSelector = ({ lead }: { lead: Lead }) => {
-  const { toast } = useToast();
-  const { currentTeamspace, currentUser } = useApp();
-  const [isPending, startTransition] = useTransition();
-
-  const handleStatusChange = (newStatus: LeadStatus) => {
-    if (!currentTeamspace) return;
-    startTransition(async () => {
-      const result = await updateLeadStatus({
-        leadId: lead.id,
-        teamspaceId: currentTeamspace.id,
-        status: newStatus,
-      });
-
-      if (result.success) {
-        toast({
-          title: 'Stage Transitioned',
-          description: (
-            <div className="flex flex-col gap-3 pt-2">
-              <p className="font-medium">Lead moved to "{newStatus}".</p>
-              <Button variant="default" size="sm" asChild className="herbal-gradient w-fit rounded-xl font-bold shadow-lg">
-                <a href={getPrefilledGoogleFormUrl(lead, currentUser)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4" />
-                  Open Feedback Form
-                </a>
-              </Button>
-            </div>
-          ),
-        });
-      } else {
-        toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
-      }
-    });
-  };
-
-  const currentStatus = normalizeStatus(lead.status);
-
-  return (
-    <div className="flex items-center gap-2">
-      <Select 
-        key={lead.id}
-        disabled={isPending} 
-        value={currentStatus} 
-        onValueChange={(v) => handleStatusChange(v as LeadStatus)}
-      >
-        <SelectTrigger className="h-8 w-[130px] rounded-lg text-[10px] font-black uppercase tracking-widest bg-muted/30 border-none">
-          {isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {statuses.map(s => (
-            <SelectItem key={s} value={s} className="text-[10px] font-black uppercase">{s}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-full" asChild>
-            <a href={getPrefilledGoogleFormUrl(lead, currentUser)} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4" />
-            </a>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent className="rounded-xl font-bold">Feedback Loop</TooltipContent>
-      </Tooltip>
-    </div>
-  );
-};
-
-const ReminderSelector = ({ lead }: { lead: Lead }) => {
+const UpdateLeadDialog = ({ lead }: { lead: Lead }) => {
   const { toast } = useToast();
   const { currentTeamspace } = useApp();
   const [isPending, startTransition] = useTransition();
-  const reminderDays = typeof lead.reminderDays === 'number' ? String(lead.reminderDays) : '0';
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState<LeadStatus>(normalizeStatus(lead.status));
+  const [reminderUnit, setReminderUnit] = useState<'none' | 'hours' | 'days'>(
+    lead.reminderAt ? (lead.reminderUnit || 'days') : 'none'
+  );
+  const [reminderValue, setReminderValue] = useState<string>(
+    lead.reminderValue ? String(lead.reminderValue) : ''
+  );
 
-  const handleReminderChange = (value: string) => {
+  const reminderRequired = status === 'intrested';
+
+  const handleSave = () => {
     if (!currentTeamspace) return;
-    const days = Number(value);
+    const parsedReminderValue = Number(reminderValue || '0');
+
+    if (reminderRequired && (reminderUnit === 'none' || parsedReminderValue <= 0)) {
+      toast({
+        variant: 'destructive',
+        title: 'Reminder Required',
+        description: 'Choose hours or days and enter a valid reminder time for interested leads.',
+      });
+      return;
+    }
 
     startTransition(async () => {
-      const result = await setLeadReminder({
+      const statusResult = await updateLeadStatus({
         leadId: lead.id,
         teamspaceId: currentTeamspace.id,
-        reminderDays: days,
+        status,
       });
 
-      if (result.success) {
-        toast({
-          title: days === 0 ? 'Reminder Cleared' : 'Reminder Scheduled',
-          description: days === 0
-            ? `Reminder removed for ${lead.fullName}.`
-            : `Team leader will be reminded in ${days} day${days === 1 ? '' : 's'} for ${lead.fullName}.`,
-        });
-      } else {
-        toast({ variant: 'destructive', title: 'Reminder Failed', description: result.error });
+      if (!statusResult.success) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: statusResult.error });
+        return;
       }
+
+      const reminderResult = await setLeadReminder({
+        leadId: lead.id,
+        teamspaceId: currentTeamspace.id,
+        reminderValue: reminderRequired ? parsedReminderValue : 0,
+        reminderUnit: reminderRequired && reminderUnit !== 'none' ? reminderUnit : 'days',
+      });
+
+      if (!reminderResult.success) {
+        toast({ variant: 'destructive', title: 'Reminder Failed', description: reminderResult.error });
+        return;
+      }
+
+      toast({
+        title: 'Lead Updated',
+        description: reminderRequired
+          ? `${lead.fullName} moved to ${status} with a ${parsedReminderValue} ${reminderUnit} reminder.`
+          : `${lead.fullName} moved to ${status}.`,
+      });
+      setOpen(false);
     });
   };
 
   return (
-    <Select disabled={isPending} value={reminderDays} onValueChange={handleReminderChange}>
-      <SelectTrigger className="h-8 w-[116px] rounded-lg text-[10px] font-black uppercase tracking-widest bg-muted/30 border-none">
-        {isPending ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <BellRing className="mr-2 h-3 w-3 text-primary" />}
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="0" className="text-[10px] font-black uppercase">No Reminder</SelectItem>
-        {Array.from({ length: 15 }, (_, index) => index + 1).map(day => (
-          <SelectItem key={day} value={String(day)} className="text-[10px] font-black uppercase">
-            {day} Day{day === 1 ? '' : 's'}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 rounded-xl border-primary/10 bg-background font-black uppercase tracking-[0.15em] text-[10px]">
+          <PencilLine className="mr-2 h-3.5 w-3.5" />
+          Update
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md rounded-[2rem] border border-border/60 bg-card p-8 shadow-2xl">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-2xl font-black text-primary">Update Lead</DialogTitle>
+          <DialogDescription className="text-base font-medium">
+            Move {lead.fullName} to the next stage and schedule a reminder when needed.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label className="text-[11px] font-black uppercase tracking-[0.25em] text-muted-foreground">
+              Stage
+            </Label>
+            <Select disabled={isPending} value={status} onValueChange={(value) => setStatus(value as LeadStatus)}>
+              <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-none font-bold">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((item) => (
+                  <SelectItem key={item} value={item} className="font-bold">
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {reminderRequired && (
+            <div className="rounded-2xl border border-primary/10 bg-muted/20 p-5 space-y-4">
+              <div className="flex items-center gap-2 text-primary">
+                <BellRing className="h-4 w-4" />
+                <p className="text-sm font-black uppercase tracking-[0.2em]">Reminder</p>
+              </div>
+              <div className="grid grid-cols-[1fr_120px] gap-3">
+                <Input
+                  type="number"
+                  min="1"
+                  value={reminderValue}
+                  onChange={(event) => setReminderValue(event.target.value)}
+                  placeholder="Enter time"
+                  className="h-11 rounded-xl border-none bg-background shadow-inner font-bold"
+                />
+                <Select
+                  disabled={isPending}
+                  value={reminderUnit}
+                  onValueChange={(value) => setReminderUnit(value as 'none' | 'hours' | 'days')}
+                >
+                  <SelectTrigger className="h-11 rounded-xl border-none bg-background shadow-inner font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hours">Hours</SelectItem>
+                    <SelectItem value="days">Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs font-medium text-muted-foreground">
+                Team leaders will keep seeing the popup reminder until they close it.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="mt-4">
+          <Button
+            onClick={handleSave}
+            disabled={isPending}
+            className="w-full h-12 rounded-xl herbal-gradient font-black"
+          >
+            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Save Update
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -278,14 +305,9 @@ export const columns: ColumnDef<Lead>[] = [
     cell: ({ row }) => <Badge variant="secondary" className="text-[9px] font-black uppercase">{row.getValue('source') || 'Direct'}</Badge>
   },
   {
-    accessorKey: 'reminderDays',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Reminder</div>,
-    cell: ({ row }) => <ReminderSelector lead={row.original} />
-  },
-  {
-    accessorKey: 'status',
-    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Stage</div>,
-    cell: ({ row }) => <StatusSelector lead={row.original} />
+    id: 'update',
+    header: () => <div className="font-black uppercase tracking-widest text-[10px]">Update</div>,
+    cell: ({ row }) => <UpdateLeadDialog lead={row.original} />
   },
   {
     accessorKey: 'assignedToIds',
