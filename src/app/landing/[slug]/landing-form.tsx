@@ -5,7 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-export function LandingForm({ slug, ctaText }: { slug: string; ctaText: string }) {
+type LandingFormProps = {
+  slug: string;
+  ctaText: string;
+  campaignId?: string;
+  teamspaceId?: string;
+  previewMode?: boolean;
+};
+
+export function LandingForm({ slug, ctaText, campaignId, teamspaceId, previewMode = false }: LandingFormProps) {
   const [form, setForm] = useState({
     fullName: '',
     phone: '',
@@ -19,16 +27,24 @@ export function LandingForm({ slug, ctaText }: { slug: string; ctaText: string }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+
+    if (previewMode) {
+      alert('यह केवल प्रीव्यू पेज है। लाइव लीड कैप्चर के लिए CRM से असली कैंपेन लिंक बनाइए।');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/campaign-leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, ...form }),
+        body: JSON.stringify({ slug, campaignId, teamspaceId, ...form }),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        throw new Error('Submission failed');
+        throw new Error(result?.error || 'Submission failed');
       }
 
       setSubmitted(true);
@@ -40,8 +56,8 @@ export function LandingForm({ slug, ctaText }: { slug: string; ctaText: string }
         age: '',
         painPoint: '',
       });
-    } catch {
-      alert('कृपया दोबारा कोशिश करें।');
+    } catch (error: any) {
+      alert(error?.message || 'कृपया दोबारा कोशिश करें।');
     } finally {
       setIsSubmitting(false);
     }
@@ -104,7 +120,9 @@ export function LandingForm({ slug, ctaText }: { slug: string; ctaText: string }
         {isSubmitting ? 'भेजा जा रहा है...' : ctaText}
       </Button>
       <p className="text-center text-sm font-medium text-muted-foreground">
-        आपकी जानकारी सीधे एडमिन CRM में सुरक्षित रूप से जाएगी।
+        {previewMode
+          ? 'यह केवल प्रीव्यू है। लाइव कैंपेन बनने पर जानकारी सीधे एडमिन CRM में जाएगी।'
+          : 'आपकी जानकारी सीधे एडमिन CRM में सुरक्षित रूप से जाएगी।'}
       </p>
     </form>
   );
