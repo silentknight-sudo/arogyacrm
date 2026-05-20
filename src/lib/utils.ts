@@ -11,7 +11,7 @@ export function getPublicAppUrl() {
     return configuredUrl.replace(/\/+$/, "");
   }
 
-  return "https://studio-3238704164-621f1.us-central1.hosted.app";
+  return "https://studio--studio-3238704164-621f1.us-central1.hosted.app";
 }
 
 export function buildPublicUrl(path?: string | null) {
