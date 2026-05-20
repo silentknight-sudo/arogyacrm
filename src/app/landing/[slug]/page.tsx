@@ -22,6 +22,8 @@ export default async function LandingPage({ params }: { params: { slug: string }
   const slug = params.slug;
   let campaign: any = null;
   let previewMode = false;
+  let campaignId = '';
+  let teamspaceId = '';
 
   if (slug === 'your-slug') {
     campaign = previewCampaign;
@@ -30,7 +32,9 @@ export default async function LandingPage({ params }: { params: { slug: string }
     try {
       const campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
       if (!campaignSnap.empty) {
+        campaignId = campaignSnap.docs[0].id;
         campaign = campaignSnap.docs[0].data() as any;
+        teamspaceId = campaign.teamspaceId || '';
       }
     } catch (error) {
       previewMode = true;
@@ -48,7 +52,7 @@ export default async function LandingPage({ params }: { params: { slug: string }
       <section className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
         {previewMode && (
           <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-900 shadow-sm">
-            This is a landing page preview. Create a campaign from the CRM to generate a real landing slug and live lead capture.
+            यह एक प्रीव्यू पेज है। लाइव लीड कैप्चर के लिए CRM से असली कैंपेन लिंक बनाइए।
           </div>
         )}
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] items-start">
@@ -104,7 +108,13 @@ export default async function LandingPage({ params }: { params: { slug: string }
           </div>
 
           <div className="sticky top-6 space-y-6">
-            <LandingForm slug={slug} ctaText={campaign.ctaText || 'अभी ऑर्डर करें'} />
+            <LandingForm
+              slug={slug}
+              ctaText={campaign.ctaText || 'अभी ऑर्डर करें'}
+              campaignId={campaignId}
+              teamspaceId={teamspaceId}
+              previewMode={previewMode}
+            />
             <div className="rounded-[2rem] border border-emerald-200 bg-white/90 p-6 shadow-xl">
               <p className="text-lg font-black text-[#184f24]">कैश ऑन डिलीवरी उपलब्ध</p>
               <p className="mt-3 text-base font-medium text-[#36543e]">
