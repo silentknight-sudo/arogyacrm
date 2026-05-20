@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal, ArrowUpDown, Trash2, KeyRound } from 'lucide-react';
@@ -182,13 +183,13 @@ export const columns: ColumnDef<UserProfile>[] = [
     cell: ({ row }) => {
         const user = row.original;
         return (
-            <div className="flex items-center gap-2">
+            <Link href={`/team/${user.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <Avatar className="h-8 w-8">
                     <AvatarImage src={user.avatar} alt={user.displayName} />
                     <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <span className="font-medium">{user.displayName}</span>
-            </div>
+                <span className="font-medium underline-offset-4 hover:underline">{user.displayName}</span>
+            </Link>
         )
     }
   },

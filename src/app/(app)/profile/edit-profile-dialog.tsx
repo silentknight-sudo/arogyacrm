@@ -32,6 +32,8 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 const formSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
   avatar: z.string().url('Please enter a valid URL.').optional().or(z.literal('')),
+  phone: z.string().optional(),
+  dateOfBirth: z.string().optional(),
 });
 
 type EditProfileDialogProps = {
@@ -51,6 +53,8 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
     defaultValues: {
       displayName: currentUser?.displayName || '',
       avatar: currentUser?.avatar || '',
+      phone: currentUser?.phone || '',
+      dateOfBirth: currentUser?.dateOfBirth || '',
     },
   });
   
@@ -59,6 +63,8 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
         form.reset({
             displayName: currentUser.displayName || '',
             avatar: currentUser.avatar || '',
+            phone: currentUser.phone || '',
+            dateOfBirth: currentUser.dateOfBirth || '',
         });
     }
   }, [currentUser, form, open]);
@@ -71,7 +77,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
     }
     startTransition(async () => {
       try {
-        const { displayName, avatar } = values;
+        const { displayName, avatar, phone, dateOfBirth } = values;
 
         // Update Firebase Auth user profile
         await updateProfile(auth.currentUser!, { displayName, photoURL: avatar });
@@ -81,6 +87,8 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
         await updateDoc(userDocRef, {
           displayName,
           avatar,
+          phone,
+          dateOfBirth,
           updatedAt: serverTimestamp(),
         });
         
@@ -118,6 +126,12 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
             )} />
              <FormField control={form.control} name="avatar" render={({ field }) => (
                 <FormItem><FormLabel>Avatar URL (Optional)</FormLabel><FormControl><Input placeholder="https://example.com/avatar.png" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="phone" render={({ field }) => (
+                <FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input placeholder="+91 9876543210" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="dateOfBirth" render={({ field }) => (
+                <FormItem><FormLabel>Date of Birth</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <Button type="submit" disabled={isPending} className="w-full">
                 {isPending ? 'Saving...' : 'Save Changes'}

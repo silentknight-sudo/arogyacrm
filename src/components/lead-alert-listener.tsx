@@ -5,11 +5,12 @@ import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
 import { collection, query, onSnapshot, limit, orderBy } from 'firebase/firestore';
 import { X, BellRing } from 'lucide-react';
+import type { Notification } from '@/types';
 
 export function LeadAlertListener() {
   const { currentUser, currentTeamspace } = useApp();
   const firestore = useFirestore();
-  const [activeAlert, setActiveAlert] = useState<string | null>(null);
+  const [activeAlert, setActiveAlert] = useState<Notification | null>(null);
   const isInitialLoad = useRef(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -43,14 +44,16 @@ export function LeadAlertListener() {
           const data = change.doc.data();
           
           // Trigger the high-priority visual alert and audio ping
-          setActiveAlert(data.description || data.title || 'Strategic Assignment Received');
+          setActiveAlert({
+            id: change.doc.id,
+            title: data.title || 'Strategic Assignment Received',
+            description: data.description || data.title || 'Strategic Assignment Received',
+            type: data.type || 'system',
+            timestamp: data.timestamp || new Date().toISOString(),
+            read: !!data.read,
+            link: data.link,
+          });
           audioRef.current?.play().catch(() => {});
-          
-          const timer = setTimeout(() => {
-            setActiveAlert(null);
-          }, 8000);
-          
-          return () => clearTimeout(timer);
         }
       });
     });
@@ -67,8 +70,10 @@ export function LeadAlertListener() {
           <BellRing className="h-6 w-6 text-white" />
         </div>
         <div className="flex-1 text-white">
-          <p className="font-black uppercase tracking-[0.2em] text-[10px] opacity-70 mb-0.5">Action Alert</p>
-          <p className="font-bold text-lg leading-tight tracking-tight">{activeAlert}</p>
+          <p className="font-black uppercase tracking-[0.2em] text-[10px] opacity-70 mb-0.5">
+            {activeAlert.type === 'lead_reminder' ? 'Reminder Alert' : 'Action Alert'}
+          </p>
+          <p className="font-bold text-lg leading-tight tracking-tight">{activeAlert.description}</p>
         </div>
         <button 
           onClick={() => setActiveAlert(null)}

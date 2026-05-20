@@ -6,11 +6,10 @@ import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
 import type { Lead } from '@/types';
 
-function getReminderIsoDate(value: any) {
+function getReminderDate(value: any) {
   if (!value) return null;
-  if (typeof value === 'string') return value.slice(0, 10);
-  if (value?.toDate) return value.toDate().toISOString().slice(0, 10);
-  return new Date(value).toISOString().slice(0, 10);
+  if (value?.toDate) return value.toDate();
+  return new Date(value);
 }
 
 export function LeadReminderListener() {
@@ -33,12 +32,13 @@ export function LeadReminderListener() {
         hasPrimed.current = true;
       }
 
-      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
       const dueLeads = snapshot.docs
         .map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Lead))
         .filter(lead =>
-          (lead.reminderDays || 0) > 0 &&
-          getReminderIsoDate(lead.reminderAt) === today &&
+          (lead.reminderValue || 0) > 0 &&
+          !!getReminderDate(lead.reminderAt) &&
+          (getReminderDate(lead.reminderAt) as Date) <= now &&
           !lead.reminderNotifiedAt
         );
 

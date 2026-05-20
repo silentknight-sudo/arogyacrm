@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useApp } from '@/context/app-context';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -12,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { EditProfileDialog } from './edit-profile-dialog';
 import { ChangePasswordDialog } from '../admin/users/change-password-dialog';
+import type { Lead, UserProfile } from '@/types';
+import { RolePerformancePanel } from '@/components/role-performance-panel';
 
 function ProfileDetailRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
@@ -24,8 +28,24 @@ function ProfileDetailRow({ label, value }: { label: string; value: React.ReactN
 
 
 export default function ProfilePage() {
-  const { currentUser, logout, isUserLoading, availableTeamspaces, areTeamspacesLoading } = useApp();
+  const { currentUser, logout, isUserLoading, availableTeamspaces, areTeamspacesLoading, currentTeamspace } = useApp();
+  const firestore = useFirestore();
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!currentTeamspace?.id) return null;
+    return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
+  }, [firestore, currentTeamspace?.id]);
+
+  const leadsQuery = useMemoFirebase(() => {
+    if (!currentTeamspace?.id) return null;
+    return query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'));
+  }, [firestore, currentTeamspace?.id]);
+
+  const { data: usersData } = useCollection<UserProfile>(usersQuery);
+  const { data: leadsData } = useCollection<Lead>(leadsQuery);
+  const users = usersData || [];
+  const leads = leadsData || [];
 
   if (isUserLoading || !currentUser) {
     return (
@@ -100,6 +120,10 @@ export default function ProfilePage() {
             <Separator className="opacity-50" />
              <ProfileDetailRow label="System Role" value={<Badge variant="outline" className="capitalize font-black gold-glow bg-accent/5 border-accent/20 text-accent-foreground px-4 py-1"><Shield className="mr-2 h-3 w-3" /> {currentUser.role.replace(/_/g, ' ')}</Badge>} />
             <Separator className="opacity-50" />
+            <ProfileDetailRow label="Phone Number" value={currentUser.phone || 'Not added yet'} />
+            <Separator className="opacity-50" />
+            <ProfileDetailRow label="Date of Birth" value={currentUser.dateOfBirth || 'Not added yet'} />
+            <Separator className="opacity-50" />
             <ProfileDetailRow 
                 label="Assigned Workspaces" 
                 value={
@@ -140,6 +164,8 @@ export default function ProfilePage() {
             </Button>
         </CardFooter>
       </Card>
+
+      <RolePerformancePanel subject={currentUser} leads={leads} users={users} />
 
       <ChangePasswordDialog 
         open={isPasswordDialogOpen} 

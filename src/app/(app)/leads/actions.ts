@@ -178,26 +178,33 @@ export async function updateLeadStatus(values: {
 export async function setLeadReminder(values: {
   leadId: string,
   teamspaceId: string,
-  reminderDays: number,
+  reminderValue: number,
+  reminderUnit: 'hours' | 'days',
 }) {
   try {
-    const { leadId, teamspaceId, reminderDays } = values;
+    const { leadId, teamspaceId, reminderValue, reminderUnit } = values;
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
 
-    if (reminderDays <= 0) {
+    if (reminderValue <= 0) {
       await leadRef.update({
-        reminderDays: 0,
+        reminderValue: 0,
+        reminderUnit: null,
         reminderAt: null,
         reminderNotifiedAt: null,
         updatedAt: FieldValue.serverTimestamp(),
       });
     } else {
       const reminderDate = new Date();
-      reminderDate.setHours(9, 0, 0, 0);
-      reminderDate.setDate(reminderDate.getDate() + reminderDays);
+      if (reminderUnit === 'hours') {
+        reminderDate.setHours(reminderDate.getHours() + reminderValue);
+      } else {
+        reminderDate.setDate(reminderDate.getDate() + reminderValue);
+        reminderDate.setHours(9, 0, 0, 0);
+      }
 
       await leadRef.update({
-        reminderDays,
+        reminderValue,
+        reminderUnit,
         reminderAt: reminderDate.toISOString(),
         reminderNotifiedAt: null,
         updatedAt: FieldValue.serverTimestamp(),
