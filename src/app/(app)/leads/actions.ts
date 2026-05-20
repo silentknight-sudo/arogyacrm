@@ -1,6 +1,7 @@
 'use server';
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
+import { sendMetaCapiEvent } from '@/lib/meta-capi';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { LeadStatus } from '@/types';
@@ -9,6 +10,23 @@ import type { LeadStatus } from '@/types';
  * BORN-AGAIN VELOCITY PROTOCOL
  * Every assignment strictly resets the createdAt timestamp to force top-of-pipeline sorting.
  */
+
+function mapLeadStatusToMetaEvent(status: LeadStatus): string | null {
+  switch (status) {
+    case 'new':
+      return 'Lead';
+    case 'intrested':
+      return 'QualifiedLead';
+    case 'CNP':
+      return 'Contact';
+    case 'done':
+      return 'Converted';
+    case 'not intrested':
+      return null;
+    default:
+      return null;
+  }
+}
 
 export async function assignLead(values: { 
   leadId: string, 
@@ -116,10 +134,33 @@ export async function updateLeadStatus(values: {
 }) {
   try {
     const { leadId, teamspaceId, status } = values;
-    await adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId).update({
+    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+    const leadSnap = await leadRef.get();
+    const leadData = leadSnap.data();
+
+    await leadRef.update({
       status,
       updatedAt: FieldValue.serverTimestamp(),
     });
+
+    const metaEventName = mapLeadStatusToMetaEvent(status);
+
+    if (leadData?.metaLeadId && metaEventName) {
+      await sendMetaCapiEvent({
+        eventName: metaEventName,
+        leadId: leadData.metaLeadId,
+        email: leadData.email || '',
+        phone: leadData.phone || '',
+        firstName: leadData.firstName || '',
+        lastName: leadData.lastName || '',
+        customData: {
+          crm_status: status,
+          teamspace_id: teamspaceId,
+          source: leadData.source || '',
+        },
+      });
+    }
+
     revalidatePath('/leads');
     return { success: true };
   } catch (error: any) {

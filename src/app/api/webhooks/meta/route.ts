@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { adminDb, FieldValue } from '@/firebase/admin';
+import { sendMetaCapiEvent } from '@/lib/meta-capi';
 
 /**
  * META DIRECT INGESTION ENDPOINT
@@ -87,7 +88,7 @@ async function processMetaLead(metaLeadId: string, webhookValue?: MetaLeadgenCha
   const accessToken = process.env.META_ACCESS_TOKEN;
   if (!accessToken) return;
 
-  const res = await fetch(`https://graph.facebook.com/v21.0/${metaLeadId}?access_token=${accessToken}`);
+  const res = await fetch(`https://graph.facebook.com/v25.0/${metaLeadId}?access_token=${accessToken}`);
   const data = await res.json();
   if (data.error) {
     console.error('META_LEAD_FETCH_ERROR:', data.error);
@@ -155,5 +156,19 @@ async function processMetaLead(metaLeadId: string, webhookValue?: MetaLeadgenCha
     },
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  await sendMetaCapiEvent({
+    eventName: 'Lead',
+    leadId: metaLeadId,
+    email: getVal('email') || '',
+    phone: normalizedPhone,
+    firstName,
+    lastName,
+    customData: {
+      source: 'meta_ads_webhook',
+      teamspace_id: tsId,
+      meta_form_id: webhookValue?.form_id || data.form_id || '',
+    },
   });
 }

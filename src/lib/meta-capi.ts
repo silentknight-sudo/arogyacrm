@@ -59,7 +59,7 @@ export async function sendMetaCapiEvent(event: MetaEventData) {
       ],
     };
 
-    const response = await fetch(`https://graph.facebook.com/v21.0/${datasetId}/events?access_token=${accessToken}`, {
+    const response = await fetch(`https://graph.facebook.com/v25.0/${datasetId}/events?access_token=${accessToken}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
