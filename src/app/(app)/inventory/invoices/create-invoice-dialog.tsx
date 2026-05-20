@@ -77,7 +77,7 @@ export function CreateInvoiceDialog({ children, salesOrders, isLoading }: Create
     if (watchedSalesOrderId) {
       const selectedOrder = salesOrders.find(so => so.id === watchedSalesOrderId);
       if (selectedOrder) {
-        form.setValue('lineItems', selectedOrder.lineItems);
+        form.setValue('lineItems', selectedOrder.lineItems || []);
       }
     }
   }, [watchedSalesOrderId, salesOrders, form]);

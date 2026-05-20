@@ -143,7 +143,11 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
                         </Label>
                       </div>
                     )) : (
-                        <div className="text-center text-xs text-muted-foreground py-8 italic">No sales executives available in this workspace.</div>
+                        <div className="text-center text-xs text-muted-foreground py-8 italic">
+                          {currentUser?.role === 'admin'
+                            ? 'No team leaders available in this workspace.'
+                            : 'No sales executives available in this workspace.'}
+                        </div>
                     )}
                     </div>
                   </ScrollArea>

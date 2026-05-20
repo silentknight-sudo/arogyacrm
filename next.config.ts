@@ -1,7 +1,9 @@
 import type {NextConfig} from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: __dirname,
   serverExternalPackages: [
     'firebase-admin', 
     '@google-cloud/firestore',
@@ -13,6 +15,7 @@ const nextConfig: NextConfig = {
   ],
   typescript: {
     ignoreBuildErrors: false,
+    tsconfigPath: path.join(__dirname, 'tsconfig.json'),
   },
   eslint: {
     ignoreDuringBuilds: false,
@@ -32,6 +35,13 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      '@': path.resolve(__dirname, 'src'),
+    };
+    return config;
   },
 };
 

@@ -129,7 +129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 
   const [currentTeamspace, setCurrentTeamspaceState] = useState<Teamspace | null>(null);
-  const [theme, setThemeState] = useState<Theme>('system');
+  const [theme, setThemeState] = useState<Theme>('light');
 
   useEffect(() => {
     if (!isUserLoading && availableTeamspaces && availableTeamspaces.length > 0) {
@@ -143,21 +143,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('arogya-crm-theme') as Theme | null;
-    if (storedTheme && ['light', 'dark', 'system'].includes(storedTheme)) {
+    if (storedTheme === 'light' || storedTheme === 'dark') {
       setThemeState(storedTheme);
+      return;
     }
+
+    localStorage.setItem('arogya-crm-theme', 'light');
+    setThemeState('light');
   }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
 
-    if (theme === 'system') {
-        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        root.classList.add(systemTheme);
-    } else {
-        root.classList.add(theme);
-    }
+    root.classList.add(theme === 'dark' ? 'dark' : 'light');
   }, [theme]);
 
   const setCurrentTeamspace = (teamspace: Teamspace) => {

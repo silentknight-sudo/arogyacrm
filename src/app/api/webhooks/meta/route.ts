@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { adminDb, FieldValue } from '@/firebase/admin';
+import { sendMetaCapiEvent } from '@/lib/meta-capi';
 
 /**
  * META DIRECT INGESTION ENDPOINT
@@ -56,7 +57,6 @@ type MetaLeadgenChangeValue = {
 function isValidMetaSignature(rawBody: string, signatureHeader: string | null): boolean {
   const appSecret = process.env.META_APP_SECRET;
 
-  // Allow local/dev setups to work without signature enforcement if no app secret is configured.
   if (!appSecret) return true;
   if (!signatureHeader?.startsWith('sha256=')) return false;
 
@@ -88,7 +88,7 @@ async function processMetaLead(metaLeadId: string, webhookValue?: MetaLeadgenCha
   const accessToken = process.env.META_ACCESS_TOKEN;
   if (!accessToken) return;
 
-  const res = await fetch(`https://graph.facebook.com/v21.0/${metaLeadId}?access_token=${accessToken}`);
+  const res = await fetch(`https://graph.facebook.com/v25.0/${metaLeadId}?access_token=${accessToken}`);
   const data = await res.json();
   if (data.error) {
     console.error('META_LEAD_FETCH_ERROR:', data.error);
@@ -159,4 +159,18 @@ async function processMetaLead(metaLeadId: string, webhookValue?: MetaLeadgenCha
   };
 
   await leadRef.set(newLeadData);
+
+  await sendMetaCapiEvent({
+    eventName: 'Lead',
+    leadId: metaLeadId,
+    email: getVal('email') || '',
+    phone: normalizedPhone,
+    firstName,
+    lastName,
+    customData: {
+      source: 'meta_ads_webhook',
+      teamspace_id: tsId,
+      meta_form_id: webhookValue?.form_id || data.form_id || '',
+    },
+  });
 }

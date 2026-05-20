@@ -82,12 +82,13 @@ export function CreatePurchaseOrderDialog({ children, products, users, isLoading
     const product = products.find(p => p.id === productId);
     if (product) {
       const currentItem = fields[index];
+      const unitPrice = product.price ?? 0;
       update(index, {
         ...currentItem,
         productId: product.id,
         productName: product.name,
-        unitPrice: product.price,
-        subtotal: product.price * (currentItem.quantity || 1),
+        unitPrice,
+        subtotal: unitPrice * (currentItem.quantity || 1),
       });
     }
   };

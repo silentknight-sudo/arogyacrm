@@ -1,13 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { Inter } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { AppProvider } from '@/context/app-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const viewport: Viewport = {
   themeColor: '#2D5A27',
@@ -82,8 +79,7 @@ export default function RootLayout({
       </head>
       <body
         className={cn(
-          'min-h-screen bg-background font-sans antialiased',
-          inter.variable
+          'min-h-screen bg-background font-sans antialiased'
         )}
       >
         <FirebaseClientProvider>

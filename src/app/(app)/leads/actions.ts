@@ -1,6 +1,7 @@
 'use server';
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
+import { sendMetaCapiEvent } from '@/lib/meta-capi';
 import { revalidatePath } from 'next/cache';
 import type { LeadStatus } from '@/types';
 
@@ -9,11 +10,28 @@ import type { LeadStatus } from '@/types';
  * Every assignment strictly resets the createdAt timestamp to force top-of-pipeline sorting.
  */
 
-export async function assignLead(values: { 
-  leadId: string, 
-  teamspaceId: string, 
-  newAssignedToIds: string[], 
-  currentUserId: string 
+function mapLeadStatusToMetaEvent(status: LeadStatus): string | null {
+  switch (status) {
+    case 'new':
+      return 'Lead';
+    case 'intrested':
+      return 'QualifiedLead';
+    case 'CNP':
+      return 'Contact';
+    case 'done':
+      return 'Converted';
+    case 'not intrested':
+      return null;
+    default:
+      return null;
+  }
+}
+
+export async function assignLead(values: {
+  leadId: string,
+  teamspaceId: string,
+  newAssignedToIds: string[],
+  currentUserId: string
 }) {
   try {
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = values;
@@ -21,19 +39,19 @@ export async function assignLead(values: {
     const leadDoc = await leadRef.get();
     const leadData = leadDoc.data();
 
-    // Identify Initial Distribution (Leadership moving fresh inventory)
     const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
     const actorRole = actorDoc.data()?.role;
-    const isInitialDist = (actorRole === 'admin' || actorRole === 'sales_team_lead') && leadData?.status === 'new';
+    const isLeaderAction = actorRole === 'admin' || actorRole === 'sales_team_lead';
+    const isInitialDist = isLeaderAction && leadData?.status === 'new';
 
     await leadRef.update({
       assignedToIds: newAssignedToIds,
+      status: isLeaderAction ? 'new' : leadData?.status,
       reassigned: isInitialDist ? false : true,
-      createdAt: FieldValue.serverTimestamp(), // Date Refresh forces top-of-stack
+      createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // Notify Specialists
     for (const uid of newAssignedToIds) {
       if (uid === currentUserId) continue;
       await adminDb.collection('users').doc(uid).collection('notifications').add({
@@ -42,7 +60,7 @@ export async function assignLead(values: {
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,
-        link: '/leads'
+        link: '/leads',
       });
     }
 
@@ -53,27 +71,33 @@ export async function assignLead(values: {
   }
 }
 
-export async function bulkAssignLeads(values: { 
-  leadIds: string[], 
-  teamspaceId: string, 
-  newAssignedToIds: string[], 
-  currentUserId: string 
+export async function bulkAssignLeads(values: {
+  leadIds: string[],
+  teamspaceId: string,
+  newAssignedToIds: string[],
+  currentUserId: string
 }) {
   try {
-    const { leadIds, teamspaceId, newAssignedToIds } = values;
-    const batch = adminDb.batch();
+    const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = values;
+    const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
+    const actorRole = actorDoc.data()?.role;
+    const isLeaderAction = actorRole === 'admin' || actorRole === 'sales_team_lead';
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
 
     for (const id of leadIds) {
-      batch.update(leadsRef.doc(id), {
+      const leadDoc = await leadsRef.doc(id).get();
+      const leadData = leadDoc.data();
+      const isInitialDist = isLeaderAction && leadData?.status === 'new';
+
+      await leadsRef.doc(id).update({
         assignedToIds: newAssignedToIds,
-        reassigned: true,
-        createdAt: FieldValue.serverTimestamp(), // Born-Again sorting
+        status: isLeaderAction ? 'new' : leadData?.status,
+        reassigned: isInitialDist ? false : true,
+        createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
 
-    await batch.commit();
     revalidatePath('/leads');
     return { success: true };
   } catch (error: any) {
@@ -81,62 +105,10 @@ export async function bulkAssignLeads(values: {
   }
 }
 
-export async function updateLeadStatus(values: { 
-  leadId: string, 
-  teamspaceId: string, 
-  status: LeadStatus 
-}) {
-  try {
-    const { leadId, teamspaceId, status } = values;
-    await adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId).update({
-      status,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    
-    // Automatically trigger deal sync if converted to "done"
-    if (status === 'done') {
-        await syncDealForLead(leadId, teamspaceId);
-    }
-
-    revalidatePath('/leads');
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: handleAdminSDKError(error) };
-  }
-}
-
-export async function syncDealForLead(leadId: string, teamspaceId: string) {
-    try {
-        const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
-        const leadDoc = await leadRef.get();
-        const leadData = leadDoc.data();
-        if (!leadData) return;
-
-        const dealRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('deals').doc();
-        await dealRef.set({
-            id: dealRef.id,
-            leadId: leadId,
-            teamspaceId,
-            name: `${leadData.fullName} - Wellness Deal`,
-            amount: 0,
-            stage: 'new',
-            type: 'Initial Order',
-            closeDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            contactId: leadId,
-            ownerId: leadData.assignedToIds?.[0] || '',
-            lineItems: [],
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-        });
-    } catch (e) {
-        console.error("DEAL_SYNC_FAILURE:", e);
-    }
-}
-
-export async function selfAssignLeads(values: { 
-  leadIds: string[], 
-  teamspaceId: string, 
-  currentUserId: string 
+export async function selfAssignLeads(values: {
+  leadIds: string[],
+  teamspaceId: string,
+  currentUserId: string
 }) {
   try {
     const { leadIds, teamspaceId, currentUserId } = values;
@@ -146,6 +118,7 @@ export async function selfAssignLeads(values: {
     for (const id of leadIds) {
       batch.update(leadsRef.doc(id), {
         assignedToIds: [currentUserId],
+        status: 'new',
         reassigned: true,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -160,16 +133,94 @@ export async function selfAssignLeads(values: {
   }
 }
 
-export async function deleteLeads(values: { 
-  leadIds: string[], 
-  teamspaceId: string, 
-  currentUserId: string 
+export async function updateLeadStatus(values: {
+  leadId: string,
+  teamspaceId: string,
+  status: LeadStatus
+}) {
+  try {
+    const { leadId, teamspaceId, status } = values;
+    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+    const leadSnap = await leadRef.get();
+    const leadData = leadSnap.data();
+
+    await leadRef.update({
+      status,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    const metaEventName = mapLeadStatusToMetaEvent(status);
+
+    if (leadData?.metaLeadId && metaEventName) {
+      await sendMetaCapiEvent({
+        eventName: metaEventName,
+        leadId: leadData.metaLeadId,
+        email: leadData.email || '',
+        phone: leadData.phone || '',
+        firstName: leadData.firstName || '',
+        lastName: leadData.lastName || '',
+        customData: {
+          crm_status: status,
+          teamspace_id: teamspaceId,
+          source: leadData.source || '',
+        },
+      });
+    }
+
+    revalidatePath('/leads');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
+export async function setLeadReminder(values: {
+  leadId: string,
+  teamspaceId: string,
+  reminderDays: number,
+}) {
+  try {
+    const { leadId, teamspaceId, reminderDays } = values;
+    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
+
+    if (reminderDays <= 0) {
+      await leadRef.update({
+        reminderDays: 0,
+        reminderAt: null,
+        reminderNotifiedAt: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      const reminderDate = new Date();
+      reminderDate.setHours(9, 0, 0, 0);
+      reminderDate.setDate(reminderDate.getDate() + reminderDays);
+
+      await leadRef.update({
+        reminderDays,
+        reminderAt: reminderDate.toISOString(),
+        reminderNotifiedAt: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    revalidatePath('/leads');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
+export async function deleteLeads(values: {
+  leadIds: string[],
+  teamspaceId: string,
+  currentUserId: string
 }) {
   try {
     const { leadIds, teamspaceId } = values;
     const batch = adminDb.batch();
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
-    
+
     leadIds.forEach(id => batch.delete(leadsRef.doc(id)));
     await batch.commit();
 
@@ -181,32 +232,32 @@ export async function deleteLeads(values: {
 }
 
 export async function createLead(values: any) {
-    try {
-        const { teamspaceId, creatorId, ...data } = values;
-        const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
-        
-        await leadRef.set({
-            id: leadRef.id,
-            ...data,
-            teamspaceId,
-            assignedToIds: [creatorId],
-            reassigned: false,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-        });
+  try {
+    const { teamspaceId, creatorId, ...data } = values;
+    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
 
-        revalidatePath('/leads');
-        return { success: true };
-    } catch (error: any) {
-        return { success: false, error: handleAdminSDKError(error) };
-    }
+    await leadRef.set({
+      id: leadRef.id,
+      ...data,
+      teamspaceId,
+      assignedToIds: [creatorId],
+      reassigned: false,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    revalidatePath('/leads');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
 }
 
 export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ success: boolean; removedCount: number; error?: string }> {
   try {
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
     const snapshot = await leadsRef.get();
-    
+
     const leadsByPhone: Record<string, any[]> = {};
     snapshot.docs.forEach(doc => {
       const data = doc.data();
@@ -222,11 +273,9 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
 
     Object.values(leadsByPhone).forEach(duplicates => {
       if (duplicates.length > 1) {
-        // Sort by creation date (ascending)
         duplicates.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-        
-        // Keep the first one, delete the rest
         const toDelete = duplicates.slice(1);
+
         toDelete.forEach(d => {
           batch.delete(leadsRef.doc(d.id));
           removedCount++;

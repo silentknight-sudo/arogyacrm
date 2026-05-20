@@ -22,12 +22,16 @@ import { useState, useMemo } from 'react';
 import { useApp } from '@/context/app-context';
 
 function ProductCard({ product }: { product: Product }) {
+  const imageSrc = product.imageUrl || 'https://picsum.photos/640/480';
+  const price = product.price ?? 0;
+  const stock = product.stock ?? product.stockQuantity ?? 0;
+
   return (
     <Card>
       <CardHeader className="p-0">
         <div className="relative h-40 w-full">
             <Image 
-              src={product.imageUrl} 
+              src={imageSrc} 
               alt={product.name} 
               fill 
               style={{objectFit: 'cover'}} 
@@ -38,11 +42,11 @@ function ProductCard({ product }: { product: Product }) {
       </CardHeader>
       <CardContent className="p-4">
         <CardTitle className="text-lg font-semibold tracking-tight">{product.name}</CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">{product.category}</p>
+        <p className="text-sm text-muted-foreground mt-1">{product.category || 'Uncategorized'}</p>
         <div className="flex items-center justify-between mt-4">
-            <span className="text-xl font-bold">₹{product.price.toFixed(2)}</span>
-            <Badge variant={product.stock > 0 ? 'secondary' : 'destructive'}>
-                {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+            <span className="text-xl font-bold">₹{price.toFixed(2)}</span>
+            <Badge variant={stock > 0 ? 'secondary' : 'destructive'}>
+                {stock > 0 ? `${stock} in stock` : 'Out of stock'}
             </Badge>
         </div>
       </CardContent>
@@ -65,7 +69,7 @@ export default function ProductsPage() {
 
   const categories = useMemo(() => {
     if (!products) return [];
-    return [...new Set(products.map(p => p.category))];
+    return [...new Set(products.map(p => p.category).filter((category): category is string => Boolean(category)))];
   }, [products]);
 
   const handleCategoryChange = (category: string, checked: boolean) => {
@@ -77,7 +81,7 @@ export default function ProductsPage() {
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     if (selectedCategories.length === 0) return products;
-    return products.filter(p => selectedCategories.includes(p.category));
+    return products.filter(p => p.category && selectedCategories.includes(p.category));
   }, [products, selectedCategories]);
 
   const isLoading = isUserLoading || isLoadingProducts;
