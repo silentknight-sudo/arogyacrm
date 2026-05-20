@@ -3,7 +3,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { AppProvider } from '@/context/app-context';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 export const viewport: Viewport = {

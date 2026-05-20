@@ -12,10 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Deal, UserProfile, DealStage, Contact, Lead } from '@/types';
+import type { Deal, UserProfile, DealStage } from '@/types';
 import { updateDealStage } from './actions';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

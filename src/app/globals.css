@@ -5,78 +5,97 @@
 @layer base {
   :root {
     --background: 120 20% 98%;
-    --foreground: 120 40% 5%;
+    --foreground: 145 60% 2%;
     --card: 0 0% 100%;
-    --card-foreground: 120 40% 5%;
+    --card-foreground: 145 60% 2%;
     --popover: 0 0% 100%;
-    --popover-foreground: 120 40% 5%;
-    --primary: 142 45% 25%;
+    --popover-foreground: 145 60% 2%;
+    --primary: 145 60% 15%;
     --primary-foreground: 120 20% 98%;
-    --secondary: 120 15% 92%;
-    --secondary-foreground: 142 45% 25%;
-    --muted: 120 10% 94%;
-    --muted-foreground: 120 10% 40%;
-    --accent: 45 90% 45%;
-    --accent-foreground: 120 40% 5%;
-    --destructive: 0 84% 60%;
+    --secondary: 120 20% 90%;
+    --secondary-foreground: 145 60% 15%;
+    --muted: 120 15% 92%;
+    --muted-foreground: 145 50% 25%;
+    --accent: 45 100% 42%;
+    --accent-foreground: 145 60% 2%;
+    --destructive: 0 84% 45%;
     --destructive-foreground: 120 20% 98%;
-    --border: 120 10% 90%;
-    --input: 120 10% 90%;
-    --ring: 142 45% 25%;
+    --border: 145 20% 85%;
+    --input: 145 20% 85%;
+    --ring: 145 60% 15%;
     --radius: 1.25rem;
   }
 
   .dark {
-    --background: 142 50% 3%;
-    --foreground: 120 20% 98%;
-    --card: 142 50% 5%;
-    --card-foreground: 120 20% 98%;
-    --popover: 142 50% 5%;
-    --popover-foreground: 120 20% 98%;
-    --primary: 120 20% 98%;
-    --primary-foreground: 142 45% 25%;
-    --secondary: 142 40% 12%;
-    --secondary-foreground: 120 20% 98%;
-    --muted: 142 40% 12%;
-    --muted-foreground: 120 10% 60%;
-    --accent: 45 90% 55%;
-    --accent-foreground: 142 50% 3%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 120 20% 98%;
-    --border: 142 40% 15%;
-    --input: 142 40% 15%;
-    --ring: 120 20% 98%;
+    --background: 145 60% 2%;
+    --foreground: 120 25% 98%;
+    --card: 145 60% 4%;
+    --card-foreground: 120 25% 98%;
+    --popover: 145 60% 4%;
+    --popover-foreground: 120 25% 98%;
+    --primary: 120 40% 45%;
+    --primary-foreground: 145 60% 2%;
+    --secondary: 145 45% 10%;
+    --secondary-foreground: 120 25% 98%;
+    --muted: 145 45% 12%;
+    --muted-foreground: 120 20% 80%;
+    --accent: 45 100% 50%;
+    --accent-foreground: 145 60% 2%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 120 25% 98%;
+    --border: 145 45% 18%;
+    --input: 145 45% 18%;
+    --ring: 120 40% 45%;
   }
 }
 
 @layer base {
   * { @apply border-border transition-colors duration-200; }
-  body { @apply bg-background text-foreground antialiased font-sans; }
+  body { @apply bg-background text-foreground antialiased font-medium; }
+  h1, h2, h3, h4, h5, h6 { @apply font-black tracking-tight text-primary; }
 }
 
 @layer components {
   .premium-card {
-    @apply bg-card border border-border/40 shadow-[0_10px_40px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-all duration-500 rounded-[2.5rem];
+    @apply bg-card border border-primary/10 shadow-[0_20px_50px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_70px_rgba(0,0,0,0.12)] transition-all duration-500 rounded-3xl;
   }
+
   .herbal-gradient {
-    @apply bg-gradient-to-br from-[#1B3019] via-[#2D5A27] to-[#1B3019] text-white border-none;
+    @apply bg-gradient-to-br from-[#1B3D17] via-[#122A0F] to-[#0A1A08] text-white border-none;
   }
+
   .zen-gradient {
     @apply bg-gradient-to-br from-[#17321F] via-[#245433] to-[#102217] text-white border-none;
   }
+
   .accent-glow {
     @apply shadow-[0_0_30px_rgba(52,211,153,0.22)];
   }
+
   .gold-glow {
-    @apply shadow-[0_0_25px_rgba(212,175,55,0.2)];
+    @apply shadow-[0_0_35px_rgba(234,179,8,0.4)];
   }
+
   .glass-sidebar {
-    @apply bg-card/70 backdrop-blur-3xl border-r border-border/40 shadow-xl;
+    @apply bg-[#040C04] border-r border-white/5 shadow-2xl;
   }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-black tracking-tight text-white/80 hover:text-white hover:bg-white/10 transition-all;
+  }
+
+  .sidebar-link-active {
+    @apply bg-accent text-accent-foreground shadow-2xl shadow-accent/50 font-black scale-105;
+  }
+
   .glass-header {
     @apply sticky top-0 z-50 bg-background/75 backdrop-blur-2xl border-b border-border/30;
   }
+
   .mission-control-header {
     @apply sticky top-0 z-50 bg-background/60 backdrop-blur-2xl border-b border-border/20;
   }
 }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

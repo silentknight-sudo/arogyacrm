@@ -42,12 +42,16 @@ export type Lead = {
   metaLeadId?: string;
   demographicData?: {
     country?: string;
+    industry?: string;
+    companySize?: string;
+    jobTitle?: string;
     [key: string]: any;
   };
   reassigned?: boolean;
   reminderDays?: number;
   reminderAt?: any;
   reminderNotifiedAt?: any;
+  productAsked?: string[];
   createdAt: any;
   updatedAt: any;
 };
@@ -61,12 +65,11 @@ export type Contact = {
   phone?: string;
   ownerId: string;
   teamspaceId: string;
-  createdAt: any;
-  updatedAt: any;
+  createdAt?: any;
+  updatedAt?: any;
 };
 
 export type CallStatus = 'Completed' | 'No Answer' | 'Voicemail' | 'Busy';
-
 export type CallType = 'Outbound' | 'Inbound';
 
 export type Call = {
@@ -105,24 +108,31 @@ export type Campaign = {
 export type Meeting = {
   id: string;
   title: string;
-  meetingDate: string;
+  meetingDate?: string;
+  startTime?: string;
+  endTime?: string;
+  description?: string;
+  location?: string;
   attendees?: string[];
+  attendeeIds?: string[];
   relatedToEntityId?: string;
   notes?: string;
   ownerId?: string;
+  organizerId?: string;
   teamspaceId: string;
   createdAt?: any;
   updatedAt?: any;
 };
 
 export type TaskStatus = 'Todo' | 'In Progress' | 'Done';
+export type TaskPriority = 'Low' | 'Medium' | 'High';
 
 export type Task = {
   id: string;
   title: string;
   description?: string;
   dueDate: string;
-  priority: string;
+  priority: string | TaskPriority;
   status: TaskStatus;
   assignedToIds: string[];
   teamspaceId: string;
@@ -144,24 +154,16 @@ export type Product = {
   updatedAt?: any;
 };
 
+export type QuoteStatus = 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
+
 export type Quote = {
   id: string;
   ownerId: string;
   teamspaceId: string;
   contactId: string;
-  status?: string;
-  total?: number;
-  createdAt?: any;
-  updatedAt?: any;
-};
-
-export type SalesOrder = {
-  id: string;
-  ownerId: string;
-  teamspaceId: string;
-  contactId: string;
-  orderNumber?: string;
-  status?: string;
+  name?: string;
+  validUntil?: string;
+  status?: string | QuoteStatus;
   total?: number;
   totalAmount?: number;
   lineItems?: any[];
@@ -169,26 +171,62 @@ export type SalesOrder = {
   updatedAt?: any;
 };
 
+export type SalesOrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Completed' | 'Cancelled';
+
+export type SalesOrder = {
+  id: string;
+  ownerId: string;
+  teamspaceId: string;
+  contactId: string;
+  orderNumber?: string;
+  orderDate?: string;
+  status?: string | SalesOrderStatus;
+  total?: number;
+  totalAmount?: number;
+  lineItems?: any[];
+  createdAt?: any;
+  updatedAt?: any;
+};
+
+export type PurchaseOrderStatus = 'Pending' | 'Ordered' | 'Received' | 'Cancelled';
+
 export type PurchaseOrder = {
   id: string;
   ownerId: string;
   teamspaceId: string;
-  status?: string;
+  orderNumber?: string;
+  supplierName?: string;
+  orderDate?: string;
+  expectedDeliveryDate?: string;
+  status?: string | PurchaseOrderStatus;
   total?: number;
+  totalAmount?: number;
+  lineItems?: any[];
   createdAt?: any;
   updatedAt?: any;
 };
+
+export type InvoiceStatus = 'Draft' | 'Sent' | 'Paid' | 'Partially Paid' | 'Overdue' | 'Voided';
 
 export type Invoice = {
   id: string;
   ownerId: string;
   teamspaceId: string;
   salesOrderId?: string;
-  status?: string;
+  invoiceNumber?: string;
+  invoiceDate?: string;
+  dueDate?: string;
+  status?: string | InvoiceStatus;
   total?: number;
+  totalAmount?: number;
+  paidAmount?: number;
+  lineItems?: any[];
   createdAt?: any;
   updatedAt?: any;
 };
+
+export type TicketStatus = 'Open' | 'In Progress' | 'Awaiting Customer' | 'Resolved' | 'Closed';
+export type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
 
 export type Ticket = {
   id: string;
@@ -196,13 +234,15 @@ export type Ticket = {
   contactId?: string;
   assignedToId?: string;
   subject: string;
-  status?: string;
-  priority?: string;
+  description?: string;
+  status?: string | TicketStatus;
+  priority?: string | TicketPriority;
+  category?: string;
   createdAt?: any;
   updatedAt?: any;
 };
 
-export type RefundStatus = 'Requested' | 'Approved' | 'Rejected' | 'Processed';
+export type RefundStatus = 'Pending' | 'Approved' | 'Rejected' | 'Processed' | 'Cancelled';
 
 export type Refund = {
   id: string;
@@ -211,9 +251,13 @@ export type Refund = {
   status: RefundStatus | string;
   amount?: number;
   reason?: string;
+  requestedById?: string;
   createdAt?: any;
   updatedAt?: any;
 };
+
+export type ComplaintStatus = 'Received' | 'Investigating' | 'Action Taken' | 'Resolved' | 'Closed';
+export type ComplaintSeverity = 'Minor' | 'Moderate' | 'Major' | 'Critical';
 
 export type Complaint = {
   id: string;
@@ -221,7 +265,9 @@ export type Complaint = {
   contactId?: string;
   assignedToId?: string;
   subject?: string;
-  status?: string;
+  description?: string;
+  status?: string | ComplaintStatus;
+  severity?: ComplaintSeverity;
   createdAt?: any;
   updatedAt?: any;
 };
@@ -237,12 +283,12 @@ export type InteractionLog = {
   createdBy?: string;
 };
 
-export type DealStage = 
-  | 'new' 
-  | 'intrested' 
-  | 'not connect' 
-  | 'CNP' 
-  | 'done' 
+export type DealStage =
+  | 'new'
+  | 'intrested'
+  | 'not connect'
+  | 'CNP'
+  | 'done'
   | 'not intrested';
 
 export type Deal = {

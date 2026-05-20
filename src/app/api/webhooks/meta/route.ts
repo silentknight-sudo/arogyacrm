@@ -37,6 +37,7 @@ export async function POST(request: Request) {
         }
       }
     }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('META_WEBHOOK_FAILURE:', error);
@@ -56,7 +57,6 @@ type MetaLeadgenChangeValue = {
 function isValidMetaSignature(rawBody: string, signatureHeader: string | null): boolean {
   const appSecret = process.env.META_APP_SECRET;
 
-  // Allow local/dev setups to work without signature enforcement if no app secret is configured.
   if (!appSecret) return true;
   if (!signatureHeader?.startsWith('sha256=')) return false;
 
@@ -129,7 +129,7 @@ async function processMetaLead(metaLeadId: string, webhookValue?: MetaLeadgenCha
   const adminOwnerId = teamspace.ownerId || null;
 
   const leadRef = adminDb.collection('teamspaces').doc(tsId).collection('leads').doc();
-  await leadRef.set({
+  const newLeadData = {
     id: leadRef.id,
     fullName: rawName || 'Meta Prospect',
     firstName,
@@ -156,7 +156,9 @@ async function processMetaLead(metaLeadId: string, webhookValue?: MetaLeadgenCha
     },
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-  });
+  };
+
+  await leadRef.set(newLeadData);
 
   await sendMetaCapiEvent({
     eventName: 'Lead',

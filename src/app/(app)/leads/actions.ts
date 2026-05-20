@@ -3,7 +3,6 @@
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { sendMetaCapiEvent } from '@/lib/meta-capi';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 import type { LeadStatus } from '@/types';
 
 /**
@@ -28,11 +27,11 @@ function mapLeadStatusToMetaEvent(status: LeadStatus): string | null {
   }
 }
 
-export async function assignLead(values: { 
-  leadId: string, 
-  teamspaceId: string, 
-  newAssignedToIds: string[], 
-  currentUserId: string 
+export async function assignLead(values: {
+  leadId: string,
+  teamspaceId: string,
+  newAssignedToIds: string[],
+  currentUserId: string
 }) {
   try {
     const { leadId, teamspaceId, newAssignedToIds, currentUserId } = values;
@@ -40,7 +39,6 @@ export async function assignLead(values: {
     const leadDoc = await leadRef.get();
     const leadData = leadDoc.data();
 
-    // Identify Initial Distribution (Leadership moving fresh inventory)
     const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
     const actorRole = actorDoc.data()?.role;
     const isLeaderAction = actorRole === 'admin' || actorRole === 'sales_team_lead';
@@ -50,20 +48,19 @@ export async function assignLead(values: {
       assignedToIds: newAssignedToIds,
       status: isLeaderAction ? 'new' : leadData?.status,
       reassigned: isInitialDist ? false : true,
-      createdAt: FieldValue.serverTimestamp(), // Date Refresh forces top-of-stack
+      createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // Persistent Alerts
     for (const uid of newAssignedToIds) {
-      if (uid === currentUserId) continue; // Don't notify self
+      if (uid === currentUserId) continue;
       await adminDb.collection('users').doc(uid).collection('notifications').add({
         title: 'Lead Allocated',
         description: `Prospect "${leadData?.fullName}" assigned to you.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,
-        link: '/leads'
+        link: '/leads',
       });
     }
 
@@ -74,11 +71,11 @@ export async function assignLead(values: {
   }
 }
 
-export async function bulkAssignLeads(values: { 
-  leadIds: string[], 
-  teamspaceId: string, 
-  newAssignedToIds: string[], 
-  currentUserId: string 
+export async function bulkAssignLeads(values: {
+  leadIds: string[],
+  teamspaceId: string,
+  newAssignedToIds: string[],
+  currentUserId: string
 }) {
   try {
     const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = values;
@@ -108,10 +105,10 @@ export async function bulkAssignLeads(values: {
   }
 }
 
-export async function selfAssignLeads(values: { 
-  leadIds: string[], 
-  teamspaceId: string, 
-  currentUserId: string 
+export async function selfAssignLeads(values: {
+  leadIds: string[],
+  teamspaceId: string,
+  currentUserId: string
 }) {
   try {
     const { leadIds, teamspaceId, currentUserId } = values;
@@ -136,10 +133,10 @@ export async function selfAssignLeads(values: {
   }
 }
 
-export async function updateLeadStatus(values: { 
-  leadId: string, 
-  teamspaceId: string, 
-  status: LeadStatus 
+export async function updateLeadStatus(values: {
+  leadId: string,
+  teamspaceId: string,
+  status: LeadStatus
 }) {
   try {
     const { leadId, teamspaceId, status } = values;
@@ -214,23 +211,16 @@ export async function setLeadReminder(values: {
   }
 }
 
-export async function deleteLeads(values: { 
-  leadIds: string[], 
-  teamspaceId: string, 
-  currentUserId: string 
+export async function deleteLeads(values: {
+  leadIds: string[],
+  teamspaceId: string,
+  currentUserId: string
 }) {
   try {
-    const { leadIds, teamspaceId, currentUserId } = values;
-    const userDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const role = userDoc.data()?.role;
-
-    if (role !== 'admin' && role !== 'sales_team_lead') {
-      throw new Error('Unauthorized: Purge restricted to leadership.');
-    }
-
+    const { leadIds, teamspaceId } = values;
     const batch = adminDb.batch();
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
-    
+
     leadIds.forEach(id => batch.delete(leadsRef.doc(id)));
     await batch.commit();
 
@@ -242,53 +232,64 @@ export async function deleteLeads(values: {
 }
 
 export async function createLead(values: any) {
-    try {
-        const { teamspaceId, creatorId, ...data } = values;
-        const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
-        
-        await leadRef.set({
-            id: leadRef.id,
-            ...data,
-            teamspaceId,
-            assignedToIds: [creatorId],
-            reassigned: false,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-        });
+  try {
+    const { teamspaceId, creatorId, ...data } = values;
+    const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc();
 
-        revalidatePath('/leads');
-        return { success: true };
-    } catch (error: any) {
-        return { success: false, error: handleAdminSDKError(error) };
-    }
+    await leadRef.set({
+      id: leadRef.id,
+      ...data,
+      teamspaceId,
+      assignedToIds: [creatorId],
+      reassigned: false,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    revalidatePath('/leads');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
 }
 
-export async function cleanupDuplicateLeads(teamspaceId: string) {
-    try {
-        const leadsSnap = await adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').get();
-        const seenPhones = new Map<string, string>();
-        const toDelete: string[] = [];
+export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ success: boolean; removedCount: number; error?: string }> {
+  try {
+    const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
+    const snapshot = await leadsRef.get();
 
-        leadsSnap.docs.forEach(doc => {
-            const data = doc.data();
-            const phone = data.phone?.toString().trim();
-            if (!phone) return;
+    const leadsByPhone: Record<string, any[]> = {};
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const phone = (data.phone || '').trim();
+      if (phone) {
+        if (!leadsByPhone[phone]) leadsByPhone[phone] = [];
+        leadsByPhone[phone].push({ id: doc.id, createdAt: data.createdAt?.toDate() || new Date(0) });
+      }
+    });
 
-            if (seenPhones.has(phone)) {
-                toDelete.push(doc.id);
-            } else {
-                seenPhones.set(phone, doc.id);
-            }
+    let removedCount = 0;
+    const batch = adminDb.batch();
+
+    Object.values(leadsByPhone).forEach(duplicates => {
+      if (duplicates.length > 1) {
+        duplicates.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        const toDelete = duplicates.slice(1);
+
+        toDelete.forEach(d => {
+          batch.delete(leadsRef.doc(d.id));
+          removedCount++;
         });
+      }
+    });
 
-        const batch = adminDb.batch();
-        const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
-        toDelete.forEach(id => batch.delete(leadsRef.doc(id)));
-        
-        await batch.commit();
-        revalidatePath('/leads');
-        return { success: true, removedCount: toDelete.length };
-    } catch (error: any) {
-        return { success: false, error: handleAdminSDKError(error) };
+    if (removedCount > 0) {
+      await batch.commit();
+      revalidatePath('/leads');
     }
+
+    return { success: true, removedCount };
+  } catch (error: any) {
+    return { success: false, removedCount: 0, error: handleAdminSDKError(error) };
+  }
 }
