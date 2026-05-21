@@ -31,6 +31,24 @@ const CreateCampaignSchema = z.object({
     currentPrice: z.coerce.number().optional(),
     originalPrice: z.coerce.number().optional(),
     benefits: z.array(z.string()).optional(),
+    heroImageUrl: z.string().optional(),
+    productImageUrl: z.string().optional(),
+    secondaryImageUrl: z.string().optional(),
+    primaryColor: z.string().optional(),
+    accentColor: z.string().optional(),
+    trustPoints: z.array(z.string()).optional(),
+    testimonials: z.array(z.string()).optional(),
+    formTitle: z.string().optional(),
+    formSubtitle: z.string().optional(),
+    formFields: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        label: z.string(),
+        type: z.enum(['text', 'textarea', 'tel', 'email', 'number', 'select']),
+        placeholder: z.string().optional(),
+        required: z.boolean().optional(),
+        options: z.array(z.string()).optional(),
+    })).optional(),
 });
 
 export type CreateCampaignInput = z.infer<typeof CreateCampaignSchema>;
@@ -65,6 +83,29 @@ export async function createCampaign(values: CreateCampaignInput): Promise<Creat
                 'लचीलापन बढ़ाने में सहायक',
                 '100% आयुर्वेदिक फ़ॉर्मूला',
             ],
+            heroImageUrl: validatedInput.heroImageUrl || '',
+            productImageUrl: validatedInput.productImageUrl || '',
+            secondaryImageUrl: validatedInput.secondaryImageUrl || '',
+            primaryColor: validatedInput.primaryColor || '#184f24',
+            accentColor: validatedInput.accentColor || '#f59e0b',
+            trustPoints: validatedInput.trustPoints || [
+                '100% आयुर्वेदिक',
+                'कोई साइड इफेक्ट नहीं',
+                'Cash on Delivery',
+            ],
+            testimonials: validatedInput.testimonials || [
+                'दर्द में राहत मिली और चलना आसान हुआ।',
+                'घरेलू आयुर्वेदिक समाधान जैसा भरोसा।',
+                'परिवार में सभी के लिए उपयोगी अनुभव।',
+            ],
+            formTitle: validatedInput.formTitle || 'अभी जानकारी भरें',
+            formSubtitle: validatedInput.formSubtitle || 'हमारी टीम जल्द आपसे संपर्क करेगी।',
+            formFields: validatedInput.formFields || [
+                { id: 'fullName', name: 'fullName', label: 'पूरा नाम', type: 'text', placeholder: 'पूरा नाम', required: true },
+                { id: 'phone', name: 'phone', label: 'मोबाइल नंबर', type: 'tel', placeholder: 'मोबाइल नंबर', required: true },
+                { id: 'city', name: 'city', label: 'शहर', type: 'text', placeholder: 'शहर', required: false },
+                { id: 'painPoint', name: 'painPoint', label: 'आपको कहाँ-कहाँ दर्द है?', type: 'textarea', placeholder: 'अपने दर्द के बारे में लिखें', required: false },
+            ],
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         };
@@ -78,6 +119,30 @@ export async function createCampaign(values: CreateCampaignInput): Promise<Creat
     } catch (error: any) {
         const errorMessage = handleAdminSDKError(error);
         return { success: false, error: `Failed to create campaign: ${errorMessage}` };
+    }
+}
+
+const DeleteCampaignSchema = z.object({
+    teamspaceId: z.string().min(1),
+    campaignId: z.string().min(1),
+});
+
+export async function deleteCampaign(values: z.infer<typeof DeleteCampaignSchema>) {
+    try {
+        const { teamspaceId, campaignId } = DeleteCampaignSchema.parse(values);
+        const campaignRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('campaigns').doc(campaignId);
+        const leadsSnap = await campaignRef.collection('landingLeads').get();
+        const batch = adminDb.batch();
+
+        leadsSnap.docs.forEach((doc) => batch.delete(doc.ref));
+        batch.delete(campaignRef);
+        await batch.commit();
+
+        revalidatePath('/campaigns');
+        revalidatePath(`/campaigns/${campaignId}`);
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: handleAdminSDKError(error) };
     }
 }
 
@@ -129,6 +194,7 @@ export async function importCampaignLeadToProspects(values: z.infer<typeof Impor
             reassigned: false,
             campaignId,
             campaignLeadId,
+            demographicData: campaignLead.customFields || {},
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });

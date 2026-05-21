@@ -93,6 +93,24 @@ export type Call = {
 
 export type CampaignStatus = 'Planned' | 'Active' | 'Completed' | 'Paused' | 'Cancelled';
 
+export type CampaignFormFieldType =
+  | 'text'
+  | 'textarea'
+  | 'tel'
+  | 'email'
+  | 'number'
+  | 'select';
+
+export type CampaignFormField = {
+  id: string;
+  name: string;
+  label: string;
+  type: CampaignFormFieldType;
+  placeholder?: string;
+  required?: boolean;
+  options?: string[];
+};
+
 export type Campaign = {
   id: string;
   name: string;
@@ -115,6 +133,16 @@ export type Campaign = {
   currentPrice?: number;
   originalPrice?: number;
   benefits?: string[];
+  heroImageUrl?: string;
+  productImageUrl?: string;
+  secondaryImageUrl?: string;
+  primaryColor?: string;
+  accentColor?: string;
+  trustPoints?: string[];
+  testimonials?: string[];
+  formTitle?: string;
+  formSubtitle?: string;
+  formFields?: CampaignFormField[];
   createdAt?: any;
   updatedAt?: any;
 };
@@ -129,6 +157,7 @@ export type CampaignLead = {
   city?: string;
   age?: string;
   painPoint?: string;
+  customFields?: Record<string, any>;
   source: 'landing_page';
   importedToProspects?: boolean;
   importedLeadId?: string;

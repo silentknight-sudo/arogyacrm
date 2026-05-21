@@ -1,9 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { CampaignFormField } from '@/types';
 
 type LandingFormProps = {
   slug: string;
@@ -11,17 +19,31 @@ type LandingFormProps = {
   campaignId?: string;
   teamspaceId?: string;
   previewMode?: boolean;
+  formTitle?: string;
+  formSubtitle?: string;
+  formFields?: CampaignFormField[];
+  primaryColor?: string;
 };
 
-export function LandingForm({ slug, ctaText, campaignId, teamspaceId, previewMode = false }: LandingFormProps) {
-  const [form, setForm] = useState({
-    fullName: '',
-    phone: '',
-    email: '',
-    city: '',
-    age: '',
-    painPoint: '',
-  });
+export function LandingForm({
+  slug,
+  ctaText,
+  campaignId,
+  teamspaceId,
+  previewMode = false,
+  formTitle,
+  formSubtitle,
+  formFields = [],
+  primaryColor = '#184f24',
+}: LandingFormProps) {
+  const initialState = useMemo(
+    () => formFields.reduce<Record<string, string>>((acc, field) => {
+      acc[field.name] = '';
+      return acc;
+    }, {}),
+    [formFields]
+  );
+  const [form, setForm] = useState<Record<string, string>>(initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -38,7 +60,18 @@ export function LandingForm({ slug, ctaText, campaignId, teamspaceId, previewMod
       const response = await fetch('/api/campaign-leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, campaignId, teamspaceId, ...form }),
+        body: JSON.stringify({
+          slug,
+          campaignId,
+          teamspaceId,
+          fullName: form.fullName || '',
+          phone: form.phone || '',
+          email: form.email || '',
+          city: form.city || '',
+          age: form.age || '',
+          painPoint: form.painPoint || '',
+          customFields: form,
+        }),
       });
 
       const result = await response.json();
@@ -48,14 +81,7 @@ export function LandingForm({ slug, ctaText, campaignId, teamspaceId, previewMod
       }
 
       setSubmitted(true);
-      setForm({
-        fullName: '',
-        phone: '',
-        email: '',
-        city: '',
-        age: '',
-        painPoint: '',
-      });
+      setForm(initialState);
     } catch (error: any) {
       alert(error?.message || 'कृपया दोबारा कोशिश करें।');
     } finally {
@@ -74,49 +100,66 @@ export function LandingForm({ slug, ctaText, campaignId, teamspaceId, previewMod
     );
   }
 
+  const renderField = (field: CampaignFormField) => {
+    if (field.type === 'textarea') {
+      return (
+        <Textarea
+          placeholder={field.placeholder || field.label}
+          value={form[field.name] || ''}
+          onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
+          required={field.required}
+          className="min-h-[110px] rounded-xl"
+        />
+      );
+    }
+
+    if (field.type === 'select') {
+      return (
+        <Select
+          value={form[field.name] || ''}
+          onValueChange={(value) => setForm((current) => ({ ...current, [field.name]: value }))}
+        >
+          <SelectTrigger className="h-12 rounded-xl">
+            <SelectValue placeholder={field.placeholder || field.label} />
+          </SelectTrigger>
+          <SelectContent>
+            {(field.options || []).map((option) => (
+              <SelectItem key={option} value={option}>{option}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    return (
+      <Input
+        type={field.type}
+        placeholder={field.placeholder || field.label}
+        value={form[field.name] || ''}
+        onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
+        required={field.required}
+        className="h-12 rounded-xl"
+      />
+    );
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-[2rem] border border-emerald-300 bg-white/95 p-6 shadow-2xl">
-      <Input
-        placeholder="पूरा नाम"
-        value={form.fullName}
-        onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
-        required
-        className="h-12 rounded-xl"
-      />
-      <Input
-        placeholder="मोबाइल नंबर"
-        value={form.phone}
-        onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
-        required
-        className="h-12 rounded-xl"
-      />
-      <Input
-        placeholder="ईमेल (वैकल्पिक)"
-        value={form.email}
-        onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-        className="h-12 rounded-xl"
-      />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          placeholder="शहर"
-          value={form.city}
-          onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))}
-          className="h-12 rounded-xl"
-        />
-        <Input
-          placeholder="उम्र"
-          value={form.age}
-          onChange={(event) => setForm((current) => ({ ...current, age: event.target.value }))}
-          className="h-12 rounded-xl"
-        />
+      <div className="space-y-1">
+        <p className="text-2xl font-black" style={{ color: primaryColor }}>{formTitle || 'अभी जानकारी भरें'}</p>
+        <p className="text-sm font-medium text-muted-foreground">
+          {formSubtitle || 'हमारी टीम जल्द आपसे संपर्क करेगी।'}
+        </p>
       </div>
-      <Textarea
-        placeholder="आपको कहाँ-कहाँ दर्द है?"
-        value={form.painPoint}
-        onChange={(event) => setForm((current) => ({ ...current, painPoint: event.target.value }))}
-        className="min-h-[110px] rounded-xl"
-      />
-      <Button type="submit" disabled={isSubmitting} className="h-14 w-full rounded-2xl herbal-gradient text-lg font-black">
+      {formFields.map((field) => (
+        <div key={field.id} className="space-y-2">
+          <label className="text-sm font-black text-slate-700">
+            {field.label}{field.required ? ' *' : ''}
+          </label>
+          {renderField(field)}
+        </div>
+      ))}
+      <Button type="submit" disabled={isSubmitting} className="h-14 w-full rounded-2xl text-lg font-black text-white" style={{ backgroundColor: primaryColor }}>
         {isSubmitting ? 'भेजा जा रहा है...' : ctaText}
       </Button>
       <p className="text-center text-sm font-medium text-muted-foreground">

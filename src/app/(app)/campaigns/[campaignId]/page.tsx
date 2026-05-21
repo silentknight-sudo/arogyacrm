@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useTransition } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '@/context/app-context';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, orderBy } from 'firebase/firestore';
@@ -9,15 +9,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { importCampaignLeadToProspects } from '../actions';
+import { deleteCampaign, importCampaignLeadToProspects } from '../actions';
 import type { Campaign, CampaignLead } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { buildPublicUrl } from '@/lib/utils';
+import { Trash2 } from 'lucide-react';
 
 export default function CampaignDetailPage() {
   const { currentTeamspace } = useApp();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
   const params = useParams<{ campaignId: string }>();
   const [isPending, startTransition] = useTransition();
   const campaignId = Array.isArray(params.campaignId) ? params.campaignId[0] : params.campaignId;
@@ -97,6 +99,25 @@ export default function CampaignDetailPage() {
     window.open(landingUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const handleDeleteCampaign = () => {
+    if (!currentTeamspace?.id || !campaignId || !campaign) return;
+    const confirmed = window.confirm(`Delete campaign "${campaign.name}"? This will also remove captured landing leads.`);
+    if (!confirmed) return;
+
+    startTransition(async () => {
+      const result = await deleteCampaign({
+        teamspaceId: currentTeamspace.id,
+        campaignId,
+      });
+      if (result.success) {
+        toast({ title: 'Campaign deleted', description: 'Campaign removed successfully.' });
+        router.push('/campaigns');
+      } else {
+        toast({ variant: 'destructive', title: 'Delete failed', description: result.error });
+      }
+    });
+  };
+
   if (loadingCampaign || loadingLeads) {
     return (
       <div className="space-y-6">
@@ -138,6 +159,10 @@ export default function CampaignDetailPage() {
               </div>
               <p className="mt-3 break-all text-sm font-medium text-muted-foreground">{landingUrl}</p>
             </div>
+            <Button variant="destructive" className="rounded-xl" disabled={isPending} onClick={handleDeleteCampaign}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Campaign
+            </Button>
           </div>
 
           <div className="rounded-2xl border border-primary/10 bg-muted/20 p-5">
