@@ -1,67 +1,36 @@
+import { notFound } from 'next/navigation';
 import { adminDb } from '@/firebase/admin';
 import { Badge } from '@/components/ui/badge';
 import { LandingForm } from './landing-form';
+import type { Campaign } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-const previewCampaign = {
-  headline: 'जोड़ों के दर्द से छुटकारा पाएं!',
-  subheadline: '100% आयुर्वेदिक गाउटहेल्थ ऑयल के साथ राहत, लचीलापन और बेहतर जीवन।',
-  ctaText: 'अभी ऑर्डर करें',
-  originalPrice: 2499,
-  currentPrice: 1999,
-  primaryColor: '#184f24',
-  accentColor: '#f59e0b',
-  benefits: [
-    'जोड़ों और हड्डियों की देखभाल',
-    'दर्द और सूजन में राहत',
-    'लचीलापन बढ़ाने में सहायक',
-    '100% आयुर्वेदिक फ़ॉर्मूला',
-  ],
-  trustPoints: ['100% आयुर्वेदिक', 'कोई साइड इफेक्ट नहीं', 'Cash on Delivery'],
-  testimonials: [
-    'दर्द में राहत मिली और चलना आसान हुआ।',
-    'घरेलू आयुर्वेदिक समाधान जैसा भरोसा।',
-    'परिवार में सभी के लिए उपयोगी अनुभव।',
-  ],
-  formTitle: 'अभी जानकारी भरें',
-  formSubtitle: 'हमारी टीम जल्द आपसे संपर्क करेगी।',
-  formFields: [
-    { id: 'fullName', name: 'fullName', label: 'पूरा नाम', type: 'text', placeholder: 'पूरा नाम', required: true },
-    { id: 'phone', name: 'phone', label: 'मोबाइल नंबर', type: 'tel', placeholder: 'मोबाइल नंबर', required: true },
-    { id: 'city', name: 'city', label: 'शहर', type: 'text', placeholder: 'शहर', required: false },
-    { id: 'painPoint', name: 'painPoint', label: 'आपको कहाँ-कहाँ दर्द है?', type: 'textarea', placeholder: 'अपने दर्द के बारे में लिखें', required: false },
-  ],
-};
+async function getLiveCampaignBySlug(slug: string): Promise<{ campaign: Campaign; campaignId: string; teamspaceId: string } | null> {
+  const campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
+  if (campaignSnap.empty) return null;
+
+  const campaignDoc = campaignSnap.docs[0];
+  const campaign = campaignDoc.data() as Campaign;
+  const campaignId = campaignDoc.id;
+  const teamspaceId = campaign.teamspaceId;
+
+  if (!campaign.landingPageEnabled) return null;
+  if ((campaign.landingPageStatus || 'live') !== 'live') return null;
+  if (campaign.status === 'Paused' || campaign.status === 'Cancelled') return null;
+
+  return { campaign, campaignId, teamspaceId };
+}
 
 export default async function LandingPage({ params }: { params: { slug: string } }) {
   const slug = params.slug;
-  let campaign: any = null;
-  let previewMode = false;
-  let campaignId = '';
-  let teamspaceId = '';
+  const liveCampaign = await getLiveCampaignBySlug(slug);
 
-  if (slug === 'your-slug') {
-    campaign = previewCampaign;
-    previewMode = true;
-  } else {
-    try {
-      const campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
-      if (!campaignSnap.empty) {
-        campaignId = campaignSnap.docs[0].id;
-        campaign = campaignSnap.docs[0].data() as any;
-        teamspaceId = campaign.teamspaceId || '';
-      }
-    } catch (error) {
-      previewMode = true;
-      campaign = previewCampaign;
-    }
+  if (!liveCampaign) {
+    notFound();
   }
 
-  if (!campaign) {
-    previewMode = true;
-    campaign = previewCampaign;
-  }
+  const { campaign, campaignId, teamspaceId } = liveCampaign;
 
   return (
     <main
@@ -71,11 +40,6 @@ export default async function LandingPage({ params }: { params: { slug: string }
       }}
     >
       <section className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
-        {previewMode && slug === 'your-slug' && (
-          <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-900 shadow-sm">
-            यह एक प्रीव्यू पेज है। लाइव लीड कैप्चर के लिए CRM से असली कैंपेन लिंक बनाइए।
-          </div>
-        )}
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] items-start">
           <div className="rounded-[2.5rem] border border-emerald-200 bg-white/80 p-6 shadow-2xl backdrop-blur">
             <div className="mb-6 flex items-center justify-between">
@@ -95,7 +59,7 @@ export default async function LandingPage({ params }: { params: { slug: string }
 
             {(campaign.heroImageUrl || campaign.productImageUrl) && (
               <div className="mb-6 grid gap-4 md:grid-cols-2">
-                {[campaign.heroImageUrl, campaign.productImageUrl].filter(Boolean).map((image: string) => (
+                {[campaign.heroImageUrl, campaign.productImageUrl].filter(Boolean).map((image) => (
                   <div key={image} className="overflow-hidden rounded-[2rem] border border-emerald-200 bg-white shadow-xl">
                     <img src={image} alt={campaign.productName || 'Campaign image'} className="h-[320px] w-full object-cover" />
                   </div>
@@ -126,11 +90,7 @@ export default async function LandingPage({ params }: { params: { slug: string }
             </div>
 
             <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {(campaign.trustPoints || [
-                'कंधे, कमर, घुटने और टखनों के दर्द में सहायक',
-                'तेज अवशोषण और सुरक्षित उपयोग',
-                'पुरुष और महिला दोनों के लिए उपयोगी',
-              ]).map((item: string) => (
+              {(campaign.trustPoints || []).map((item: string) => (
                 <div key={item} className="rounded-2xl border border-emerald-200 bg-white/80 p-4 text-base font-bold shadow-sm">
                   {item}
                 </div>
@@ -155,10 +115,10 @@ export default async function LandingPage({ params }: { params: { slug: string }
               ctaText={campaign.ctaText || 'अभी ऑर्डर करें'}
               campaignId={campaignId}
               teamspaceId={teamspaceId}
-              previewMode={previewMode}
+              previewMode={false}
               formTitle={campaign.formTitle}
               formSubtitle={campaign.formSubtitle}
-              formFields={campaign.formFields || previewCampaign.formFields}
+              formFields={campaign.formFields || []}
               primaryColor={campaign.primaryColor}
             />
             <div className="rounded-[2rem] border border-emerald-200 bg-white/90 p-6 shadow-xl">

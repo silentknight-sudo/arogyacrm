@@ -124,6 +124,7 @@ export type Campaign = {
   slug?: string;
   landingPath?: string;
   landingPageEnabled?: boolean;
+  landingPageStatus?: 'draft' | 'live';
   locale?: 'hi' | 'en';
   templateKey?: string;
   headline?: string;

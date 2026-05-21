@@ -30,7 +30,6 @@ export function LandingForm({
   ctaText,
   campaignId,
   teamspaceId,
-  previewMode = false,
   formTitle,
   formSubtitle,
   formFields = [],
@@ -49,11 +48,6 @@ export function LandingForm({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-
-    if (previewMode) {
-      alert('यह केवल प्रीव्यू पेज है। लाइव लीड कैप्चर के लिए CRM से असली कैंपेन लिंक बनाइए।');
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -163,9 +157,7 @@ export function LandingForm({
         {isSubmitting ? 'भेजा जा रहा है...' : ctaText}
       </Button>
       <p className="text-center text-sm font-medium text-muted-foreground">
-        {previewMode
-          ? 'यह केवल प्रीव्यू है। लाइव कैंपेन बनने पर जानकारी सीधे एडमिन CRM में जाएगी।'
-          : 'आपकी जानकारी सीधे एडमिन CRM में सुरक्षित रूप से जाएगी।'}
+        आपकी जानकारी सीधे एडमिन CRM में सुरक्षित रूप से जाएगी।
       </p>
     </form>
   );

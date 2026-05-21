@@ -27,6 +27,14 @@ export async function POST(request: Request) {
       const campaign = campaignDoc.data() as any;
       resolvedCampaignId = campaignDoc.id;
       resolvedTeamspaceId = campaign.teamspaceId;
+
+      if (!campaign.landingPageEnabled || (campaign.landingPageStatus || 'live') !== 'live') {
+        return NextResponse.json({ success: false, error: 'Landing page is not live.' }, { status: 403 });
+      }
+
+      if (campaign.status === 'Paused' || campaign.status === 'Cancelled') {
+        return NextResponse.json({ success: false, error: 'Campaign is not accepting leads right now.' }, { status: 403 });
+      }
     }
 
     if (!resolvedCampaignId || !resolvedTeamspaceId) {

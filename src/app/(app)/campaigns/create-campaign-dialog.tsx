@@ -60,6 +60,7 @@ const formSchema = z.object({
   budgetInterval: z.enum(['Daily', 'Weekly']),
   description: z.string().optional(),
   landingPageEnabled: z.boolean().default(true),
+  landingPageStatus: z.enum(['draft', 'live']).default('live'),
   locale: z.enum(['hi', 'en']).default('hi'),
   headline: z.string().optional(),
   subheadline: z.string().optional(),
@@ -110,6 +111,7 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
       budget: 5000,
       budgetInterval: 'Daily',
       landingPageEnabled: true,
+      landingPageStatus: 'live',
       locale: 'hi',
       headline: 'जोड़ों के दर्द से छुटकारा पाएं!',
       subheadline: '100% आयुर्वेदिक गाउटहेल्थ ऑयल के साथ राहत, लचीलापन और बेहतर जीवन।',
@@ -253,6 +255,9 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
                       </div>
                       <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                     </FormItem>
+                  )} />
+                  <FormField control={form.control} name="landingPageStatus" render={({ field }) => (
+                    <FormItem><FormLabel>Landing Page Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select landing status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="live">Live</SelectItem><SelectItem value="draft">Draft</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                   )} />
                 </TabsContent>
 
