@@ -18,7 +18,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: 'Campaign identifier missing.' }, { status: 400 });
       }
 
-      const campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
+      let campaignSnap;
+      try {
+        campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
+      } catch (error: any) {
+        console.error('CAMPAIGN_LOOKUP_FAILED:', error);
+        return NextResponse.json({ success: false, error: 'Campaign service is temporarily unavailable.' }, { status: 503 });
+      }
       if (campaignSnap.empty) {
         return NextResponse.json({ success: false, error: 'Campaign not found.' }, { status: 404 });
       }
@@ -49,22 +55,27 @@ export async function POST(request: Request) {
       .collection('landingLeads')
       .doc();
 
-    await campaignLeadRef.set({
-      id: campaignLeadRef.id,
-      campaignId: resolvedCampaignId,
-      teamspaceId: resolvedTeamspaceId,
-      fullName,
-      phone,
-      email: email || '',
-      city: city || '',
-      age: age || '',
-      painPoint: painPoint || '',
-      customFields: customFields || {},
-      source: 'landing_page',
-      importedToProspects: false,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    try {
+      await campaignLeadRef.set({
+        id: campaignLeadRef.id,
+        campaignId: resolvedCampaignId,
+        teamspaceId: resolvedTeamspaceId,
+        fullName,
+        phone,
+        email: email || '',
+        city: city || '',
+        age: age || '',
+        painPoint: painPoint || '',
+        customFields: customFields || {},
+        source: 'landing_page',
+        importedToProspects: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error: any) {
+      console.error('CAMPAIGN_LEAD_WRITE_FAILED:', error);
+      return NextResponse.json({ success: false, error: 'Lead capture is temporarily unavailable.' }, { status: 503 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

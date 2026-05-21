@@ -46,6 +46,11 @@ export default function CampaignDetailPage() {
     return buildPublicUrl(campaign?.landingPath);
   }, [campaign?.landingPath]);
 
+  const previewLandingUrl = useMemo(() => {
+    if (!campaign?.landingPath || typeof window === 'undefined') return '';
+    return `${window.location.origin}${campaign.landingPath}`;
+  }, [campaign?.landingPath]);
+
   const handleImport = (campaignLeadId: string) => {
     if (!currentTeamspace?.id || !campaignId) return;
     startTransition(async () => {
@@ -91,12 +96,14 @@ export default function CampaignDetailPage() {
   };
 
   const handleOpenLandingPage = () => {
-    if (!landingUrl) {
+    const targetUrl = window.location.hostname === 'localhost' ? previewLandingUrl : landingUrl;
+
+    if (!targetUrl) {
       toast({ variant: 'destructive', title: 'Link unavailable', description: 'Landing page link is not ready yet.' });
       return;
     }
 
-    window.open(landingUrl, '_blank', 'noopener,noreferrer');
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleDeleteCampaign = () => {
@@ -151,13 +158,18 @@ export default function CampaignDetailPage() {
               <p className="text-[11px] font-black uppercase tracking-[0.25em] text-muted-foreground mb-3">Landing Page Link</p>
               <div className="flex flex-wrap gap-3">
                 <Button variant="outline" className="rounded-xl" onClick={handleCopyLink}>
-                  Copy Link
+                  Copy Live Link
                 </Button>
                 <Button className="rounded-xl herbal-gradient" onClick={handleOpenLandingPage}>
                   Open Landing Page
                 </Button>
               </div>
               <p className="mt-3 break-all text-sm font-medium text-muted-foreground">{landingUrl}</p>
+              {previewLandingUrl ? (
+                <p className="mt-1 break-all text-xs font-medium text-muted-foreground/80">
+                  Local preview: {previewLandingUrl}
+                </p>
+              ) : null}
             </div>
             <Button variant="destructive" className="rounded-xl" disabled={isPending} onClick={handleDeleteCampaign}>
               <Trash2 className="mr-2 h-4 w-4" />
