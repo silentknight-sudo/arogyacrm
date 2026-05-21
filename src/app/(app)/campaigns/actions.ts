@@ -22,6 +22,7 @@ const CreateCampaignSchema = z.object({
     teamspaceId: z.string().min(1, 'Teamspace ID is required.'),
     description: z.string().optional(),
     landingPageEnabled: z.boolean().optional(),
+    landingPageStatus: z.enum(['draft', 'live']).optional(),
     locale: z.enum(['hi', 'en']).optional(),
     templateKey: z.string().optional(),
     headline: z.string().optional(),
@@ -69,6 +70,9 @@ export async function createCampaign(values: CreateCampaignInput): Promise<Creat
             slug,
             landingPath: `/landing/${slug}`,
             landingPageEnabled: validatedInput.landingPageEnabled ?? true,
+            landingPageStatus: validatedInput.landingPageEnabled === false
+                ? 'draft'
+                : (validatedInput.landingPageStatus || 'live'),
             locale: validatedInput.locale || 'hi',
             templateKey: validatedInput.templateKey || 'joint-pain-hi',
             headline: validatedInput.headline || 'जोड़ों के दर्द से छुटकारा पाएं!',
