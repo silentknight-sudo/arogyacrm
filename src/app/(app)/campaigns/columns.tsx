@@ -135,6 +135,7 @@ export const columns: ColumnDef<Campaign>[] = [
     cell: ({ row }) => {
       const campaign = row.original;
       const landingUrl = buildPublicUrl(campaign.landingPath);
+      const previewLandingUrl = campaign.landingPath ? `${window.location.origin}${campaign.landingPath}` : '';
       return (
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm" className="rounded-xl">
@@ -145,7 +146,7 @@ export const columns: ColumnDef<Campaign>[] = [
               variant="ghost"
               size="icon"
               className="rounded-full"
-              onClick={() => window.open(landingUrl, '_blank', 'noopener,noreferrer')}
+              onClick={() => window.open(window.location.hostname === 'localhost' ? previewLandingUrl : landingUrl, '_blank', 'noopener,noreferrer')}
             >
               <ExternalLink className="h-4 w-4" />
             </Button>
