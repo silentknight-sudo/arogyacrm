@@ -23,6 +23,8 @@ import { useTransition } from 'react';
 const CampaignActions = ({ campaign }: { campaign: Campaign }) => {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const landingPath = `/landing/${encodeURIComponent(campaign.id)}`;
+  const landingUrl = buildPublicUrl(landingPath);
 
   const copyText = async (value: string, successMessage: string) => {
     try {
@@ -60,11 +62,9 @@ const CampaignActions = ({ campaign }: { campaign: Campaign }) => {
           <DropdownMenuItem onClick={() => copyText(campaign.id, 'Campaign ID copied to clipboard.')}>
             Copy campaign ID
           </DropdownMenuItem>
-          {campaign.landingPath && (
-            <DropdownMenuItem onClick={() => copyText(buildPublicUrl(campaign.landingPath), 'Landing page link copied to clipboard.')}>
+          <DropdownMenuItem onClick={() => copyText(landingUrl, 'Landing page link copied to clipboard.')}>
               Copy landing page link
-            </DropdownMenuItem>
-          )}
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-red-600 focus:text-red-600"
@@ -134,23 +134,21 @@ export const columns: ColumnDef<Campaign>[] = [
     header: 'View',
     cell: ({ row }) => {
       const campaign = row.original;
-      const landingUrl = buildPublicUrl(campaign.landingPath);
-      const previewLandingUrl = campaign.landingPath ? `${window.location.origin}${campaign.landingPath}` : '';
+      const landingPath = `/landing/${encodeURIComponent(campaign.id)}`;
+      const landingUrl = buildPublicUrl(landingPath);
       return (
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm" className="rounded-xl">
             <Link href={`/campaigns/${campaign.id}`}>Open</Link>
           </Button>
-          {campaign.landingPath && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full"
-              onClick={() => window.open(window.location.hostname === 'localhost' ? previewLandingUrl : landingUrl, '_blank', 'noopener,noreferrer')}
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={() => window.open(landingUrl, '_blank', 'noopener,noreferrer')}
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Button>
         </div>
       );
     },
@@ -175,8 +173,7 @@ export const columns: ColumnDef<Campaign>[] = [
     accessorKey: 'landingPath',
     header: 'Landing Link',
     cell: ({ row }) => {
-      const landingPath = row.original.landingPath;
-      if (!landingPath) return <span className="text-muted-foreground">Disabled</span>;
+      const landingPath = `/landing/${encodeURIComponent(row.original.id)}`;
       return <span className="text-xs font-medium">{landingPath}</span>;
     },
   },

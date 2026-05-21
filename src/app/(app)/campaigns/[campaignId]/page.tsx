@@ -42,14 +42,14 @@ export default function CampaignDetailPage() {
   const { data: campaign, isLoading: loadingCampaign } = useDoc<Campaign>(campaignRef);
   const { data: landingLeads, isLoading: loadingLeads } = useCollection<CampaignLead>(leadsQuery);
 
-  const landingUrl = useMemo(() => {
-    return buildPublicUrl(campaign?.landingPath);
-  }, [campaign?.landingPath]);
+  const resolvedLandingPath = useMemo(() => {
+    if (!campaignId) return '';
+    return `/landing/${encodeURIComponent(campaignId)}`;
+  }, [campaignId]);
 
-  const previewLandingUrl = useMemo(() => {
-    if (!campaign?.landingPath || typeof window === 'undefined') return '';
-    return `${window.location.origin}${campaign.landingPath}`;
-  }, [campaign?.landingPath]);
+  const landingUrl = useMemo(() => {
+    return buildPublicUrl(resolvedLandingPath);
+  }, [resolvedLandingPath]);
 
   const handleImport = (campaignLeadId: string) => {
     if (!currentTeamspace?.id || !campaignId) return;
@@ -96,14 +96,12 @@ export default function CampaignDetailPage() {
   };
 
   const handleOpenLandingPage = () => {
-    const targetUrl = window.location.hostname === 'localhost' ? previewLandingUrl : landingUrl;
-
-    if (!targetUrl) {
+    if (!landingUrl) {
       toast({ variant: 'destructive', title: 'Link unavailable', description: 'Landing page link is not ready yet.' });
       return;
     }
 
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    window.open(landingUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleDeleteCampaign = () => {
@@ -165,9 +163,9 @@ export default function CampaignDetailPage() {
                 </Button>
               </div>
               <p className="mt-3 break-all text-sm font-medium text-muted-foreground">{landingUrl}</p>
-              {previewLandingUrl ? (
-                <p className="mt-1 break-all text-xs font-medium text-muted-foreground/80">
-                  Local preview: {previewLandingUrl}
+              {campaign.landingPath && campaign.landingPath !== resolvedLandingPath ? (
+                <p className="mt-2 break-all text-xs font-medium text-amber-600">
+                  Legacy stored path: {campaign.landingPath}
                 </p>
               ) : null}
             </div>
