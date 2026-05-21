@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, ExternalLink } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, ExternalLink, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,10 +16,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { buildPublicUrl } from '@/lib/utils';
+import { deleteCampaign } from './actions';
 import type { Campaign } from '@/types';
+import { useTransition } from 'react';
 
 const CampaignActions = ({ campaign }: { campaign: Campaign }) => {
   const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
 
   const copyText = async (value: string, successMessage: string) => {
     try {
@@ -62,6 +65,29 @@ const CampaignActions = ({ campaign }: { campaign: Campaign }) => {
               Copy landing page link
             </DropdownMenuItem>
           )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-600 focus:text-red-600"
+            disabled={isPending}
+            onClick={() => {
+              const confirmed = window.confirm(`Delete campaign "${campaign.name}"? This will also delete captured landing leads.`);
+              if (!confirmed) return;
+              startTransition(async () => {
+                const result = await deleteCampaign({
+                  teamspaceId: campaign.teamspaceId,
+                  campaignId: campaign.id,
+                });
+                if (result.success) {
+                  toast({ title: 'Campaign deleted', description: 'The campaign and its landing leads were removed.' });
+                } else {
+                  toast({ variant: 'destructive', title: 'Delete failed', description: result.error });
+                }
+              });
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete campaign
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
   );

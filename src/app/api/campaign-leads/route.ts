@@ -4,7 +4,7 @@ import { adminDb, serverTimestamp } from '@/firebase/admin';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { slug, campaignId, teamspaceId, fullName, phone, email, city, age, painPoint } = body || {};
+    const { slug, campaignId, teamspaceId, fullName, phone, email, city, age, painPoint, customFields } = body || {};
 
     if (!fullName || !phone) {
       return NextResponse.json({ success: false, error: 'Missing required fields.' }, { status: 400 });
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       city: city || '',
       age: age || '',
       painPoint: painPoint || '',
+      customFields: customFields || {},
       source: 'landing_page',
       importedToProspects: false,
       createdAt: serverTimestamp(),
