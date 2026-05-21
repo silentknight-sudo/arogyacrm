@@ -7,19 +7,24 @@ import type { Campaign } from '@/types';
 export const dynamic = 'force-dynamic';
 
 async function getLiveCampaignBySlug(slug: string): Promise<{ campaign: Campaign; campaignId: string; teamspaceId: string } | null> {
-  const campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
-  if (campaignSnap.empty) return null;
+  try {
+    const campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
+    if (campaignSnap.empty) return null;
 
-  const campaignDoc = campaignSnap.docs[0];
-  const campaign = campaignDoc.data() as Campaign;
-  const campaignId = campaignDoc.id;
-  const teamspaceId = campaign.teamspaceId;
+    const campaignDoc = campaignSnap.docs[0];
+    const campaign = campaignDoc.data() as Campaign;
+    const campaignId = campaignDoc.id;
+    const teamspaceId = campaign.teamspaceId;
 
-  if (!campaign.landingPageEnabled) return null;
-  if ((campaign.landingPageStatus || 'live') !== 'live') return null;
-  if (campaign.status === 'Paused' || campaign.status === 'Cancelled') return null;
+    if (!campaign.landingPageEnabled) return null;
+    if ((campaign.landingPageStatus || 'live') !== 'live') return null;
+    if (campaign.status === 'Paused' || campaign.status === 'Cancelled') return null;
 
-  return { campaign, campaignId, teamspaceId };
+    return { campaign, campaignId, teamspaceId };
+  } catch (error) {
+    console.error('LANDING_CAMPAIGN_LOOKUP_FAILED:', error);
+    return null;
+  }
 }
 
 export default async function LandingPage({ params }: { params: { slug: string } }) {
