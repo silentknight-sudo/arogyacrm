@@ -3,12 +3,18 @@ import { adminDb } from '@/firebase/admin';
 import { Badge } from '@/components/ui/badge';
 import { LandingForm } from './landing-form';
 import type { Campaign } from '@/types';
+import { FieldPath } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
 async function getLiveCampaignBySlug(slug: string): Promise<{ campaign: Campaign; campaignId: string; teamspaceId: string } | null> {
   try {
-    const campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
+    let campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
+
+    if (campaignSnap.empty) {
+      campaignSnap = await adminDb.collectionGroup('campaigns').where(FieldPath.documentId(), '==', slug).limit(1).get();
+    }
+
     if (campaignSnap.empty) return null;
 
     const campaignDoc = campaignSnap.docs[0];
