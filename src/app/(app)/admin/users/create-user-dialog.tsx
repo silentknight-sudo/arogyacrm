@@ -33,11 +33,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { createUser } from './actions';
-import type { Teamspace } from '@/types';
+import type { Teamspace, UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useApp } from '@/context/app-context';
+import { getRoleLabel } from '@/lib/user-labels';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { Badge } from '@/components/ui/badge';
 
 const formSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -45,7 +49,23 @@ const formSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters.'),
   role: z.enum(['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support']),
   teamspaceIds: z.array(z.string()).min(1, 'User must belong to at least one teamspace.'),
+  managerId: z.string().optional(),
+}).superRefine((values, ctx) => {
+  if (values.role === 'sales_executive' && !values.managerId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['managerId'],
+      message: 'Choose the Team Lead this telecaller should work under.',
+    });
+  }
 });
+
+function getTeamspaceNames(teamspaces: Teamspace[], ids: string[]) {
+  return ids
+    .map((id) => teamspaces.find((teamspace) => teamspace.id === id)?.name)
+    .filter(Boolean)
+    .join(', ');
+}
 
 type CreateUserDialogProps = {
   children: React.ReactNode;
@@ -56,21 +76,28 @@ type CreateUserDialogProps = {
 export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: CreateUserDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
+  const firestore = useFirestore();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // ROLE RESTRICTIONS: Team Leads can only create Sales Executives
+  const teamLeadsQuery = useMemoFirebase(() => (
+    currentUser?.role === 'admin'
+      ? query(collection(firestore, 'users'), where('role', '==', 'sales_team_lead'))
+      : null
+  ), [firestore, currentUser?.role]);
+  const { data: teamLeads, isLoading: isLoadingTeamLeads } = useCollection<UserProfile>(teamLeadsQuery);
+
   const availableRoles = useMemo(() => {
     if (currentUser?.role === 'admin') {
-        return ['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support'];
+        return ['sales_team_lead', 'sales_executive', 'admin', 'marketer', 'support'];
     }
-    return ['sales_executive']; // Team leads only create executives
+    return [];
   }, [currentUser]);
 
   // TEAMSPACE RESTRICTIONS: Team Leads can only assign to their own teams
   const filteredTeamspaces = useMemo(() => {
     if (currentUser?.role === 'admin') return teamspaces;
-    return teamspaces.filter(ts => currentUser?.teamspaceIds?.includes(ts.id));
+    return [];
   }, [teamspaces, currentUser]);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -81,8 +108,12 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
       password: '',
       role: 'sales_executive',
       teamspaceIds: currentUser?.role === 'sales_team_lead' && currentTeamspace ? [currentTeamspace.id] : [],
+      managerId: '',
     },
   });
+
+  const selectedRole = form.watch('role');
+  const selectedTeamspaceIds = form.watch('teamspaceIds');
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!currentUser) return;
@@ -98,7 +129,14 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
           description: `Successfully onboarded ${values.displayName} to your team.`,
         });
         setOpen(false);
-        form.reset();
+        form.reset({
+          displayName: '',
+          email: '',
+          password: '',
+          role: 'sales_executive',
+          teamspaceIds: [],
+          managerId: '',
+        });
       } else {
         toast({
           variant: 'destructive',
@@ -116,7 +154,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
         <DialogHeader>
           <DialogTitle>Add Team Member</DialogTitle>
           <DialogDescription>
-            {currentUser?.role === 'admin' ? 'Register a new user and assign global permissions.' : 'Add a new Sales Executive to your workspace.'}
+            Register a team lead or telecaller and assign their workspace access.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[80vh] px-1">
@@ -167,7 +205,15 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>System Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={availableRoles.length === 1}>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue('teamspaceIds', []);
+                        form.setValue('managerId', '');
+                      }}
+                      value={field.value}
+                      disabled={availableRoles.length === 1}
+                    >
                         <FormControl>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a role" />
@@ -175,7 +221,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         </FormControl>
                         <SelectContent>
                           {availableRoles.map(r => (
-                              <SelectItem key={r} value={r} className="capitalize">{r.replace(/_/g, ' ')}</SelectItem>
+                              <SelectItem key={r} value={r} className="capitalize">{getRoleLabel(r)}</SelectItem>
                           ))}
                         </SelectContent>
                     </Select>
@@ -183,6 +229,54 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                     </FormItem>
                 )}
                 />
+                {selectedRole === 'sales_executive' && (
+                  <FormField
+                    control={form.control}
+                    name="managerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Team Lead / Sales Department</FormLabel>
+                        <Select
+                          value={field.value}
+                          disabled={isLoadingTeamLeads}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            const selectedTL = (teamLeads || []).find((teamLead) => teamLead.id === value);
+                            form.setValue('teamspaceIds', selectedTL?.teamspaceIds || [], { shouldValidate: true });
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={isLoadingTeamLeads ? 'Loading Team Leads...' : 'Choose Team Lead'} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(teamLeads || []).map((teamLead) => (
+                              <SelectItem key={teamLead.id} value={teamLead.id}>
+                                {teamLead.displayName} Team
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Telecaller will be added directly under this TL and their sales department.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                {selectedRole === 'sales_executive' && selectedTeamspaceIds.length > 0 && (
+                  <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 text-sm font-semibold">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Selected Department</span>
+                      <Badge variant="secondary">
+                        {getTeamspaceNames(teamspaces, selectedTeamspaceIds) || 'Teamspace linked'}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+                {selectedRole !== 'sales_executive' && (
                 <FormField
                   control={form.control}
                   name="teamspaceIds"
@@ -191,7 +285,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         <div className="mb-2">
                             <FormLabel className="text-base">Workspace Assignment</FormLabel>
                             <FormDescription>
-                                Select the teams this user will belong to.
+                                Team leads should have one dedicated workspace. Telecallers can be moved between teamspaces by admin.
                             </FormDescription>
                         </div>
                         <div className="space-y-2">
@@ -229,7 +323,15 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                     </FormItem>
                   )}
                 />
-                <Button type="submit" disabled={isPending || isLoadingTeamspaces || filteredTeamspaces.length === 0} className="w-full">
+                )}
+                <Button
+                  type="submit"
+                  disabled={
+                    isPending ||
+                    (selectedRole === 'sales_executive' ? isLoadingTeamLeads || !form.watch('managerId') : isLoadingTeamspaces || filteredTeamspaces.length === 0)
+                  }
+                  className="w-full"
+                >
                 {isPending ? 'Processing...' : 'Complete Registration'}
                 </Button>
             </form>

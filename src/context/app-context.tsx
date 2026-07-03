@@ -93,6 +93,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAreTeamspacesLoading(isAdminTeamspacesLoading);
     }
   }, [adminTeamspaces, isAdminTeamspacesLoading, currentUser?.role, isUserLoading]);
+
+  useEffect(() => {
+    if (!isUserLoading && currentUser?.accessStatus === 'blocked') {
+      logout();
+    }
+  }, [currentUser?.accessStatus, isUserLoading]);
   
   useEffect(() => {
     if (!isUserLoading && currentUser && currentUser.role !== 'admin') {

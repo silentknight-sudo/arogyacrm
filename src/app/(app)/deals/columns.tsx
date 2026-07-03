@@ -19,6 +19,7 @@ import { useApp } from '@/context/app-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getDealStageLabel } from '@/lib/status-labels';
 
 const stages: DealStage[] = ['new', 'intrested', 'not connect', 'CNP', 'done', 'not intrested'];
 
@@ -39,7 +40,7 @@ const StageSelector = ({ deal }: { deal: Deal }) => {
       if (result.success) {
         toast({
           title: 'Pipeline Updated',
-          description: `Opportunity moved to "${newStage}".`,
+          description: `Opportunity moved to "${getDealStageLabel(newStage)}".`,
         });
       } else {
         toast({
@@ -65,7 +66,7 @@ const StageSelector = ({ deal }: { deal: Deal }) => {
         </SelectTrigger>
         <SelectContent>
           {stages.map(s => (
-            <SelectItem key={s} value={s} className="text-[10px] font-black uppercase">{s}</SelectItem>
+            <SelectItem key={s} value={s} className="text-[10px] font-black uppercase">{getDealStageLabel(s)}</SelectItem>
           ))}
         </SelectContent>
       </Select>

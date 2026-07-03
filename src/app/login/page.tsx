@@ -21,6 +21,7 @@ import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, ShieldCheck, TrendingUp, Zap, Leaf } from 'lucide-react';
+import { notifyBlockedLoginAttempt } from '@/app/(app)/device-manager/actions';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -59,6 +60,15 @@ export default function LoginPage() {
       router.push('/dashboard');
     } catch (error: any) {
       console.error('Login error', error);
+      if (error?.code === 'auth/user-disabled') {
+        await notifyBlockedLoginAttempt({ email: values.email });
+        toast({
+          variant: 'destructive',
+          title: 'Account Blocked',
+          description: 'Your ID is blocked. Admin has been notified for approval.',
+        });
+        return;
+      }
       toast({
         variant: 'destructive',
         title: 'Access Denied',

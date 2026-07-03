@@ -38,8 +38,9 @@ export default function UserManagementPage() {
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 
-  const canCreateUser = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
-  const displayLoadingState = isLoading || !currentUser || !canCreateUser;
+  const canCreateUser = currentUser?.role === 'admin';
+  const canViewUsers = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  const displayLoadingState = isLoading || !currentUser || !canViewUsers;
 
   return (
     <div className="space-y-4">
@@ -47,10 +48,10 @@ export default function UserManagementPage() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
                 <p className="text-muted-foreground">
-                    {currentUser?.role === 'admin' ? 'Global team governance and roles.' : `Managing specialists onboarded by you for ${currentTeamspace?.name}.`}
+                    {currentUser?.role === 'admin' ? 'Global team governance and role assignments.' : `Viewing telecallers for ${currentTeamspace?.name}.`}
                 </p>
             </div>
-            <div className="flex items-center space-x-2">
+            {canCreateUser && <div className="flex items-center space-x-2">
                 <CreateUserDialog 
                   teamspaces={availableTeamspaces || []}
                   isLoadingTeamspaces={areTeamspacesLoading}
@@ -60,7 +61,7 @@ export default function UserManagementPage() {
                         Add Team Member
                     </Button>
                 </CreateUserDialog>
-            </div>
+            </div>}
         </div>
         {displayLoadingState && (
             <div className="space-y-2">

@@ -16,6 +16,7 @@ import { EditProfileDialog } from './edit-profile-dialog';
 import { ChangePasswordDialog } from '../admin/users/change-password-dialog';
 import type { Lead, UserProfile } from '@/types';
 import { RolePerformancePanel } from '@/components/role-performance-panel';
+import { getRoleLabel } from '@/lib/user-labels';
 
 function ProfileDetailRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
@@ -118,7 +119,7 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-6">
             <Separator className="opacity-50" />
-             <ProfileDetailRow label="System Role" value={<Badge variant="outline" className="capitalize font-black gold-glow bg-accent/5 border-accent/20 text-accent-foreground px-4 py-1"><Shield className="mr-2 h-3 w-3" /> {currentUser.role.replace(/_/g, ' ')}</Badge>} />
+             <ProfileDetailRow label="System Role" value={<Badge variant="outline" className="capitalize font-black gold-glow bg-accent/5 border-accent/20 text-accent-foreground px-4 py-1"><Shield className="mr-2 h-3 w-3" /> {getRoleLabel(currentUser.role)}</Badge>} />
             <Separator className="opacity-50" />
             <ProfileDetailRow label="Phone Number" value={currentUser.phone || 'Not added yet'} />
             <Separator className="opacity-50" />

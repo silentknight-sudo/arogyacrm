@@ -33,6 +33,7 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
+import { getRoleLabel } from '@/lib/user-labels';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -168,7 +169,7 @@ export function CreateTaskDialog({ children, users, isLoading }: CreateTaskDialo
                                             />
                                             <Label htmlFor={`task-user-${user.id}`} className="text-sm font-medium cursor-pointer group-hover:text-primary transition-colors flex flex-col">
                                                 {user.displayName}
-                                                <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{user.role.replace(/_/g, ' ')}</span>
+                                                <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{getRoleLabel(user.role)}</span>
                                             </Label>
                                         </div>
                                     ))

@@ -25,6 +25,7 @@ import { bulkAssignDeals } from './actions';
 import { useApp } from '@/context/app-context';
 import type { Deal, UserProfile } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getRoleLabel } from '@/lib/user-labels';
 
 const formSchema = z.object({
   newOwnerId: z.string().min(1, 'Please select an authorized specialist.'),
@@ -108,7 +109,7 @@ export function BulkAssignDealsDialog({ open, onOpenChange, deals, users }: Bulk
                     </FormControl>
                     <SelectContent className="bg-[#0D1F0B] text-white border-white/10">
                       {filteredUsers.length > 0 ? filteredUsers.map(u => (
-                        <SelectItem key={u.id} value={u.id}>{u.displayName} ({u.role.replace(/_/g, ' ')})</SelectItem>
+                        <SelectItem key={u.id} value={u.id}>{u.displayName} ({getRoleLabel(u.role)})</SelectItem>
                       )) : (
                         <div className="p-4 text-center text-xs text-white/40 italic">No authorized specialists found.</div>
                       )}

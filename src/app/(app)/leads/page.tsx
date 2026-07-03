@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useTransition, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -40,11 +41,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { getLeadStatusLabel } from '@/lib/status-labels';
 
 type FilterType = LeadStatus | 'all' | 'fresh_uploads';
 const ALL_FILTERS: FilterType[] = ['all', 'fresh_uploads', 'new', 'intrested', 'CNP', 'done', 'not intrested'];
 
 export default function LeadsPage() {
+  const searchParams = useSearchParams();
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -61,6 +64,20 @@ export default function LeadsPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const requestedStatus = searchParams.get('status');
+    if (!requestedStatus) return;
+
+    if (requestedStatus === 'fresh_uploads') {
+      setActiveFilter('fresh_uploads');
+      return;
+    }
+
+    if (ALL_FILTERS.includes(requestedStatus as FilterType)) {
+      setActiveFilter(requestedStatus as FilterType);
+    }
+  }, [searchParams]);
 
   const isAdminOrTL = useMemo(
     () => currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead',
@@ -149,7 +166,7 @@ export default function LeadsPage() {
         currentUserId: currentUser.id,
       });
       if (result.success) {
-        toast({ title: 'Strategic Purge Success', description: `Permanently removed ${selectedLeads.length} prospects.` });
+        toast({ title: 'Lead cleanup complete', description: `Permanently removed ${selectedLeads.length} leads.` });
         setSelectedLeads([]);
         setIsDeleteOpen(false);
       }
@@ -166,8 +183,8 @@ export default function LeadsPage() {
             <Target className="h-6 w-6 fill-accent" />
             <span className="text-xs font-black uppercase tracking-[0.4em] opacity-70">Strategic Command</span>
           </div>
-          <h1 className="text-7xl font-black tracking-tighter text-primary">Prospect Pipeline</h1>
-          <p className="text-2xl text-muted-foreground font-semibold">Managing High-Intensity Wellness Assets.</p>
+          <h1 className="text-7xl font-black tracking-tighter text-primary">Leads</h1>
+          <p className="text-2xl text-muted-foreground font-semibold">Managing active lead operations.</p>
         </div>
         <div className="flex items-center gap-4">
           {isAdminOrTL && (
@@ -184,7 +201,7 @@ export default function LeadsPage() {
           <CreateLeadDialog products={products || []} isLoading={loading}>
             <Button className="rounded-2xl herbal-gradient shadow-2xl shadow-primary/30 px-12 py-8 text-lg font-black gold-glow scale-105 hover:scale-110 active:scale-95 transition-all">
               <PlusCircle className="mr-3 h-7 w-7" />
-              Add Prospect
+              Add Lead
             </Button>
           </CreateLeadDialog>
         </div>
@@ -201,7 +218,7 @@ export default function LeadsPage() {
                   onClick={() => setActiveFilter(f)}
                   className={`cursor-pointer px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg scale-105' : 'bg-muted/80 text-muted-foreground hover:bg-muted'}`}
                 >
-                  {f.replace(/_/g, ' ')}
+                  {f === 'all' ? 'All' : f === 'fresh_uploads' ? 'Fresh Uploads' : getLeadStatusLabel(f)}
                 </Badge>
               ))}
             </div>
@@ -310,7 +327,7 @@ export default function LeadsPage() {
           <AlertDialogHeader className="mb-6">
             <AlertDialogTitle className="text-3xl font-black text-destructive">Strategic Purge</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground text-lg font-medium">
-              Decommission <span className="text-foreground font-bold">{selectedLeads.length}</span> prospects permanently?
+              Delete <span className="text-foreground font-bold">{selectedLeads.length}</span> leads permanently?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-4">

@@ -56,7 +56,7 @@ export async function assignLead(values: {
       if (uid === currentUserId) continue;
       await adminDb.collection('users').doc(uid).collection('notifications').add({
         title: 'Lead Allocated',
-        description: `Prospect "${leadData?.fullName}" assigned to you.`,
+        description: `Lead "${leadData?.fullName}" assigned to you.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,
@@ -136,16 +136,24 @@ export async function selfAssignLeads(values: {
 export async function updateLeadStatus(values: {
   leadId: string,
   teamspaceId: string,
-  status: LeadStatus
+  status: LeadStatus,
+  note?: string,
+  updatedBy?: string,
 }) {
   try {
-    const { leadId, teamspaceId, status } = values;
+    const { leadId, teamspaceId, status, note, updatedBy } = values;
     const leadRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads').doc(leadId);
     const leadSnap = await leadRef.get();
     const leadData = leadSnap.data();
 
     await leadRef.update({
       status,
+      statusHistory: FieldValue.arrayUnion({
+        status,
+        note: note || '',
+        updatedBy: updatedBy || '',
+        updatedAt: new Date().toISOString(),
+      }),
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });

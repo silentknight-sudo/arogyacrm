@@ -170,7 +170,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-32 text-center text-muted-foreground font-medium italic opacity-50"
                 >
-                  No strategic prospects found matching your current filters.
+                  No leads found matching your current filters.
                 </TableCell>
               </TableRow>
             )}
@@ -180,7 +180,7 @@ export function DataTable<TData, TValue>({
       <div className="flex items-center justify-end space-x-4 py-6">
         <div className="flex-1 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
           {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} Prospect(s) Selected
+          {table.getFilteredRowModel().rows.length} Lead(s) Selected
         </div>
         <div className="flex items-center gap-2">
             <Button

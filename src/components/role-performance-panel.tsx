@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { BarChart3, CheckCircle2, PhoneCall, Sparkles, Target, Users } from 'lucide-react';
 import type { Lead, UserProfile } from '@/types';
+import { getRoleLabel } from '@/lib/user-labels';
 
 type RolePerformancePanelProps = {
   subject: UserProfile;
@@ -98,7 +99,7 @@ export function RolePerformancePanel({
         <p className="text-muted-foreground font-medium">
           {description ||
             (subject.role === 'sales_team_lead'
-              ? 'Team-wide pipeline visibility for your specialists.'
+              ? 'Team-wide pipeline visibility for your telecallers.'
               : subject.role === 'sales_executive'
                 ? 'Your live pipeline and conversion progress.'
                 : 'Global operational performance view.')}
@@ -107,16 +108,16 @@ export function RolePerformancePanel({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <SummaryCard label="Total Leads" value={summary.total} icon={Users} />
-        <SummaryCard label="Fresh" value={summary.fresh} icon={Target} />
-        <SummaryCard label="Interested" value={summary.interested} icon={Sparkles} />
-        <SummaryCard label="CNP" value={summary.cnp} icon={PhoneCall} />
-        <SummaryCard label="Closed" value={`${summary.closed} (${summary.conversionRate}%)`} icon={CheckCircle2} />
+        <SummaryCard label="Pending" value={summary.fresh} icon={Target} />
+        <SummaryCard label="Holding" value={summary.interested} icon={Sparkles} />
+        <SummaryCard label="Not Connected" value={summary.cnp} icon={PhoneCall} />
+        <SummaryCard label="Completed" value={`${summary.closed} (${summary.conversionRate}%)`} icon={CheckCircle2} />
       </div>
 
       {subject.role === 'sales_team_lead' && (
         <Card className="premium-card">
           <CardHeader>
-            <CardTitle className="text-xl font-black text-primary">Team Specialists</CardTitle>
+            <CardTitle className="text-xl font-black text-primary">Team Telecallers</CardTitle>
             <CardDescription className="font-medium">
               Live performance across the executives managed by {subject.displayName}.
             </CardDescription>
@@ -124,7 +125,7 @@ export function RolePerformancePanel({
           <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {summary.subordinateUsers.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-primary/15 p-6 text-sm font-medium text-muted-foreground italic">
-                No sales executives are currently linked to this team lead.
+                No telecallers are currently linked to this team lead.
               </div>
             ) : (
               summary.subordinateUsers.map((user) => {
@@ -137,14 +138,14 @@ export function RolePerformancePanel({
                         <p className="text-xs font-medium text-muted-foreground">{user.email}</p>
                       </div>
                       <Badge variant="secondary" className="capitalize">
-                        {user.role.replace(/_/g, ' ')}
+                        {getRoleLabel(user.role)}
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-sm font-bold">
                       <div className="rounded-xl bg-background p-3">Leads: {memberSummary.total}</div>
-                      <div className="rounded-xl bg-background p-3">Closed: {memberSummary.closed}</div>
-                      <div className="rounded-xl bg-background p-3">Fresh: {memberSummary.fresh}</div>
-                      <div className="rounded-xl bg-background p-3">Interested: {memberSummary.interested}</div>
+                      <div className="rounded-xl bg-background p-3">Completed: {memberSummary.closed}</div>
+                      <div className="rounded-xl bg-background p-3">Pending: {memberSummary.fresh}</div>
+                      <div className="rounded-xl bg-background p-3">Holding: {memberSummary.interested}</div>
                     </div>
                   </div>
                 );

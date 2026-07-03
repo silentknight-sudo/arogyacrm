@@ -44,7 +44,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
             
             const newLeadData = {
                 id: id,
-                fullName: getVal(['full_name', 'name', 'customer_name']) || 'New Prospect',
+                fullName: getVal(['full_name', 'name', 'customer_name']) || 'New Lead',
                 email: getVal(['email', 'email_address', 'mail']) || '',
                 phone: cleanPhone || '',
                 source: getVal(['campaign_name', 'platform', 'source']) || 'Meta Ads',
@@ -64,7 +64,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     // Trigger high-intensity alert pulse for the assigned specialist
     await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
         title: `you got ${rawLeads.length} new leads`,
-        description: `Successfully ingested ${rawLeads.length} prospects from Meta Ads.`,
+        description: `Successfully ingested ${rawLeads.length} leads from Meta Ads.`,
         type: 'lead_assigned',
         timestamp: new Date().toISOString(),
         read: false,

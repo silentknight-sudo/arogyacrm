@@ -27,9 +27,10 @@ import { assignLead } from './actions';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getRoleLabel } from '@/lib/user-labels';
 
 const formSchema = z.object({
-  assignedToIds: z.array(z.string()).min(1, 'Select at least one wellness specialist.'),
+  assignedToIds: z.array(z.string()).min(1, 'Select at least one recipient.'),
 });
 
 type AssignLeadDialogProps = {
@@ -86,7 +87,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
       });
 
       if (result.success) {
-        toast({ title: 'Lead Delegated', description: `Successfully updated specialists for ${lead.fullName}.` });
+        toast({ title: 'Lead Delegated', description: `Successfully updated assignment for ${lead.fullName}.` });
         onOpenChange(false);
       } else {
         toast({ 
@@ -101,7 +102,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
   const title = currentUser?.role === 'admin' ? 'Strategic Delegation (Admin)' : 'Team Distribution (TL)';
   const description = currentUser?.role === 'admin' 
     ? `Delegate ${lead.fullName} to a verified Team Leader.` 
-    : `Assign ${lead.fullName} to a Sales Executive you have onboarded.`;
+    : `Assign ${lead.fullName} to a telecaller in your team.`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,14 +137,14 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
                         />
                         <Label htmlFor={`user-${user.id}`} className="text-sm font-bold cursor-pointer group-hover:text-primary transition-colors flex flex-col gap-0.5">
                           {user.displayName}
-                          <span className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.1em]">{user.role.replace(/_/g, ' ')}</span>
+                          <span className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.1em]">{getRoleLabel(user.role)}</span>
                         </Label>
                       </div>
                     )) : (
                         <div className="text-center text-sm text-muted-foreground font-medium py-16 italic px-4">
                           {currentUser?.role === 'admin' 
                             ? 'No Team Leaders available for global delegation.' 
-                            : 'No Sales Executives found in this workspace.'}
+                            : 'No telecallers found in this workspace.'}
                         </div>
                     )}
                     </div>

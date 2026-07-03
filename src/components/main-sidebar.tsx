@@ -1,52 +1,50 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
-    Users, Handshake, Megaphone, Package,
-    ShoppingCart, Receipt, Ticket, Undo2, ShieldAlert, LayoutDashboard,
-    Shield, CalendarCheck2, PhoneCall, Sparkles, BriefcaseBusiness, BarChart3, UserCog
+    Megaphone, Ticket, LayoutDashboard,
+    Shield, Sparkles, BarChart3, UserCog,
+    MonitorSmartphone, UploadCloud, Search, ClipboardCheck, ListChecks, WalletCards, Settings, Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/app-context';
+import { LEAD_STATUS_ORDER, getLeadStatusLabel } from '@/lib/status-labels';
+
+type SidebarItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+};
 
 export function MainSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { currentUser } = useApp();
 
   const isAdmin = currentUser?.role === 'admin';
   const isTL = currentUser?.role === 'sales_team_lead';
+  const isTelecaller = currentUser?.role === 'sales_executive';
+
+  const crmItems = [
+        { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { href: '/leads', label: 'Leads', icon: Users },
+        !isTelecaller ? { href: '/admin/users', label: 'Telecaller List', icon: UserCog } : null,
+        !isTelecaller ? { href: '/analytics/reports', label: 'Reports Management', icon: BarChart3 } : null,
+        !isTelecaller ? { href: '/device-manager', label: 'Device Manager', icon: MonitorSmartphone } : null,
+        isAdmin ? { href: '/campaigns', label: 'Product Campaigns', icon: Megaphone } : null,
+        isAdmin ? { href: '/add-on', label: 'Add Product Leads', icon: UploadCloud } : null,
+        { href: '/parcel-search', label: 'All Parcel Search', icon: Search },
+        !isTelecaller ? { href: '/confirmation', label: 'Confirmation Management', icon: ClipboardCheck } : null,
+        { href: '/follow-up', label: 'Follow Up', icon: ListChecks },
+        isAdmin ? { href: '/support/tickets', label: 'Support Tickets', icon: Ticket } : null,
+        !isTelecaller ? { href: '/transactions', label: 'Transactions', icon: WalletCards } : null,
+        { href: '/settings', label: 'Dashboard Settings', icon: Settings },
+    ].filter((item): item is SidebarItem => Boolean(item));
 
   const menu = [
-    { title: "INSIGHTS", items: [{ href: '/dashboard', label: 'Overview', icon: BarChart3 }] },
-    { title: 'PIPELINE', items: [
-        { href: '/leads', label: 'Prospects', icon: Users },
-        ...(currentUser?.role !== 'sales_executive' ? [{ href: '/deals', label: 'Revenue', icon: Handshake }] : []),
-    ]},
+    { title: "CRM", items: crmItems },
   ];
-
-  if (isAdmin || isTL) {
-    menu.push({ title: 'OPERATIONS', items: [
-        { href: '/tasks', label: 'Workflows', icon: BriefcaseBusiness },
-        { href: '/meetings', label: 'Sessions', icon: CalendarCheck2 },
-        { href: '/calls', label: 'Activities', icon: PhoneCall },
-    ]});
-    
-    menu.push({ title: 'COMMERCE', items: [
-        { href: '/inventory/products', label: 'Catalog', icon: Package },
-        { href: '/inventory/sales-orders', label: 'Orders', icon: ShoppingCart },
-        { href: '/inventory/invoices', label: 'Billings', icon: Receipt },
-    ]});
-  }
-
-  if (isAdmin) {
-    menu.push({ title: 'GROWTH', items: [{ href: '/campaigns', label: 'Strategy', icon: Megaphone }] });
-    menu.push({ title: 'SUPPORT', items: [
-        { href: '/support/tickets', label: 'Tickets', icon: Ticket },
-        { href: '/support/refunds', label: 'Refunds', icon: Undo2 },
-        { href: '/support/complaints', label: 'Escalations', icon: ShieldAlert },
-    ]});
-  }
 
   return (
     <aside className={cn("flex flex-col glass-sidebar h-screen sticky top-0", className)}>
@@ -87,10 +85,37 @@ export function MainSidebar({ className }: { className?: string }) {
                         const Icon = item.icon;
                         const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                         return (
-                            <Link key={item.href} href={item.href} className={cn('sidebar-link', active && 'sidebar-link-active')}>
-                                <Icon className="h-4 w-4" />
-                                <span>{item.label}</span>
-                            </Link>
+                            <div key={item.href} className="space-y-1.5">
+                                <Link href={item.href} className={cn('sidebar-link', active && 'sidebar-link-active')}>
+                                    <Icon className="h-4 w-4" />
+                                    <span>{item.label}</span>
+                                </Link>
+                                {item.href === '/leads' && (
+                                    <div className="ml-8 space-y-1">
+                                        {LEAD_STATUS_ORDER.map((status) => {
+                                            const statusActive = pathname === '/leads' && searchParams.get('status') === status;
+                                            return (
+                                                <Link
+                                                    key={status}
+                                                    href={`/leads?status=${encodeURIComponent(status)}`}
+                                                    className={cn(
+                                                      'block rounded-lg px-3 py-2 text-xs font-bold text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary',
+                                                      statusActive && 'bg-primary/10 text-primary'
+                                                    )}
+                                                >
+                                                    {getLeadStatusLabel(status)}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {item.href === '/follow-up' && (
+                                    <div className="ml-8 space-y-1">
+                                        <Link href="/follow-up/hot" className={cn('block rounded-lg px-3 py-2 text-xs font-bold text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary', pathname === '/follow-up/hot' && 'bg-primary/10 text-primary')}>Hot Leads Incoming</Link>
+                                        <Link href="/follow-up/overdue" className={cn('block rounded-lg px-3 py-2 text-xs font-bold text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary', pathname === '/follow-up/overdue' && 'bg-primary/10 text-primary')}>Overdue Leads</Link>
+                                    </div>
+                                )}
+                            </div>
                         );
                     })}
                 </div>

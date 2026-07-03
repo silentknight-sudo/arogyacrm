@@ -27,9 +27,10 @@ import { bulkAssignLeads } from './actions';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getRoleLabel } from '@/lib/user-labels';
 
 const formSchema = z.object({
-  assignedToIds: z.array(z.string()).min(1, 'Select at least one authorized specialist.'),
+  assignedToIds: z.array(z.string()).min(1, 'Select at least one authorized recipient.'),
 });
 
 type BulkAssignLeadsDialogProps = {
@@ -72,7 +73,7 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
       return;
     }
     if (leads.length === 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No prospects selected.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'No leads selected.' });
         return;
     }
     
@@ -92,7 +93,7 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
       if (result.success) {
         toast({
           title: 'Batch Delegation Success',
-          description: `${leads.length} prospects have been reassigned to your authorized team.`,
+          description: `${leads.length} leads have been reassigned to your authorized team.`,
         });
         onOpenChange(false);
         form.reset();
@@ -112,7 +113,7 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-primary">Bulk Pipeline Delegation</DialogTitle>
           <DialogDescription className="font-medium">
-            Redistribute {leads.length} selected prospects to authorized specialists.
+            Redistribute {leads.length} selected leads to an authorized team lead or telecaller.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -122,7 +123,7 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
               name="assignedToIds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Authorized Specialists</FormLabel>
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Authorized Recipients</FormLabel>
                   <ScrollArea className="h-48 rounded-2xl border bg-muted/20 p-4">
                     <div className="space-y-4">
                     {filteredUsers.length > 0 ? filteredUsers.map((user) => (
@@ -139,14 +140,14 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
                         />
                         <Label htmlFor={`bulk-user-${user.id}`} className="text-sm font-bold cursor-pointer flex flex-col">
                           {user.displayName}
-                          <span className="text-[9px] uppercase font-black text-muted-foreground">{user.role.replace(/_/g, ' ')}</span>
+                          <span className="text-[9px] uppercase font-black text-muted-foreground">{getRoleLabel(user.role)}</span>
                         </Label>
                       </div>
                     )) : (
                         <div className="text-center text-xs text-muted-foreground py-8 italic">
                           {currentUser?.role === 'admin'
                             ? 'No team leaders available in this workspace.'
-                            : 'No sales executives available in this workspace.'}
+                            : 'No telecallers available in this workspace.'}
                         </div>
                     )}
                     </div>

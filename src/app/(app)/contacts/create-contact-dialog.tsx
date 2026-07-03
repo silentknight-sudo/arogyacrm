@@ -89,7 +89,7 @@ export function CreateContactDialog({ children }: CreateContactDialogProps) {
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-primary">New Stakeholder</DialogTitle>
           <DialogDescription>
-            Register an individual wellness prospect or existing partner.
+            Register an individual lead or existing partner.
           </DialogDescription>
         </DialogHeader>
         <div className="overflow-y-auto max-h-[60vh] pr-4 pt-2">

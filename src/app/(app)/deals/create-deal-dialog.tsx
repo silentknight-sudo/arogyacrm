@@ -36,6 +36,7 @@ import type { Contact, Product } from '@/types';
 import { LineItemSchema } from '../inventory/schemas';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle, Trash2 } from 'lucide-react';
+import { getDealStageLabel } from '@/lib/status-labels';
 
 const dealStages = ['intrested', 'not connect', 'CNP', 'done', 'not intrested'] as const;
 const dealTypes = ['Wellness Package', 'Single Order', 'Subscription', 'Bulk Order', 'Retail'] as const;
@@ -156,7 +157,7 @@ export function CreateDealDialog({ children, contacts, products, isLoading }: Cr
 
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="stage" render={({ field }) => (
-                        <FormItem><FormLabel>Stage</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{dealStages.map(s => (<SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Stage</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{dealStages.map(s => (<SelectItem key={s} value={s} className="capitalize">{getDealStageLabel(s)}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="type" render={({ field }) => (
                         <FormItem><FormLabel>Deal Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{dealTypes.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>
