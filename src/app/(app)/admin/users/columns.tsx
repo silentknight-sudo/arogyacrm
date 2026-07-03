@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown, Trash2, KeyRound } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, Trash2, KeyRound, UserRoundCog, Eye, Loader2 } from 'lucide-react';
+import { collection, query, where } from 'firebase/firestore';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,7 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { UserProfile } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { deleteUser } from './actions';
+import { deleteUser, transferTelecallerToTeamLead } from './actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,14 +32,31 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useApp } from '@/context/app-context';
 import { ChangePasswordDialog } from './change-password-dialog';
+import { getProfessionalEmployeeId, getRoleLabel } from '@/lib/user-labels';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 
 
 const UserActions = ({ user }: { user: UserProfile }) => {
   const { toast } = useToast();
   const { currentUser } = useApp();
+  const firestore = useFirestore();
   const [isDeleting, startDeleteTransition] = useTransition();
+  const [isTransferring, startTransferTransition] = useTransition();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+  const [selectedTeamLeadId, setSelectedTeamLeadId] = useState('');
+
+  const teamLeadsQuery = useMemoFirebase(() => (
+    currentUser?.role === 'admin'
+      ? query(collection(firestore, 'users'), where('role', '==', 'sales_team_lead'))
+      : null
+  ), [firestore, currentUser?.role]);
+
+  const { data: teamLeads, isLoading: isLoadingTeamLeads } = useCollection<UserProfile>(teamLeadsQuery);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(user.id).then(() => {
@@ -82,6 +100,34 @@ const UserActions = ({ user }: { user: UserProfile }) => {
 
   const canManagePassword = currentUser?.role === 'admin' || 
     (currentUser?.role === 'sales_team_lead' && user.role === 'sales_executive');
+  const canTransferTelecaller = currentUser?.role === 'admin' && user.role === 'sales_executive';
+
+  const handleTransfer = () => {
+    if (!currentUser || !selectedTeamLeadId) {
+      toast({ variant: 'destructive', title: 'Select Team Lead', description: 'Choose a Team Lead before transferring.' });
+      return;
+    }
+
+    startTransferTransition(async () => {
+      const result = await transferTelecallerToTeamLead({
+        telecallerId: user.id,
+        teamLeadId: selectedTeamLeadId,
+        adminId: currentUser.id,
+      });
+
+      if (result.success) {
+        const teamLead = teamLeads?.find((item) => item.id === selectedTeamLeadId);
+        toast({
+          title: 'Telecaller Transferred',
+          description: `${user.displayName} is now in ${teamLead?.displayName || 'the selected Team Lead'}'s team.`,
+        });
+        setIsTransferDialogOpen(false);
+        setSelectedTeamLeadId('');
+      } else {
+        toast({ variant: 'destructive', title: 'Transfer Failed', description: result.error });
+      }
+    });
+  };
 
   return (
     <>
@@ -109,6 +155,42 @@ const UserActions = ({ user }: { user: UserProfile }) => {
         user={user} 
       />
 
+      <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
+        <DialogContent className="rounded-[2rem] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-primary">Transfer Telecaller</DialogTitle>
+            <DialogDescription className="font-medium">
+              Move {user.displayName} directly into another Team Lead&apos;s team.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Choose Team Lead</Label>
+            <Select value={selectedTeamLeadId} onValueChange={setSelectedTeamLeadId} disabled={isLoadingTeamLeads || isTransferring}>
+              <SelectTrigger className="h-12 rounded-2xl">
+                <SelectValue placeholder={isLoadingTeamLeads ? 'Loading team leads...' : 'Select Team Lead'} />
+              </SelectTrigger>
+              <SelectContent>
+                {(teamLeads || []).map((teamLead) => (
+                  <SelectItem key={teamLead.id} value={teamLead.id}>
+                    {teamLead.displayName} · {getProfessionalEmployeeId(teamLead)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs font-medium text-muted-foreground">
+              This updates the telecaller&apos;s teamspace and manager ownership immediately.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl" onClick={() => setIsTransferDialogOpen(false)} disabled={isTransferring}>Cancel</Button>
+            <Button className="rounded-xl herbal-gradient font-black" onClick={handleTransfer} disabled={isTransferring || !selectedTeamLeadId}>
+              {isTransferring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserRoundCog className="mr-2 h-4 w-4" />}
+              Transfer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -118,6 +200,12 @@ const UserActions = ({ user }: { user: UserProfile }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="rounded-xl w-48">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem asChild>
+            <Link href={`/team/${user.id}`}>
+              <Eye className="mr-2 h-4 w-4 text-primary" />
+              View Profile
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleCopyId}>
             Copy user ID
           </DropdownMenuItem>
@@ -128,6 +216,13 @@ const UserActions = ({ user }: { user: UserProfile }) => {
             <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)}>
               <KeyRound className="mr-2 h-4 w-4 text-primary" />
               Reset Password
+            </DropdownMenuItem>
+          )}
+
+          {canTransferTelecaller && (
+            <DropdownMenuItem onClick={() => setIsTransferDialogOpen(true)}>
+              <UserRoundCog className="mr-2 h-4 w-4 text-primary" />
+              Transfer Team
             </DropdownMenuItem>
           )}
 
@@ -198,11 +293,19 @@ export const columns: ColumnDef<UserProfile>[] = [
     header: 'Email',
   },
   {
+    id: 'employeeId',
+    header: 'Employee ID',
+    cell: ({ row }) => {
+      const user = row.original;
+      return <span className="font-mono text-xs font-bold">{getProfessionalEmployeeId(user)}</span>;
+    },
+  },
+  {
     accessorKey: 'role',
     header: 'Role',
     cell: ({ row }) => {
       const role = row.getValue('role') as string;
-      return <Badge variant="secondary" className="capitalize">{role.replace(/_/g, ' ')}</Badge>;
+      return <Badge variant="secondary" className="capitalize">{getRoleLabel(role)}</Badge>;
     },
   },
    {

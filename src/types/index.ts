@@ -9,10 +9,14 @@ export type UserProfile = {
   id: string;
   displayName: string;
   email: string;
+  employeeId?: string;
   avatar?: string;
   phone?: string;
   dateOfBirth?: string;
   role: UserRole;
+  accessStatus?: 'approved' | 'blocked';
+  blockedAt?: any;
+  blockedBy?: string;
   teamspaceIds: string[];
   createdBy?: string;
 };
@@ -38,10 +42,19 @@ export type Lead = {
   email?: string;
   phone: string;
   status: LeadStatus;
+  campaignId?: string;
+  campaignLeadId?: string;
   source?: string;
   assignedToIds: string[];
   teamspaceId: string;
   metaLeadId?: string;
+  notes?: string;
+  statusHistory?: Array<{
+    status: LeadStatus;
+    note?: string;
+    updatedAt?: any;
+    updatedBy?: string;
+  }>;
   demographicData?: {
     country?: string;
     industry?: string;
@@ -373,7 +386,7 @@ export type Notification = {
   id: string;
   title: string;
   description: string;
-  type: 'lead_assigned' | 'lead_reminder' | 'system';
+  type: 'lead_assigned' | 'lead_reminder' | 'system' | 'team_transfer' | 'access_approval_request';
   timestamp: string;
   read: boolean;
   link?: string;

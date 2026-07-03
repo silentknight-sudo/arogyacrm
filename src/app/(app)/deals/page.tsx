@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
+import { getDealStageLabel } from '@/lib/status-labels';
 
 const stages: DealStage[] = ['new', 'intrested', 'not connect', 'CNP', 'done', 'not intrested'];
 
@@ -227,7 +228,7 @@ export default function SalesPipelinePage() {
                         <div className="flex gap-1">
                             {stages.map(s => (
                                 <Button key={s} variant="secondary" size="sm" onClick={() => handleSelectN(s)} className="h-10 rounded-xl font-black text-[9px] uppercase tracking-tighter px-3 hover:bg-primary hover:text-white transition-all">
-                                    Grab {s}
+                                    Grab {getDealStageLabel(s)}
                                 </Button>
                             ))}
                         </div>

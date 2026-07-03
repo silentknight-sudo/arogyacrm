@@ -37,9 +37,10 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getRoleLabel } from '@/lib/user-labels';
 
 const formSchema = z.object({
-  assignedToId: z.string().min(1, 'You must assign the leads to a specialist.'),
+  assignedToId: z.string().min(1, 'You must assign the leads to a team lead or telecaller.'),
 });
 
 type UploadLeadsDialogProps = {
@@ -135,7 +136,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
         });
 
         if (result && result.success) {
-          toast({ title: 'Import Successful', description: `${result.count} prospects synchronized.` });
+          toast({ title: 'Import Successful', description: `${result.count} leads synchronized.` });
           setOpen(false);
           form.reset();
           setImportedLeads([]);
@@ -183,16 +184,16 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                     name="assignedToId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Initial Specialist Assignment</FormLabel>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Initial Assignment</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
                             <SelectTrigger disabled={isLoading} className="rounded-xl h-12 bg-muted/20 border-none">
-                                <SelectValue placeholder="Select specialist" />
+                                <SelectValue placeholder="Select team lead or telecaller" />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-xl">
                             {users.map(user => (
-                                <SelectItem key={user.id} value={user.id}>{user.displayName} ({user.role.replace(/_/g, ' ')})</SelectItem>
+                                <SelectItem key={user.id} value={user.id}>{user.displayName} ({getRoleLabel(user.role)})</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>
@@ -207,7 +208,7 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                 </Form>
             </div>
             <div>
-                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Mapped Prospect Preview</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Mapped Lead Preview</Label>
                 <div className="rounded-[2rem] border bg-muted/10 p-1 mt-3 shadow-inner">
                     <ScrollArea className="h-[400px]">
                         <div className="p-4 space-y-4">

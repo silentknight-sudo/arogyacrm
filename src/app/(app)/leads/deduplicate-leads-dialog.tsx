@@ -62,7 +62,7 @@ export function DeduplicateLeadsDialog() {
             <AlertDialogTitle className="text-3xl font-black tracking-tight text-[#4ade80]">Strategic Cleanup</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="text-lg font-medium text-white/60">
-            This operation will scan your entire prospect database for duplicate phone numbers.
+            This operation will scan your entire lead database for duplicate phone numbers.
             <br /><br />
             <span className="text-[#fbbf24] font-bold">Only the earliest record for each number will be preserved.</span> All other duplicates will be permanently purged.
           </AlertDialogDescription>

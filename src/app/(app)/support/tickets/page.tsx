@@ -1,6 +1,6 @@
 'use client';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { BadgeIndianRupee, Megaphone, PackageCheck, PlusCircle, ShieldQuestion, UserCheck, Users } from 'lucide-react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -9,6 +9,16 @@ import type { Ticket, Contact, UserProfile } from '@/types';
 import { useApp } from '@/context/app-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateTicketDialog } from './create-ticket-dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+const helpCategories = [
+  { title: 'Campaign & Performance', icon: Megaphone, issues: ['I have issue in new leads', 'I have issue in pending leads', 'I have issue in my team performance'] },
+  { title: 'Confirmation', icon: UserCheck, issues: ['I have issue in confirmation process', 'I have issue in confirmation item performance', 'I have issue in the done leads'] },
+  { title: 'HCR or Orders & Delivery', icon: PackageCheck, issues: ['RTO issue', 'I have issue in the delivery process', 'I want to know the delivery status AWB'] },
+  { title: 'Payments & Salary', icon: BadgeIndianRupee, issues: ['I have issue in payment process', 'I have issue in salary process'] },
+  { title: 'Attendance', icon: Users, issues: ['I have issue in attendance process', 'I have issue in leave process'] },
+  { title: 'Complaints & Others', icon: ShieldQuestion, issues: ['I want to file a complaint against any team member', 'I want to file a complaint against my manager'] },
+];
 
 export default function TicketsPage() {
   const { currentTeamspace, currentUser, isUserLoading } = useApp();
@@ -47,9 +57,9 @@ export default function TicketsPage() {
     <div className="space-y-6">
         <div className="flex items-center justify-between">
             <div>
-                <h1 className="text-3xl font-black tracking-tight text-primary">Support Tickets</h1>
+                <h1 className="text-4xl font-black tracking-tight text-primary">Support</h1>
                 <p className="text-muted-foreground font-medium">
-                    Manage and resolve customer issues.
+                    Help topics and ticket management.
                 </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -64,6 +74,28 @@ export default function TicketsPage() {
                     </Button>
                 </CreateTicketDialog>
             </div>
+        </div>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {helpCategories.map((category) => {
+            const Icon = category.icon;
+            return (
+              <Card key={category.title} className="rounded-[2rem] border-primary/10 shadow-sm">
+                <CardHeader>
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-lg font-black">{category.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {category.issues.map((issue) => (
+                    <button key={issue} className="block w-full rounded-xl border bg-background px-4 py-3 text-left text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary">
+                      {issue}
+                    </button>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
         {isLoading ? (
             <div className="space-y-4">

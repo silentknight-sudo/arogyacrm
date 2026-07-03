@@ -4,7 +4,18 @@ import { useApp, type Theme } from '@/context/app-context';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Check, Monitor, Moon, Sun } from 'lucide-react';
+
+const themeTiles = [
+  { name: 'SS Herbal Theme', value: 'light', gradient: 'from-[#1f3b2f] via-[#45624f] to-[#d3b66b]' },
+  { name: 'Sunset', value: 'light', gradient: 'from-[#f8b195] via-[#f67280] to-[#6c5b7b]' },
+  { name: 'Midnight', value: 'dark', gradient: 'from-[#101827] via-[#1f2a44] to-[#536976]' },
+  { name: 'Rose', value: 'light', gradient: 'from-[#ff9a9e] via-[#fad0c4] to-[#fbc2eb]' },
+  { name: 'Forest', value: 'light', gradient: 'from-[#134e5e] via-[#71b280] to-[#a8e063]' },
+  { name: 'Jshine', value: 'system', gradient: 'from-[#12c2e9] via-[#c471ed] to-[#f64f59]' },
+  { name: 'Ocean', value: 'light', gradient: 'from-[#2193b0] via-[#6dd5ed] to-[#b2fefa]' },
+  { name: 'Midnight City', value: 'dark', gradient: 'from-[#232526] via-[#414345] to-[#0f2027]' },
+] as const;
 
 export default function SettingsPage() {
     const { theme, setTheme } = useApp();
@@ -12,53 +23,41 @@ export default function SettingsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-                <p className="text-muted-foreground">Manage your application settings.</p>
+                <h1 className="text-4xl font-black tracking-tight text-primary">Theme Settings</h1>
+                <p className="text-muted-foreground font-medium">Choose the dashboard theme color.</p>
             </div>
-            <Card>
+            <Card className="rounded-[2rem] border-primary/10">
                 <CardHeader>
-                    <CardTitle>Appearance</CardTitle>
-                    <CardDescription>Customize the look and feel of the application. Select your preferred theme.</CardDescription>
+                    <CardTitle className="text-2xl font-black">Choose Theme Color</CardTitle>
+                    <CardDescription>Reference CRM themes mapped to your available light, dark, and system appearance modes.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <RadioGroup 
                         value={theme} 
                         onValueChange={(value) => setTheme(value as Theme)} 
-                        className="grid max-w-md grid-cols-1 gap-4 pt-2 sm:grid-cols-3 sm:gap-8"
+                        className="grid grid-cols-1 gap-5 pt-2 md:grid-cols-2 xl:grid-cols-4"
                     >
-                        <div>
-                            <Label className="cursor-pointer">
-                                <RadioGroupItem value="light" className="sr-only" />
-                                <div className="items-center rounded-md border-2 border-muted p-1 hover:border-accent [&[data-state=checked]]:border-primary">
-                                    <div className="flex flex-col items-center justify-center space-y-2 rounded-sm bg-[#ecedef] p-4">
-                                        <Sun className="h-6 w-6 text-slate-800" />
-                                        <span className="font-medium text-slate-800">Light</span>
+                        {themeTiles.map((tile) => {
+                            const Icon = tile.value === 'dark' ? Moon : tile.value === 'system' ? Monitor : Sun;
+                            const selected = theme === tile.value;
+                            return (
+                                <Label key={tile.name} className="cursor-pointer">
+                                    <RadioGroupItem value={tile.value} className="sr-only" />
+                                    <div className={`relative flex h-40 items-center justify-center overflow-hidden rounded-[1.75rem] bg-gradient-to-br ${tile.gradient} p-5 text-white shadow-lg transition-all hover:scale-[1.02] ${selected ? 'ring-4 ring-primary ring-offset-2' : ''}`}>
+                                        <div className="absolute inset-0 bg-black/10" />
+                                        {selected && (
+                                            <div className="absolute right-4 top-4 rounded-full bg-white/20 p-2 backdrop-blur">
+                                                <Check className="h-4 w-4" />
+                                            </div>
+                                        )}
+                                        <div className="relative text-center">
+                                            <Icon className="mx-auto mb-3 h-7 w-7" />
+                                            <p className="text-xl font-black">{tile.name}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            </Label>
-                        </div>
-                         <div>
-                            <Label className="cursor-pointer">
-                                <RadioGroupItem value="dark" className="sr-only" />
-                                <div className="items-center rounded-md border-2 border-muted bg-popover p-1 hover:border-accent [&[data-state=checked]]:border-primary">
-                                    <div className="flex flex-col items-center justify-center space-y-2 rounded-sm bg-slate-950 p-4">
-                                        <Moon className="h-6 w-6 text-slate-400" />
-                                        <span className="font-medium text-slate-400">Dark</span>
-                                    </div>
-                                </div>
-                            </Label>
-                        </div>
-                        <div>
-                            <Label className="cursor-pointer">
-                                <RadioGroupItem value="system" className="sr-only" />
-                                <div className="items-center rounded-md border-2 border-muted p-1 hover:border-accent [&[data-state=checked]]:border-primary">
-                                    <div className="flex flex-col items-center justify-center space-y-2 rounded-sm bg-muted/40 p-4">
-                                        <Monitor className="h-6 w-6 text-muted-foreground" />
-                                        <span className="font-medium text-muted-foreground">System</span>
-                                    </div>
-                                </div>
-                            </Label>
-                        </div>
+                                </Label>
+                            );
+                        })}
                     </RadioGroup>
                 </CardContent>
             </Card>

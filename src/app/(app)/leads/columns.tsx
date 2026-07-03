@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, Loader2, BellRing, PencilLine } from 'lucide-react';
+import { ArrowUpDown, Loader2, BellRing, PencilLine, CheckCircle2, CircleOff, PauseCircle, XCircle, History, Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -31,8 +31,17 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { getLeadStatusLabel } from '@/lib/status-labels';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const statuses: LeadStatus[] = ['new', 'intrested', 'CNP', 'done', 'not intrested'];
+const statusCards: Array<{ status: LeadStatus; icon: any; className: string }> = [
+  { status: 'new', icon: Hourglass, className: 'border-amber-200 bg-amber-50 text-amber-700' },
+  { status: 'done', icon: CheckCircle2, className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+  { status: 'not intrested', icon: XCircle, className: 'border-rose-200 bg-rose-50 text-rose-700' },
+  { status: 'intrested', icon: PauseCircle, className: 'border-sky-200 bg-sky-50 text-sky-700' },
+  { status: 'CNP', icon: CircleOff, className: 'border-orange-200 bg-orange-50 text-orange-700' },
+];
 
 const normalizeStatus = (status: string): LeadStatus => {
   const map: Record<string, LeadStatus> = {
@@ -48,7 +57,7 @@ const normalizeStatus = (status: string): LeadStatus => {
 
 const UpdateLeadDialog = ({ lead }: { lead: Lead }) => {
   const { toast } = useToast();
-  const { currentTeamspace } = useApp();
+  const { currentTeamspace, currentUser } = useApp();
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<LeadStatus>(normalizeStatus(lead.status));
@@ -58,6 +67,7 @@ const UpdateLeadDialog = ({ lead }: { lead: Lead }) => {
   const [reminderValue, setReminderValue] = useState<string>(
     lead.reminderValue ? String(lead.reminderValue) : ''
   );
+  const [note, setNote] = useState('');
 
   const reminderRequired = status === 'intrested';
 
@@ -79,6 +89,8 @@ const UpdateLeadDialog = ({ lead }: { lead: Lead }) => {
         leadId: lead.id,
         teamspaceId: currentTeamspace.id,
         status,
+        note,
+        updatedBy: currentUser?.displayName || currentUser?.email || '',
       });
 
       if (!statusResult.success) {
@@ -98,15 +110,17 @@ const UpdateLeadDialog = ({ lead }: { lead: Lead }) => {
         return;
       }
 
-      toast({
-        title: 'Lead Updated',
-        description: reminderRequired
-          ? `${lead.fullName} moved to ${status} with a ${parsedReminderValue} ${reminderUnit} reminder.`
-          : `${lead.fullName} moved to ${status}.`,
+        toast({
+          title: 'Lead Updated',
+          description: reminderRequired
+          ? `${lead.fullName} moved to ${getLeadStatusLabel(status)} with a ${parsedReminderValue} ${reminderUnit} reminder.`
+          : `${lead.fullName} moved to ${getLeadStatusLabel(status)}.`,
       });
       setOpen(false);
     });
   };
+
+  const history = [...(lead.statusHistory || [])].reverse();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -116,79 +130,122 @@ const UpdateLeadDialog = ({ lead }: { lead: Lead }) => {
           Update
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md rounded-[2rem] border border-border/60 bg-card p-8 shadow-2xl">
+      <DialogContent className="sm:max-w-3xl rounded-[2rem] border border-border/60 bg-card p-8 shadow-2xl">
         <DialogHeader className="space-y-3">
-          <DialogTitle className="text-2xl font-black text-primary">Update Lead</DialogTitle>
+          <DialogTitle className="flex items-center gap-4 text-2xl font-black text-primary">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">{lead.fullName?.slice(0, 2).toUpperCase()}</span>
+            <span>{lead.fullName}</span>
+          </DialogTitle>
           <DialogDescription className="text-base font-medium">
-            Move {lead.fullName} to the next stage and schedule a reminder when needed.
+            Lead ID: {lead.id}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label className="text-[11px] font-black uppercase tracking-[0.25em] text-muted-foreground">
-              Stage
-            </Label>
-            <Select disabled={isPending} value={status} onValueChange={(value) => setStatus(value as LeadStatus)}>
-              <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-none font-bold">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((item) => (
-                  <SelectItem key={item} value={item} className="font-bold">
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <Tabs defaultValue="update" className="mt-2">
+          <TabsList className="grid w-full grid-cols-2 rounded-2xl">
+            <TabsTrigger value="update" className="rounded-xl font-black"><PencilLine className="mr-2 h-4 w-4" />Update Lead</TabsTrigger>
+            <TabsTrigger value="history" className="rounded-xl font-black"><History className="mr-2 h-4 w-4" />History ({history.length})</TabsTrigger>
+          </TabsList>
 
-          {reminderRequired && (
-            <div className="rounded-2xl border border-primary/10 bg-muted/20 p-5 space-y-4">
-              <div className="flex items-center gap-2 text-primary">
-                <BellRing className="h-4 w-4" />
-                <p className="text-sm font-black uppercase tracking-[0.2em]">Reminder</p>
+          <TabsContent value="update" className="mt-6 space-y-6">
+            <div className="space-y-3">
+              <Label className="text-[11px] font-black uppercase tracking-[0.25em] text-muted-foreground">
+                Select Status
+              </Label>
+              <div className="grid gap-3 sm:grid-cols-5">
+                {statusCards.map((item) => {
+                  const Icon = item.icon;
+                  const selected = status === item.status;
+                  return (
+                    <button
+                      key={item.status}
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => setStatus(item.status)}
+                      className={`rounded-2xl border p-4 text-center transition-all hover:scale-[1.02] ${item.className} ${selected ? 'ring-2 ring-primary ring-offset-2' : 'opacity-80'}`}
+                    >
+                      <Icon className="mx-auto mb-2 h-6 w-6" />
+                      <span className="text-xs font-black">{getLeadStatusLabel(item.status)}</span>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="grid grid-cols-[1fr_120px] gap-3">
-                <Input
-                  type="number"
-                  min="1"
-                  value={reminderValue}
-                  onChange={(event) => setReminderValue(event.target.value)}
-                  placeholder="Enter time"
-                  className="h-11 rounded-xl border-none bg-background shadow-inner font-bold"
-                />
-                <Select
-                  disabled={isPending}
-                  value={reminderUnit}
-                  onValueChange={(value) => setReminderUnit(value as 'none' | 'hours' | 'days')}
-                >
-                  <SelectTrigger className="h-11 rounded-xl border-none bg-background shadow-inner font-bold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hours">Hours</SelectItem>
-                    <SelectItem value="days">Days</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Team leaders will keep seeing the popup reminder until they close it.
-              </p>
             </div>
-          )}
-        </div>
 
-        <DialogFooter className="mt-4">
-          <Button
-            onClick={handleSave}
-            disabled={isPending}
-            className="w-full h-12 rounded-xl herbal-gradient font-black"
-          >
-            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Save Update
-          </Button>
-        </DialogFooter>
+            <div className="space-y-2">
+              <Label className="text-[11px] font-black uppercase tracking-[0.25em] text-muted-foreground">
+                Remark / Query
+              </Label>
+              <Textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add caller remark, query, or follow-up note" className="min-h-24 rounded-2xl border-primary/10" />
+            </div>
+
+            {reminderRequired && (
+              <div className="rounded-2xl border border-primary/10 bg-muted/20 p-5 space-y-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <BellRing className="h-4 w-4" />
+                  <p className="text-sm font-black uppercase tracking-[0.2em]">Reminder</p>
+                </div>
+                <div className="grid grid-cols-[1fr_120px] gap-3">
+                  <Input
+                    type="number"
+                    min="1"
+                    value={reminderValue}
+                    onChange={(event) => setReminderValue(event.target.value)}
+                    placeholder="Enter time"
+                    className="h-11 rounded-xl border-none bg-background shadow-inner font-bold"
+                  />
+                  <Select
+                    disabled={isPending}
+                    value={reminderUnit}
+                    onValueChange={(value) => setReminderUnit(value as 'none' | 'hours' | 'days')}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl border-none bg-background shadow-inner font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hours">Hours</SelectItem>
+                      <SelectItem value="days">Days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Team leaders will keep seeing the popup reminder until they close it.
+                </p>
+              </div>
+            )}
+
+            <DialogFooter className="mt-4">
+              <Button
+                onClick={handleSave}
+                disabled={isPending}
+                className="w-full h-12 rounded-xl herbal-gradient font-black"
+              >
+                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save Update
+              </Button>
+            </DialogFooter>
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-6 max-h-[420px] space-y-4 overflow-y-auto pr-2">
+            {history.length === 0 ? (
+              <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">No history yet.</div>
+            ) : history.map((item, index) => {
+              const updatedAt = item.updatedAt?.toDate ? item.updatedAt.toDate() : item.updatedAt ? new Date(item.updatedAt) : null;
+              return (
+                <div key={`${item.status}-${index}`} className="overflow-hidden rounded-2xl border bg-background">
+                  <div className="bg-primary/10 px-5 py-3 text-sm font-black text-primary">{updatedAt ? format(updatedAt, 'PPp') : 'Time not provided'}</div>
+                  <div className="grid gap-3 p-5 text-sm sm:grid-cols-2">
+                    <div><p className="text-[10px] font-black uppercase text-muted-foreground">Name</p><p className="font-bold">{lead.fullName}</p></div>
+                    <div><p className="text-[10px] font-black uppercase text-muted-foreground">TC Name</p><p className="font-bold">{item.updatedBy || 'not provided'}</p></div>
+                    <div><p className="text-[10px] font-black uppercase text-muted-foreground">Last Status</p><Badge>{getLeadStatusLabel(item.status)}</Badge></div>
+                    <div><p className="text-[10px] font-black uppercase text-muted-foreground">Campaign</p><p className="font-bold">{lead.campaignId || 'not provided'}</p></div>
+                    <div className="sm:col-span-2"><p className="text-[10px] font-black uppercase text-muted-foreground">Remark</p><p className="font-medium text-muted-foreground">{item.note || 'not provided'}</p></div>
+                  </div>
+                </div>
+              );
+            })}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

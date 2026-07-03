@@ -36,6 +36,7 @@ import { createLead } from './actions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Product } from '@/types';
+import { getLeadStatusLabel } from '@/lib/status-labels';
 
 const leadStatuses = ['new', 'intrested', 'CNP', 'done', 'not intrested'] as const;
 const leadSources = ['Website', 'Referral', 'Cold Call', 'Advertisement', 'Social Media', 'Other'];
@@ -130,7 +131,7 @@ export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDi
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[500px] rounded-[2rem]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-primary">Add Strategic Prospect</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-primary">Add Lead</DialogTitle>
           <DialogDescription>
             Register a new lead and their product interests.
           </DialogDescription>
@@ -215,7 +216,7 @@ export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDi
                             </FormControl>
                             <SelectContent>
                             {leadStatuses.map(status => (
-                                <SelectItem key={status} value={status} className="uppercase font-black text-[10px] tracking-widest">{status}</SelectItem>
+                                <SelectItem key={status} value={status} className="uppercase font-black text-[10px] tracking-widest">{getLeadStatusLabel(status)}</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>
@@ -224,7 +225,7 @@ export function CreateLeadDialog({ children, products, isLoading }: CreateLeadDi
                     )} />
                 </div>
                 <Button type="submit" disabled={isPending} className="w-full h-14 rounded-2xl herbal-gradient shadow-xl text-lg font-bold">
-                    {isPending ? 'Processing...' : 'Register Prospect'}
+                    {isPending ? 'Processing...' : 'Register Lead'}
                 </Button>
             </form>
             </Form>

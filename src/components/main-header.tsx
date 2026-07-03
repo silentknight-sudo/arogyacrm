@@ -72,7 +72,7 @@ export function MainHeader() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <Input
             type="search"
-            placeholder="Search prospect or deal..."
+            placeholder="Search lead or deal..."
             className="w-full bg-muted/40 border-none rounded-2xl pl-10 focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
           />
         </div>
