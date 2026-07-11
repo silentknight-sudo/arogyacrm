@@ -39,7 +39,7 @@ import { Label } from '@/components/ui/label';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 
 
-const UserActions = ({ user }: { user: UserProfile }) => {
+export const UserActions = ({ user }: { user: UserProfile }) => {
   const { toast } = useToast();
   const { currentUser } = useApp();
   const firestore = useFirestore();

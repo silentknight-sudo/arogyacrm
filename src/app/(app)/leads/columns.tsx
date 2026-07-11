@@ -15,8 +15,6 @@ import {
 import type { Lead, UserProfile, LeadStatus } from '@/types';
 import { setLeadReminder, updateLeadStatus } from './actions';
 import { useToast } from '@/hooks/use-toast';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import { Badge } from '@/components/ui/badge';
@@ -254,38 +252,15 @@ const UpdateLeadDialog = ({ lead }: { lead: Lead }) => {
 const AssignedToCell = ({ assignedToIds, users }: { assignedToIds: string[], users: UserProfile[] }) => {
     const assignedUsers = (assignedToIds || []).map(id => users.find(u => u.id === id)).filter(Boolean) as UserProfile[];
     if (assignedUsers.length === 0) return <span className="text-muted-foreground text-[10px] font-black uppercase tracking-widest italic opacity-40">Unassigned</span>;
-    const visibleUsers = assignedUsers.slice(0, 3);
-    const remainingCount = assignedUsers.length - visibleUsers.length;
 
     return (
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <div className="flex items-center -space-x-3 cursor-help">
-                    {visibleUsers.map(user => (
-                        <Avatar key={user.id} className="h-8 w-8 border-2 border-background shadow-sm ring-1 ring-primary/5">
-                            <AvatarImage src={user.avatar} alt={user.displayName} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-black">{user.displayName?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                    ))}
-                    {remainingCount > 0 && (
-                        <Avatar className="h-8 w-8 border-2 border-background bg-muted shadow-sm">
-                            <AvatarFallback className="text-[10px] font-black text-muted-foreground">+{remainingCount}</AvatarFallback>
-                        </Avatar>
-                    )}
-                </div>
-            </TooltipTrigger>
-            <TooltipContent className="rounded-xl border-none shadow-xl bg-[#0D1F0B] text-white p-3">
-                <div className="space-y-1">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-2">Team Jurisdiction</p>
-                    {assignedUsers.map(u => (
-                        <div key={u.id} className="text-xs font-bold flex items-center gap-2">
-                            <div className="w-1 h-1 rounded-full bg-accent" />
-                            {u.displayName}
-                        </div>
-                    ))}
-                </div>
-            </TooltipContent>
-        </Tooltip>
+        <div className="flex max-w-[220px] flex-wrap gap-1.5">
+            {assignedUsers.map(user => (
+                <Badge key={user.id} variant="secondary" className="rounded-full px-2.5 py-1 text-[10px] font-black">
+                    {user.displayName}
+                </Badge>
+            ))}
+        </div>
     );
 };
 

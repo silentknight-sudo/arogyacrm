@@ -48,14 +48,32 @@ const formSchema = z.object({
   email: z.string().email('Invalid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
   role: z.enum(['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support']),
-  teamspaceIds: z.array(z.string()).min(1, 'User must belong to at least one teamspace.'),
+  teamspaceIds: z.array(z.string()),
   managerId: z.string().optional(),
+  newTeamspaceName: z.string().optional(),
+  newTeamspaceDescription: z.string().optional(),
 }).superRefine((values, ctx) => {
   if (values.role === 'sales_executive' && !values.managerId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['managerId'],
       message: 'Choose the Team Lead this telecaller should work under.',
+    });
+  }
+
+  if (values.role === 'sales_team_lead' && !values.newTeamspaceName?.trim() && values.teamspaceIds.length !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['newTeamspaceName'],
+      message: 'Create a new teamspace for this Team Lead.',
+    });
+  }
+
+  if (!['sales_executive', 'sales_team_lead'].includes(values.role) && values.teamspaceIds.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['teamspaceIds'],
+      message: 'User must belong to at least one teamspace.',
     });
   }
 });
@@ -109,6 +127,8 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
       role: 'sales_executive',
       teamspaceIds: currentUser?.role === 'sales_team_lead' && currentTeamspace ? [currentTeamspace.id] : [],
       managerId: '',
+      newTeamspaceName: '',
+      newTeamspaceDescription: '',
     },
   });
 
@@ -136,6 +156,8 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
           role: 'sales_executive',
           teamspaceIds: [],
           managerId: '',
+          newTeamspaceName: '',
+          newTeamspaceDescription: '',
         });
       } else {
         toast({
@@ -210,6 +232,8 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         field.onChange(value);
                         form.setValue('teamspaceIds', []);
                         form.setValue('managerId', '');
+                        form.setValue('newTeamspaceName', '');
+                        form.setValue('newTeamspaceDescription', '');
                       }}
                       value={field.value}
                       disabled={availableRoles.length === 1}
@@ -276,7 +300,48 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                     </div>
                   </div>
                 )}
-                {selectedRole !== 'sales_executive' && (
+                {selectedRole === 'sales_team_lead' && (
+                  <div className="rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4 shadow-sm">
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold">Create Team Space</h3>
+                      <p className="text-xs text-muted-foreground">
+                        This dedicated teamspace will be created and assigned to the new Team Lead automatically.
+                      </p>
+                    </div>
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="newTeamspaceName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Teamspace Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Example: Yogesh TL Team" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="newTeamspaceDescription"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Optional team notes or product focus" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              You can transfer telecallers into this team after the TL is created.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
+                {!['sales_executive', 'sales_team_lead'].includes(selectedRole) && (
                 <FormField
                   control={form.control}
                   name="teamspaceIds"
@@ -328,7 +393,11 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                   type="submit"
                   disabled={
                     isPending ||
-                    (selectedRole === 'sales_executive' ? isLoadingTeamLeads || !form.watch('managerId') : isLoadingTeamspaces || filteredTeamspaces.length === 0)
+                    (selectedRole === 'sales_executive'
+                      ? isLoadingTeamLeads || !form.watch('managerId')
+                      : selectedRole === 'sales_team_lead'
+                        ? !form.watch('newTeamspaceName')?.trim()
+                        : isLoadingTeamspaces || filteredTeamspaces.length === 0)
                   }
                   className="w-full"
                 >

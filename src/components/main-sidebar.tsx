@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import {
     Megaphone, Ticket, LayoutDashboard,
     Shield, Sparkles, BarChart3, UserCog,
-    MonitorSmartphone, UploadCloud, Search, ClipboardCheck, ListChecks, WalletCards, Settings, Users
+    MonitorSmartphone, UploadCloud, ListChecks, WalletCards, Settings, Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/app-context';
@@ -34,12 +34,10 @@ export function MainSidebar({ className }: { className?: string }) {
         !isTelecaller ? { href: '/device-manager', label: 'Device Manager', icon: MonitorSmartphone } : null,
         isAdmin ? { href: '/campaigns', label: 'Product Campaigns', icon: Megaphone } : null,
         isAdmin ? { href: '/add-on', label: 'Add Product Leads', icon: UploadCloud } : null,
-        { href: '/parcel-search', label: 'All Parcel Search', icon: Search },
-        !isTelecaller ? { href: '/confirmation', label: 'Confirmation Management', icon: ClipboardCheck } : null,
         { href: '/follow-up', label: 'Follow Up', icon: ListChecks },
         isAdmin ? { href: '/support/tickets', label: 'Support Tickets', icon: Ticket } : null,
         !isTelecaller ? { href: '/transactions', label: 'Transactions', icon: WalletCards } : null,
-        { href: '/settings', label: 'Dashboard Settings', icon: Settings },
+        { href: '/settings', label: 'Settings', icon: Settings },
     ].filter((item): item is SidebarItem => Boolean(item));
 
   const menu = [

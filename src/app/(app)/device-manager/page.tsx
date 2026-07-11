@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { collection, query, where } from 'firebase/firestore';
-import { Loader2, MonitorSmartphone, ShieldCheck, ShieldOff, Search } from 'lucide-react';
+import { Eye, Loader2, MonitorSmartphone, ShieldCheck, ShieldOff, Search } from 'lucide-react';
 import { useApp } from '@/context/app-context';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { UserProfile } from '@/types';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { updateMemberAccess } from './actions';
 
@@ -22,6 +23,7 @@ export default function DeviceManagerPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [pendingUserId, setPendingUserId] = useState('');
+  const [selectedDeviceUser, setSelectedDeviceUser] = useState<UserProfile | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const usersQuery = useMemoFirebase(() => {
@@ -79,6 +81,50 @@ export default function DeviceManagerPage() {
 
   return (
     <div className="space-y-8 pb-12">
+      <Dialog open={Boolean(selectedDeviceUser)} onOpenChange={(open) => !open && setSelectedDeviceUser(null)}>
+        <DialogContent className="rounded-[2rem] sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-primary">Device Login Details</DialogTitle>
+            <DialogDescription>
+              Device access and login status for {selectedDeviceUser?.displayName || 'this employee'}.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDeviceUser && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border bg-muted/20 p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Employee</p>
+                <p className="mt-2 text-lg font-black text-primary">{selectedDeviceUser.displayName}</p>
+                <p className="text-sm font-semibold text-muted-foreground">{selectedDeviceUser.email}</p>
+              </div>
+              <div className="rounded-2xl border bg-muted/20 p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Access Status</p>
+                <div className="mt-3">
+                  {selectedDeviceUser.accessStatus === 'blocked' ? (
+                    <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700">Blocked</Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">Approved</Badge>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-2xl border bg-background p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Role</p>
+                <p className="mt-2 font-black text-primary">{getRoleLabel(selectedDeviceUser.role)}</p>
+              </div>
+              <div className="rounded-2xl border bg-background p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Employee ID</p>
+                <p className="mt-2 font-mono text-sm font-black text-primary">{getProfessionalEmployeeId(selectedDeviceUser)}</p>
+              </div>
+              <div className="rounded-2xl border bg-background p-5 md:col-span-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Login History</p>
+                <p className="mt-3 text-sm font-semibold text-muted-foreground">
+                  Detailed login device, location, login time, and logout time history has not been recorded for this account yet. Access approval/blocking is active from this manager.
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div>
         <h1 className="text-4xl font-black tracking-tight text-primary">Device Manager</h1>
         <p className="text-muted-foreground font-medium">Monitor and manage employee device access.</p>
@@ -135,14 +181,15 @@ export default function DeviceManagerPage() {
                   <th className="px-4 py-3 text-left font-black">Contact</th>
                   <th className="px-4 py-3 text-left font-black">Employee ID</th>
                   <th className="px-4 py-3 text-left font-black">Status</th>
+                  <th className="px-4 py-3 text-left font-black">View Device</th>
                   <th className="px-4 py-3 text-left font-black">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td className="px-4 py-8 text-center text-muted-foreground" colSpan={7}>Loading devices...</td></tr>
+                  <tr><td className="px-4 py-8 text-center text-muted-foreground" colSpan={8}>Loading devices...</td></tr>
                 ) : filteredUsers.length === 0 ? (
-                  <tr><td className="px-4 py-8 text-center text-muted-foreground" colSpan={7}>No employees found.</td></tr>
+                  <tr><td className="px-4 py-8 text-center text-muted-foreground" colSpan={8}>No employees found.</td></tr>
                 ) : filteredUsers.map((user, index) => (
                   <tr key={user.id} className="border-t">
                     <td className="px-4 py-3 font-bold">{index + 1}</td>
@@ -159,6 +206,17 @@ export default function DeviceManagerPage() {
                       ) : (
                         <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">Approved</Badge>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl"
+                        onClick={() => setSelectedDeviceUser(user)}
+                      >
+                        <Eye className="mr-2 h-3.5 w-3.5" />
+                        View Device
+                      </Button>
                     </td>
                     <td className="px-4 py-3">
                       {user.accessStatus === 'blocked' ? (

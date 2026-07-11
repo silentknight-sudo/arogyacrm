@@ -53,9 +53,7 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
       return users.filter(u => u.role === 'sales_team_lead');
     }
     if (currentUser.role === 'sales_team_lead') {
-      const createdExecutives = users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
-      if (createdExecutives.length > 0) return createdExecutives;
-      return users.filter(u => u.role === 'sales_executive');
+      return users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
     }
     return [];
   }, [users, currentUser]);
@@ -74,15 +72,10 @@ export function AssignLeadDialog({ open, onOpenChange, lead, users }: AssignLead
     }
     
     startTransition(async () => {
-      // Logic for Team Leads: They keep themselves assigned but add the Executive
-      const newIds = currentUser.role === 'sales_team_lead' 
-        ? Array.from(new Set([currentUser.id, ...values.assignedToIds]))
-        : values.assignedToIds;
-
       const result = await assignLead({
         leadId: lead.id,
         teamspaceId: currentTeamspace.id, 
-        newAssignedToIds: newIds,
+        newAssignedToIds: values.assignedToIds,
         currentUserId: currentUser.id,
       });
 

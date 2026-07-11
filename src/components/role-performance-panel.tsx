@@ -12,6 +12,7 @@ type RolePerformancePanelProps = {
   users: UserProfile[];
   title?: string;
   description?: string;
+  hideTeamMembers?: boolean;
 };
 
 export type PerformanceSummary = {
@@ -87,6 +88,7 @@ export function RolePerformancePanel({
   users,
   title,
   description,
+  hideTeamMembers = false,
 }: RolePerformancePanelProps) {
   const summary = getPerformanceSummary(subject, leads, users);
 
@@ -114,7 +116,7 @@ export function RolePerformancePanel({
         <SummaryCard label="Completed" value={`${summary.closed} (${summary.conversionRate}%)`} icon={CheckCircle2} />
       </div>
 
-      {subject.role === 'sales_team_lead' && (
+      {subject.role === 'sales_team_lead' && !hideTeamMembers && (
         <Card className="premium-card">
           <CardHeader>
             <CardTitle className="text-xl font-black text-primary">Team Telecallers</CardTitle>

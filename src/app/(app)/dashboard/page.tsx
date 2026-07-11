@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { collection, collectionGroup, query, where } from 'firebase/firestore';
 import { addDays, addMonths, addYears, isAfter } from 'date-fns';
-import { BarChart3, CalendarDays, CheckCircle2, CirclePause, Flame, Package, PhoneOff, ShieldX, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { BarChart3, CalendarDays, CheckCircle2, CirclePause, Package, PhoneOff, ShieldX, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { useApp } from '@/context/app-context';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Campaign, Lead, UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -203,7 +204,7 @@ function PerformanceRow({ user, leads }: { user: UserProfile; leads: Lead[] }) {
   const completion = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
 
   return (
-    <div className="grid gap-4 rounded-[1.5rem] border border-primary/10 bg-background/80 p-5 shadow-sm transition-all hover:border-primary/25 hover:bg-primary/5 md:grid-cols-[1.2fr_120px_1fr] md:items-center">
+    <Link href={`/team/${user.id}`} className="grid gap-4 rounded-[1.5rem] border border-primary/10 bg-background/80 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-primary/5 hover:shadow-xl md:grid-cols-[1.2fr_120px_1fr] md:items-center">
       <div className="flex min-w-0 items-center gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 font-black text-primary">
           {user.displayName?.slice(0, 2).toUpperCase()}
@@ -228,7 +229,54 @@ function PerformanceRow({ user, leads }: { user: UserProfile; leads: Lead[] }) {
           <span>NC {summary.notConnected}</span>
         </div>
       </div>
-    </div>
+    </Link>
+  );
+}
+
+function TelecallerProfileCard({ user, leads }: { user: UserProfile; leads: Lead[] }) {
+  const summary = getStageSummary(leads);
+  const completion = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
+
+  return (
+    <Link href={`/team/${user.id}`} className="group block">
+      <Card className="h-full overflow-hidden rounded-[2rem] border-primary/10 bg-card shadow-xl shadow-primary/5 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-2xl">
+        <CardHeader className="relative pb-3">
+          <div className="absolute -right-12 -top-12 h-28 w-28 rounded-full bg-primary/15 blur-2xl" />
+          <div className="relative flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl herbal-gradient text-lg font-black text-white shadow-lg">
+              {user.displayName?.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <CardTitle className="truncate text-xl font-black text-primary">{user.displayName}</CardTitle>
+              <CardDescription className="truncate font-semibold">{getProfessionalEmployeeId(user)}</CardDescription>
+              <Badge variant="secondary" className="mt-2">{getRoleLabel(user.role)}</Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-2xl bg-primary/5 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-muted-foreground">Completion</span>
+              <span className="text-sm font-black text-primary">{completion}%</span>
+            </div>
+            <Progress value={completion} className="h-2" />
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs font-black">
+            <div className="rounded-xl border bg-background p-3"><p className="text-lg text-primary">{summary.total}</p><p className="text-muted-foreground">Total</p></div>
+            <div className="rounded-xl border bg-background p-3"><p className="text-lg text-primary">{summary.pending}</p><p className="text-muted-foreground">Pending</p></div>
+            <div className="rounded-xl border bg-background p-3"><p className="text-lg text-primary">{summary.completed}</p><p className="text-muted-foreground">Done</p></div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs font-black">
+            <div className="rounded-xl border bg-background p-3"><p className="text-lg text-primary">{summary.notConnected}</p><p className="text-muted-foreground">NC</p></div>
+            <div className="rounded-xl border bg-background p-3"><p className="text-lg text-primary">{summary.holding}</p><p className="text-muted-foreground">Hold</p></div>
+            <div className="rounded-xl border bg-background p-3"><p className="text-lg text-primary">{summary.rejected}</p><p className="text-muted-foreground">Reject</p></div>
+          </div>
+          <Button variant="outline" className="w-full rounded-2xl font-black">
+            View Advanced Brief
+          </Button>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
@@ -267,9 +315,24 @@ export default function Dashboard() {
     return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
   }, [currentUser, currentTeamspace?.id, firestore, isAdmin, isUserLoading]);
 
-  const { data: leads, isLoading: loadingLeads } = useCollection<Lead>(leadsQuery);
+  const { data: rawLeads, isLoading: loadingLeads } = useCollection<Lead>(leadsQuery);
   const { data: campaigns, isLoading: loadingCampaigns } = useCollection<Campaign>(campaignsQuery);
   const { data: users, isLoading: loadingUsers } = useCollection<UserProfile>(usersQuery);
+
+  const leads = useMemo(() => {
+    const leadList = rawLeads || [];
+    if (!currentUser) return [];
+    if (isAdmin) return leadList;
+    if (isTelecaller) return leadList.filter((lead) => lead.assignedToIds?.includes(currentUser.id));
+    if (isTeamLead) {
+      const teamTelecallerIds = (users || [])
+        .filter((user) => user.role === 'sales_executive' && user.createdBy === currentUser.id)
+        .map((user) => user.id);
+      const visibleIds = new Set([currentUser.id, ...teamTelecallerIds]);
+      return leadList.filter((lead) => lead.assignedToIds?.some((id) => visibleIds.has(id)));
+    }
+    return [];
+  }, [currentUser, isAdmin, isTeamLead, isTelecaller, rawLeads, users]);
 
   const visibleCampaigns = useMemo(() => {
     const leadList = leads || [];
@@ -314,6 +377,21 @@ export default function Dashboard() {
     return [];
   }, [currentUser, isAdmin, isTeamLead, users]);
 
+  const teamTelecallers = useMemo(() => {
+    if (!isTeamLead || !currentUser) return [];
+    return (users || []).filter((user) => user.role === 'sales_executive' && user.createdBy === currentUser.id);
+  }, [currentUser, isTeamLead, users]);
+
+  const visibleCampaignIds = useMemo(
+    () => new Set((leads || []).map((lead) => lead.campaignId).filter(Boolean)),
+    [leads]
+  );
+
+  const teamLeadCampaigns = useMemo(
+    () => (campaigns || []).filter((campaign) => visibleCampaignIds.has(campaign.id)),
+    [campaigns, visibleCampaignIds]
+  );
+
   if (isUserLoading || loadingLeads || loadingCampaigns || loadingUsers) {
     return (
       <div className="space-y-6">
@@ -321,6 +399,139 @@ export default function Dashboard() {
         <div className="grid gap-4 md:grid-cols-3">
           {[0, 1, 2].map((item) => <Skeleton key={item} className="h-72 rounded-lg" />)}
         </div>
+      </div>
+    );
+  }
+
+  if (isTeamLead) {
+    return (
+      <div className="space-y-10 pb-12">
+        <section className="space-y-2">
+          <p className="text-sm font-black uppercase tracking-[0.25em] text-accent">Welcome back, {currentUser?.displayName || 'Team Lead'}!</p>
+          <h1 className="text-4xl font-black tracking-tight text-primary">Performance Tracker</h1>
+          <p className="max-w-3xl text-sm font-semibold text-muted-foreground">
+            Live view of leads assigned to you and your telecallers. Counts update directly from Firestore as lead status changes.
+          </p>
+        </section>
+
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <TrackerMetric label="New Leads" value={allTimeSummary.total} icon={Users} accent="bg-gradient-to-br from-amber-400 to-orange-500" detail="Total assigned visible leads" />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('new')}`} value={allTimeSummary.pending} icon={TrendingUp} accent="bg-gradient-to-br from-yellow-400 to-amber-600" detail="Untouched or pending leads" />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('CNP')}`} value={allTimeSummary.notConnected} icon={PhoneOff} accent="bg-gradient-to-br from-orange-400 to-red-500" detail="Not connected attempts" />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('done')}`} value={allTimeSummary.completed} icon={CheckCircle2} accent="bg-gradient-to-br from-emerald-400 to-green-600" detail={`${allTimeSummary.total > 0 ? Math.round((allTimeSummary.completed / allTimeSummary.total) * 100) : 0}% completion`} />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('intrested')}`} value={allTimeSummary.holding} icon={CirclePause} accent="bg-gradient-to-br from-sky-400 to-cyan-600" detail="Follow-up or holding leads" />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('not intrested')}`} value={allTimeSummary.rejected} icon={ShieldX} accent="bg-gradient-to-br from-rose-400 to-red-600" detail="Rejected lead outcomes" />
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black text-primary">Campaign Details</h2>
+              <p className="text-sm font-medium text-muted-foreground">
+                Each campaign card shows only outcomes from leads assigned to your team.
+              </p>
+            </div>
+            <Badge variant="secondary">{teamLeadCampaigns.length} campaigns</Badge>
+          </div>
+          {teamLeadCampaigns.length === 0 ? (
+            <Card className="rounded-2xl">
+              <CardContent className="p-8 text-center text-sm font-medium text-muted-foreground">
+                No campaign leads are assigned to your team yet.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {teamLeadCampaigns.map((campaign) => (
+                <CampaignCard
+                  key={campaign.id}
+                  campaign={campaign}
+                  leads={(leads || []).filter((lead) => lead.campaignId === campaign.id)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black text-primary">Telecaller Profiles</h2>
+              <p className="text-sm font-medium text-muted-foreground">
+                Open any card to view the full advanced brief profile and report.
+              </p>
+            </div>
+            <Badge variant="secondary">{teamTelecallers.length} telecallers</Badge>
+          </div>
+          {teamTelecallers.length === 0 ? (
+            <Card className="rounded-2xl">
+              <CardContent className="p-8 text-center text-sm font-medium text-muted-foreground">
+                No telecallers are currently assigned under your team.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {teamTelecallers.map((telecaller) => (
+                <TelecallerProfileCard
+                  key={telecaller.id}
+                  user={telecaller}
+                  leads={(leads || []).filter((lead) => lead.assignedToIds?.includes(telecaller.id))}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    );
+  }
+
+  if (isTelecaller) {
+    return (
+      <div className="space-y-10 pb-12">
+        <section className="space-y-2">
+          <p className="text-sm font-black uppercase tracking-[0.25em] text-accent">Welcome back, {currentUser?.displayName || 'Telecaller'}!</p>
+          <h1 className="text-4xl font-black tracking-tight text-primary">Performance Tracker</h1>
+          <p className="max-w-3xl text-sm font-semibold text-muted-foreground">
+            Live view of your assigned leads and active campaign outcomes only.
+          </p>
+        </section>
+
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <TrackerMetric label="New Leads" value={allTimeSummary.total} icon={Users} accent="bg-gradient-to-br from-amber-400 to-orange-500" detail="Total leads assigned to you" />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('new')}`} value={allTimeSummary.pending} icon={TrendingUp} accent="bg-gradient-to-br from-yellow-400 to-amber-600" detail="Untouched or pending leads" />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('CNP')}`} value={allTimeSummary.notConnected} icon={PhoneOff} accent="bg-gradient-to-br from-orange-400 to-red-500" detail="Not connected attempts" />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('done')}`} value={allTimeSummary.completed} icon={CheckCircle2} accent="bg-gradient-to-br from-emerald-400 to-green-600" detail={`${allTimeSummary.total > 0 ? Math.round((allTimeSummary.completed / allTimeSummary.total) * 100) : 0}% completion`} />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('intrested')}`} value={allTimeSummary.holding} icon={CirclePause} accent="bg-gradient-to-br from-sky-400 to-cyan-600" detail="Follow-up or holding leads" />
+          <TrackerMetric label={`Total Calls ${getLeadStatusLabel('not intrested')}`} value={allTimeSummary.rejected} icon={ShieldX} accent="bg-gradient-to-br from-rose-400 to-red-600" detail="Rejected lead outcomes" />
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black text-primary">Campaign Details</h2>
+              <p className="text-sm font-medium text-muted-foreground">
+                Only campaigns with leads assigned to you are shown here.
+              </p>
+            </div>
+            <Badge variant="secondary">{visibleCampaigns.length} campaigns</Badge>
+          </div>
+          {visibleCampaigns.length === 0 ? (
+            <Card className="rounded-2xl">
+              <CardContent className="p-8 text-center text-sm font-medium text-muted-foreground">
+                No campaign leads are assigned to you yet.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {visibleCampaigns.map((campaign) => (
+                <CampaignCard
+                  key={campaign.id}
+                  campaign={campaign}
+                  leads={(leads || []).filter((lead) => lead.campaignId === campaign.id)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     );
   }
@@ -381,9 +592,6 @@ export default function Dashboard() {
         <TrackerMetric label={`Total Calls ${getLeadStatusLabel('done')}`} value={totalSummary.completed} icon={CheckCircle2} accent="bg-gradient-to-br from-emerald-400 to-green-600" detail={`${conversionRate}% conversion in this view`} />
         <TrackerMetric label={`Total Calls ${getLeadStatusLabel('intrested')}`} value={totalSummary.holding} icon={CirclePause} accent="bg-gradient-to-br from-sky-400 to-cyan-600" detail="Follow-up or holding leads" />
         <TrackerMetric label={`Total Calls ${getLeadStatusLabel('not intrested')}`} value={totalSummary.rejected} icon={ShieldX} accent="bg-gradient-to-br from-rose-400 to-red-600" detail="Rejected lead outcomes" />
-        <TrackerMetric label="Confirmation New" value={totalSummary.completed} icon={Flame} accent="bg-gradient-to-br from-blue-500 to-indigo-600" detail="Completed leads entering confirmation" />
-        <TrackerMetric label="Confirmation Tagged" value={totalSummary.holding + totalSummary.completed} icon={Sparkles} accent="bg-gradient-to-br from-cyan-400 to-blue-600" detail="Qualified for follow-up or confirmation" />
-        <TrackerMetric label="Confirmation Validate" value={Math.max(totalSummary.completed - totalSummary.rejected, 0)} icon={BarChart3} accent="bg-gradient-to-br from-slate-500 to-primary" detail="Estimated validation-ready records" />
       </section>
 
       <section className="space-y-4">

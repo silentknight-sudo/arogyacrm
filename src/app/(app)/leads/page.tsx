@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, documentId } from 'firebase/firestore';
+import { collection, query, where, documentId } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,16 +43,17 @@ import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getLeadStatusLabel } from '@/lib/status-labels';
 
-type FilterType = LeadStatus | 'all' | 'fresh_uploads';
-const ALL_FILTERS: FilterType[] = ['all', 'fresh_uploads', 'new', 'intrested', 'CNP', 'done', 'not intrested'];
+type FilterType = LeadStatus | 'fresh_uploads' | 'default';
+type VisibleFilterType = Exclude<FilterType, 'default'>;
+const ALL_FILTERS: VisibleFilterType[] = ['fresh_uploads', 'new', 'intrested', 'CNP', 'done', 'not intrested'];
 
 export default function LeadsPage() {
   const searchParams = useSearchParams();
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('default');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('direct');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
@@ -74,8 +75,8 @@ export default function LeadsPage() {
       return;
     }
 
-    if (ALL_FILTERS.includes(requestedStatus as FilterType)) {
-      setActiveFilter(requestedStatus as FilterType);
+    if (ALL_FILTERS.includes(requestedStatus as VisibleFilterType)) {
+      setActiveFilter(requestedStatus as VisibleFilterType);
     }
   }, [searchParams]);
 
@@ -93,18 +94,23 @@ export default function LeadsPage() {
     if (activeFilter === 'fresh_uploads') {
       constraints.push(where('status', '==', 'new'));
       constraints.push(where('reassigned', '==', false));
-    } else if (activeFilter !== 'all') {
+    } else if (activeFilter !== 'default') {
       constraints.push(where('status', '==', activeFilter));
     }
 
-    if (!isAdminOrTL) {
+    if (currentUser.role === 'admin') {
+      if (assigneeFilter !== 'direct') {
+        constraints.push(where('assignedToIds', 'array-contains', assigneeFilter));
+      }
+    } else if (currentUser.role === 'sales_team_lead') {
+      const directAssigneeId = assigneeFilter === 'direct' ? currentUser.id : assigneeFilter;
+      constraints.push(where('assignedToIds', 'array-contains', directAssigneeId));
+    } else {
       constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
 
-    constraints.push(orderBy('createdAt', 'desc'));
-
     return query(leadsRef, ...constraints);
-  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, activeFilter, isAdminOrTL, mounted]);
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, activeFilter, assigneeFilter, mounted]);
 
   const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
@@ -113,8 +119,8 @@ export default function LeadsPage() {
 
     let leads = rawLeads;
 
-    if (assigneeFilter !== 'all') {
-      leads = leads.filter(lead => lead.assignedToIds?.includes(assigneeFilter));
+    if (currentUser?.role === 'admin' && assigneeFilter === 'direct') {
+      leads = leads.filter(lead => !lead.assignedToIds || lead.assignedToIds.length === 0 || lead.assignedToIds.includes(currentUser.id));
     }
 
     if (dateRange?.from) {
@@ -128,8 +134,12 @@ export default function LeadsPage() {
       });
     }
 
-    return leads;
-  }, [rawLeads, assigneeFilter, dateRange]);
+    return leads.slice().sort((a, b) => {
+      const aDate = a.createdAt?.toDate ? a.createdAt.toDate() : a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return bDate.getTime() - aDate.getTime();
+    });
+  }, [rawLeads, currentUser?.role, assigneeFilter, dateRange]);
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
@@ -218,7 +228,7 @@ export default function LeadsPage() {
                   onClick={() => setActiveFilter(f)}
                   className={`cursor-pointer px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg scale-105' : 'bg-muted/80 text-muted-foreground hover:bg-muted'}`}
                 >
-                  {f === 'all' ? 'All' : f === 'fresh_uploads' ? 'Fresh Uploads' : getLeadStatusLabel(f)}
+                  {f === 'fresh_uploads' ? 'Fresh Uploads' : getLeadStatusLabel(f)}
                 </Badge>
               ))}
             </div>
@@ -265,11 +275,19 @@ export default function LeadsPage() {
               <UsersIcon className="h-4 w-4 text-primary" />
               <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
                 <SelectTrigger className="w-[180px] h-10 rounded-xl bg-background border-none shadow-inner text-[11px] font-black uppercase tracking-tight">
-                  <SelectValue placeholder="All Members" />
+                  <SelectValue placeholder={currentUser?.role === 'admin' ? 'Admin Lead Pool' : 'Assigned To Me'} />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl border-none shadow-2xl">
-                  <SelectItem value="all" className="text-[11px] font-black uppercase">All Specialists</SelectItem>
-                  {users?.map((u) => (
+                  <SelectItem value="direct" className="text-[11px] font-black uppercase">
+                    {currentUser?.role === 'admin' ? 'Admin Lead Pool' : 'Assigned To Me'}
+                  </SelectItem>
+                  {(users || [])
+                    .filter((u) => {
+                      if (currentUser?.role === 'admin') return u.role === 'sales_team_lead';
+                      if (currentUser?.role === 'sales_team_lead') return u.role === 'sales_executive' && u.createdBy === currentUser.id;
+                      return false;
+                    })
+                    .map((u) => (
                     <SelectItem key={u.id} value={u.id} className="text-[11px] font-black uppercase">{u.displayName}</SelectItem>
                   ))}
                 </SelectContent>
