@@ -1,6 +1,6 @@
 'use client';
 import { Button } from '@/components/ui/button';
-import { BadgeIndianRupee, Megaphone, PackageCheck, PlusCircle, ShieldQuestion, UserCheck, Users } from 'lucide-react';
+import { BadgeIndianRupee, Megaphone, PackageCheck, PlusCircle, ShieldQuestion, Users } from 'lucide-react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -13,7 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const helpCategories = [
   { title: 'Campaign & Performance', icon: Megaphone, issues: ['I have issue in new leads', 'I have issue in pending leads', 'I have issue in my team performance'] },
-  { title: 'Confirmation', icon: UserCheck, issues: ['I have issue in confirmation process', 'I have issue in confirmation item performance', 'I have issue in the done leads'] },
   { title: 'HCR or Orders & Delivery', icon: PackageCheck, issues: ['RTO issue', 'I have issue in the delivery process', 'I want to know the delivery status AWB'] },
   { title: 'Payments & Salary', icon: BadgeIndianRupee, issues: ['I have issue in payment process', 'I have issue in salary process'] },
   { title: 'Attendance', icon: Users, issues: ['I have issue in attendance process', 'I have issue in leave process'] },

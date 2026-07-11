@@ -17,24 +17,24 @@ export default function UserManagementPage() {
   const firestore = useFirestore();
   const { availableTeamspaces, areTeamspacesLoading, currentUser, currentTeamspace } = useApp();
 
-  // ROLE-BASED USER QUERY: Strict Creator Lock for Team Leads
+  // ROLE-BASED USER QUERY: Admin sees TLs first; TLs see only their own telecallers.
   const usersQuery = useMemoFirebase(() => {
-    if (!currentUser || !currentTeamspace) return null;
+    if (!currentUser) return null;
     
     if (currentUser.role === 'admin') {
-        return query(collection(firestore, 'users'));
+        return query(collection(firestore, 'users'), where('role', '==', 'sales_team_lead'));
     }
     
     if (currentUser.role === 'sales_team_lead') {
-        // Team Leads see only members they personally created
         return query(
             collection(firestore, 'users'), 
-            where('createdBy', '==', currentUser.id)
+            where('createdBy', '==', currentUser.id),
+            where('role', '==', 'sales_executive')
         );
     }
     
     return null;
-  }, [firestore, currentUser, currentTeamspace]);
+  }, [firestore, currentUser]);
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 
@@ -48,7 +48,9 @@ export default function UserManagementPage() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
                 <p className="text-muted-foreground">
-                    {currentUser?.role === 'admin' ? 'Global team governance and role assignments.' : `Viewing telecallers for ${currentTeamspace?.name}.`}
+                    {currentUser?.role === 'admin'
+                      ? 'Team Lead profiles first. Open a TL to manage their telecallers.'
+                      : `Viewing your telecallers${currentTeamspace?.name ? ` for ${currentTeamspace.name}` : ''}.`}
                 </p>
             </div>
             {canCreateUser && <div className="flex items-center space-x-2">

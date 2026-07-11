@@ -27,6 +27,32 @@ function mapLeadStatusToMetaEvent(status: LeadStatus): string | null {
   }
 }
 
+async function assertAuthorizedLeadRecipients(actorId: string, recipientIds: string[]) {
+  const actorDoc = await adminDb.collection('users').doc(actorId).get();
+  const actorRole = actorDoc.data()?.role;
+
+  if (actorRole === 'admin') {
+    for (const recipientId of recipientIds) {
+      const recipientDoc = await adminDb.collection('users').doc(recipientId).get();
+      if (!recipientDoc.exists || recipientDoc.data()?.role !== 'sales_team_lead') {
+        throw new Error('Admin can assign leads only to Team Leads.');
+      }
+    }
+  }
+
+  if (actorRole === 'sales_team_lead') {
+    for (const recipientId of recipientIds) {
+      const recipientDoc = await adminDb.collection('users').doc(recipientId).get();
+      const recipient = recipientDoc.data();
+      if (!recipientDoc.exists || recipient?.role !== 'sales_executive' || recipient?.createdBy !== actorId) {
+        throw new Error('Team Leads can assign leads only to their own telecallers.');
+      }
+    }
+  }
+
+  return { actorRole, isLeaderAction: actorRole === 'admin' || actorRole === 'sales_team_lead' };
+}
+
 export async function assignLead(values: {
   leadId: string,
   teamspaceId: string,
@@ -39,9 +65,7 @@ export async function assignLead(values: {
     const leadDoc = await leadRef.get();
     const leadData = leadDoc.data();
 
-    const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const actorRole = actorDoc.data()?.role;
-    const isLeaderAction = actorRole === 'admin' || actorRole === 'sales_team_lead';
+    const { isLeaderAction } = await assertAuthorizedLeadRecipients(currentUserId, newAssignedToIds);
     const isInitialDist = isLeaderAction && leadData?.status === 'new';
 
     await leadRef.update({
@@ -79,9 +103,7 @@ export async function bulkAssignLeads(values: {
 }) {
   try {
     const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = values;
-    const actorDoc = await adminDb.collection('users').doc(currentUserId).get();
-    const actorRole = actorDoc.data()?.role;
-    const isLeaderAction = actorRole === 'admin' || actorRole === 'sales_team_lead';
+    const { isLeaderAction } = await assertAuthorizedLeadRecipients(currentUserId, newAssignedToIds);
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
 
     for (const id of leadIds) {

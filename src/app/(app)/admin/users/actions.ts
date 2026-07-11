@@ -13,6 +13,8 @@ const CreateUserInputSchema = z.object({
   teamspaceIds: z.array(z.string()),
   creatorId: z.string().min(1),
   managerId: z.string().optional(),
+  newTeamspaceName: z.string().optional(),
+  newTeamspaceDescription: z.string().optional(),
 });
 export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
 
@@ -21,15 +23,32 @@ type CreateUserResult = {
   error?: string;
 };
 
-function buildEmployeeId(role: string, uid: string) {
+function getEmployeeIdPrefix(role: string) {
+  if (role === 'sales_team_lead') return 'AGY-TL';
+  if (role === 'sales_executive') return 'AGY-TC';
+  return 'AGY-EMP';
+}
+
+async function getNextEmployeeId(role: string) {
   const prefix =
     role === 'sales_team_lead'
-      ? 'AGY-TL'
+      ? 'teamLead'
       : role === 'sales_executive'
-        ? 'AGY-TC'
-        : 'AGY-EMP';
+        ? 'telecaller'
+        : 'employee';
+  const counterRef = adminDb.collection('counters').doc(`employeeIds_${prefix}`);
+  const displayPrefix = getEmployeeIdPrefix(role);
 
-  return `${prefix}-${uid.slice(0, 6).toUpperCase()}`;
+  return adminDb.runTransaction(async (transaction) => {
+    const counterDoc = await transaction.get(counterRef);
+    const next = ((counterDoc.exists ? counterDoc.data()?.lastNumber : 0) || 0) + 1;
+    transaction.set(counterRef, {
+      lastNumber: next,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    return `${displayPrefix}-${String(next).padStart(3, '0')}`;
+  });
 }
 
 export async function createUser(values: CreateUserInput): Promise<CreateUserResult> {
@@ -70,20 +89,24 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
     }
 
     if (validatedInput.role === 'sales_team_lead') {
-      if (validatedInput.teamspaceIds.length !== 1) {
-        throw new Error('Each Team Lead must be assigned to exactly one dedicated teamspace.');
+      const isCreatingTeamspace = Boolean(validatedInput.newTeamspaceName?.trim());
+
+      if (!isCreatingTeamspace && validatedInput.teamspaceIds.length !== 1) {
+        throw new Error('Create a new teamspace or assign exactly one dedicated teamspace to this Team Lead.');
       }
 
-      const selectedTeamspaceId = validatedInput.teamspaceIds[0];
-      const existingLeadSnap = await adminDb
-        .collection('users')
-        .where('role', '==', 'sales_team_lead')
-        .where('teamspaceIds', 'array-contains', selectedTeamspaceId)
-        .limit(1)
-        .get();
+      if (!isCreatingTeamspace) {
+        const selectedTeamspaceId = validatedInput.teamspaceIds[0];
+        const existingLeadSnap = await adminDb
+          .collection('users')
+          .where('role', '==', 'sales_team_lead')
+          .where('teamspaceIds', 'array-contains', selectedTeamspaceId)
+          .limit(1)
+          .get();
 
-      if (!existingLeadSnap.empty) {
-        throw new Error('This teamspace already has a Team Lead. Create or choose a different teamspace.');
+        if (!existingLeadSnap.empty) {
+          throw new Error('This teamspace already has a Team Lead. Create or choose a different teamspace.');
+        }
       }
     }
 
@@ -96,15 +119,34 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
     });
 
     const newUserId = userRecord.uid;
+    const employeeId = await getNextEmployeeId(validatedInput.role);
 
     // 3. CREATE PROFILE
     const userDocRef = adminDb.collection('users').doc(newUserId);
     const batch = adminDb.batch();
+    let createdTeamspaceId: string | null = null;
+
+    if (validatedInput.role === 'sales_team_lead' && validatedInput.newTeamspaceName?.trim()) {
+      const newTeamspaceRef = adminDb.collection('teamspaces').doc();
+      createdTeamspaceId = newTeamspaceRef.id;
+      finalTeamspaceIds = [newTeamspaceRef.id];
+
+      batch.set(newTeamspaceRef, {
+        id: newTeamspaceRef.id,
+        name: validatedInput.newTeamspaceName.trim(),
+        description: validatedInput.newTeamspaceDescription?.trim() || `${validatedInput.displayName}'s teamspace`,
+        ownerId: newUserId,
+        memberIds: [newUserId],
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
     batch.set(userDocRef, {
       id: newUserId,
       displayName: validatedInput.displayName,
       email: validatedInput.email,
-      employeeId: buildEmployeeId(validatedInput.role, newUserId),
+      employeeId,
       role: validatedInput.role,
       teamspaceIds: finalTeamspaceIds,
       accessStatus: 'approved',
@@ -115,6 +157,8 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
     });
 
     finalTeamspaceIds.forEach(teamspaceId => {
+      if (teamspaceId === createdTeamspaceId) return;
+
       const teamspaceRef = adminDb.collection('teamspaces').doc(teamspaceId);
       batch.update(teamspaceRef, {
         memberIds: FieldValue.arrayUnion(newUserId),
@@ -127,6 +171,7 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
     await adminAuth.setCustomUserClaims(newUserId, { role: validatedInput.role });
 
     revalidatePath('/admin/users');
+    revalidatePath('/admin/teamspaces');
     return { success: true };
 
   } catch (error: any) {

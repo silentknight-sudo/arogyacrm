@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Check, Monitor, Moon, Sun } from 'lucide-react';
 
 const themeTiles = [
-  { name: 'SS Herbal Theme', value: 'light', gradient: 'from-[#1f3b2f] via-[#45624f] to-[#d3b66b]' },
+  { name: 'Default Arogya Bio Theme', value: 'light', gradient: 'from-[#1f3b2f] via-[#45624f] to-[#d3b66b]' },
   { name: 'Sunset', value: 'light', gradient: 'from-[#f8b195] via-[#f67280] to-[#6c5b7b]' },
   { name: 'Midnight', value: 'dark', gradient: 'from-[#101827] via-[#1f2a44] to-[#536976]' },
   { name: 'Rose', value: 'light', gradient: 'from-[#ff9a9e] via-[#fad0c4] to-[#fbc2eb]' },

@@ -53,9 +53,7 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
       return users.filter(u => u.role === 'sales_team_lead');
     }
     if (currentUser.role === 'sales_team_lead') {
-      const createdExecutives = users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
-      if (createdExecutives.length > 0) return createdExecutives;
-      return users.filter(u => u.role === 'sales_executive');
+      return users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
     }
     return [];
   }, [users, currentUser]);
@@ -78,15 +76,10 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
     }
     
     startTransition(async () => {
-      // For TLs, ensure they stay assigned for oversight
-      const finalIds = currentUser.role === 'sales_team_lead'
-        ? Array.from(new Set([currentUser.id, ...values.assignedToIds]))
-        : values.assignedToIds;
-
       const result = await bulkAssignLeads({
         leadIds: leads.map(l => l.id),
         teamspaceId: currentTeamspace.id,
-        newAssignedToIds: finalIds,
+        newAssignedToIds: values.assignedToIds,
         currentUserId: currentUser.id,
       });
 
