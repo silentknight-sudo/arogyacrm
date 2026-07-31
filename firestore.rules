@@ -78,5 +78,10 @@ match /users/{userId} {
         allow read, write: if isMember(teamspaceId);
       }
     }
+
+    match /leadSyncConfigs/{teamspaceId} {
+      allow read: if isMember(teamspaceId);
+      allow write: if isAdmin();
+    }
   }
 }
