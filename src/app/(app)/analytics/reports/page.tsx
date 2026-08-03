@@ -31,6 +31,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { BarChart3, CheckCircle2, CirclePause, LineChart, PhoneOff, ShieldX, Sparkles, Target, TrendingUp, Users } from 'lucide-react';
 import { getLeadStatusLabel } from '@/lib/status-labels';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
 import { getProfessionalEmployeeId } from '@/lib/user-labels';
 
 const COLORS = ['#31533C', '#D6B66D', '#1D4ED8', '#E11D48', '#0891B2', '#7C3AED'];
@@ -121,8 +122,12 @@ export default function ReportsPage() {
     , [firestore, currentTeamspace, currentUser, isUserLoading]);
 
     const usersQuery = useMemoFirebase(() =>
-        !isUserLoading && currentUser && currentTeamspace
-            ? query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id))
+        !isUserLoading && currentUser
+            ? currentUser.role === 'sales_team_lead'
+                ? query(collection(firestore, 'users'), where('role', '==', 'sales_executive'))
+                : currentTeamspace
+                    ? query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id))
+                    : null
             : null
     , [firestore, currentTeamspace, currentUser, isUserLoading]);
 
@@ -132,13 +137,8 @@ export default function ReportsPage() {
     const isTeamLead = currentUser?.role === 'sales_team_lead';
     const teamTelecallers = useMemo(() => {
         if (!currentUser) return [];
-        if (!currentTeamspace?.id) return [];
-        return (users || []).filter(
-            (user) =>
-                user.role === 'sales_executive' &&
-                (user.teamspaceIds || []).includes(currentTeamspace.id)
-        );
-    }, [currentTeamspace?.id, currentUser, users]);
+        return (users || []).filter((user) => belongsToTeamLeadTeam(user, currentUser, currentTeamspace));
+    }, [currentTeamspace, currentUser, users]);
 
     const teamScopedLeads = useMemo(() => {
         const leadList = leads || [];

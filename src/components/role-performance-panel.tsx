@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { BarChart3, CheckCircle2, PhoneCall, Sparkles, Target, Users } from 'lucide-react';
 import type { Lead, UserProfile } from '@/types';
 import { getRoleLabel } from '@/lib/user-labels';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
 
 type RolePerformancePanelProps = {
   subject: UserProfile;
@@ -27,7 +28,7 @@ export type PerformanceSummary = {
 
 export function getPerformanceSummary(subject: UserProfile, leads: Lead[], users: UserProfile[]): PerformanceSummary {
   const subordinateUsers = users.filter(
-    (user) => user.role === 'sales_executive' && user.createdBy === subject.id
+    (user) => belongsToTeamLeadTeam(user, subject, null)
   );
 
   const relevantIds =

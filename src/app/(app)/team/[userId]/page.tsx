@@ -15,6 +15,7 @@ import { ArrowLeft, Award, BriefcaseBusiness, CalendarDays, CheckCircle2, Circle
 import type { Lead, UserProfile } from '@/types';
 import { RolePerformancePanel } from '@/components/role-performance-panel';
 import { getProfessionalEmployeeId, getRoleLabel } from '@/lib/user-labels';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -152,7 +153,7 @@ export default function TeamMemberProfilePage() {
       }
 
       const teamTelecallerIds = users
-        .filter((user) => user.role === 'sales_executive' && user.createdBy === member.id)
+        .filter((user) => belongsToTeamLeadTeam(user, member, currentTeamspace))
         .map((user) => user.id);
 
       return leads.filter((lead) =>
@@ -164,9 +165,9 @@ export default function TeamMemberProfilePage() {
 
   const teamTelecallers = useMemo(
     () => member?.role === 'sales_team_lead'
-      ? users.filter((user) => user.role === 'sales_executive' && user.createdBy === member.id)
+      ? users.filter((user) => belongsToTeamLeadTeam(user, member, currentTeamspace))
       : [],
-    [member, users]
+    [currentTeamspace, member, users]
   );
 
   const assignedSummary = useMemo(() => getStageSummary(assignedLeads), [assignedLeads]);

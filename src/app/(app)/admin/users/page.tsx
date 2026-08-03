@@ -13,6 +13,7 @@ import type { UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateUserDialog } from './create-user-dialog';
 import { useApp } from '@/context/app-context';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
 
 export default function UserManagementPage() {
   const firestore = useFirestore();
@@ -31,19 +32,21 @@ export default function UserManagementPage() {
     }
     
     if (currentUser.role === 'sales_team_lead') {
-        if (!currentTeamspace?.id) return null;
-
         return query(
             collection(firestore, 'users'),
-            where('teamspaceIds', 'array-contains', currentTeamspace.id),
             where('role', '==', 'sales_executive')
         );
     }
     
     return null;
-  }, [firestore, currentUser, currentTeamspace?.id, adminView]);
+  }, [firestore, currentUser, adminView]);
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+
+  const visibleUsers = (users || []).filter((user) => {
+    if (currentUser?.role !== 'sales_team_lead') return true;
+    return belongsToTeamLeadTeam(user, currentUser, currentTeamspace);
+  });
 
   const canCreateUser = currentUser?.role === 'admin';
   const canViewUsers = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
@@ -81,7 +84,7 @@ export default function UserManagementPage() {
                 <Skeleton className="h-12 w-full" />
             </div>
         )}
-        {!displayLoadingState && <DataTable columns={columns} data={users || []} />}
+        {!displayLoadingState && <DataTable columns={columns} data={visibleUsers} />}
     </div>
   );
 }

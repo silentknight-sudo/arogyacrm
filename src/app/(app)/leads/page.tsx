@@ -42,6 +42,7 @@ import { DateRange } from 'react-day-picker';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getLeadStatusLabel } from '@/lib/status-labels';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
 
 type FilterType = LeadStatus | 'fresh_uploads' | 'default';
 type VisibleFilterType = Exclude<FilterType, 'default'>;
@@ -146,6 +147,10 @@ export default function LeadsPage() {
 
     if (currentUser.role === 'sales_executive') {
       return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
+    }
+
+    if (currentUser.role === 'sales_team_lead') {
+      return query(collection(firestore, 'users'), where('role', '==', 'sales_executive'));
     }
 
     return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
@@ -285,11 +290,7 @@ export default function LeadsPage() {
                     .filter((u) => {
                       if (currentUser?.role === 'admin') return u.role === 'sales_team_lead';
                       if (currentUser?.role === 'sales_team_lead') {
-                        return (
-                          u.role === 'sales_executive' &&
-                          !!currentTeamspace?.id &&
-                          (u.teamspaceIds || []).includes(currentTeamspace.id)
-                        );
+                        return belongsToTeamLeadTeam(u, currentUser, currentTeamspace);
                       }
                       return false;
                     })

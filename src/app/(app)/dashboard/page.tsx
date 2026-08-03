@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { collection, collectionGroup, query, where } from 'firebase/firestore';
+import { collection, collectionGroup, documentId, query, where } from 'firebase/firestore';
 import { addDays, addMonths, addYears, isAfter } from 'date-fns';
 import { BarChart3, CalendarDays, CheckCircle2, CirclePause, Package, PhoneOff, ShieldX, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { useApp } from '@/context/app-context';
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { getLeadStatusLabel } from '@/lib/status-labels';
 import { getProfessionalEmployeeId, getRoleLabel } from '@/lib/user-labels';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
 
 type StageSummary = {
   total: number;
@@ -311,9 +312,9 @@ export default function Dashboard() {
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser) return null;
     if (isAdmin) return query(collection(firestore, 'users'));
-    if (!currentTeamspace?.id) return null;
-    return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
-  }, [currentUser, currentTeamspace?.id, firestore, isAdmin, isUserLoading]);
+    if (isTeamLead) return query(collection(firestore, 'users'), where('role', '==', 'sales_executive'));
+    return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
+  }, [currentUser, firestore, isAdmin, isTeamLead, isUserLoading]);
 
   const { data: rawLeads, isLoading: loadingLeads } = useCollection<Lead>(leadsQuery);
   const { data: campaigns, isLoading: loadingCampaigns } = useCollection<Campaign>(campaignsQuery);
@@ -326,12 +327,7 @@ export default function Dashboard() {
     if (isTelecaller) return leadList.filter((lead) => lead.assignedToIds?.includes(currentUser.id));
     if (isTeamLead) {
       const teamTelecallerIds = (users || [])
-        .filter(
-          (user) =>
-            user.role === 'sales_executive' &&
-            !!currentTeamspace?.id &&
-            (user.teamspaceIds || []).includes(currentTeamspace.id)
-        )
+        .filter((user) => belongsToTeamLeadTeam(user, currentUser, currentTeamspace))
         .map((user) => user.id);
       const visibleIds = new Set([currentUser.id, ...teamTelecallerIds]);
       return leadList.filter((lead) => lead.assignedToIds?.some((id) => visibleIds.has(id)));
@@ -384,13 +380,8 @@ export default function Dashboard() {
 
   const teamTelecallers = useMemo(() => {
     if (!isTeamLead || !currentUser) return [];
-    return (users || []).filter(
-      (user) =>
-        user.role === 'sales_executive' &&
-        !!currentTeamspace?.id &&
-        (user.teamspaceIds || []).includes(currentTeamspace.id)
-    );
-  }, [currentTeamspace?.id, currentUser, isTeamLead, users]);
+    return (users || []).filter((user) => belongsToTeamLeadTeam(user, currentUser, currentTeamspace));
+  }, [currentTeamspace, currentUser, isTeamLead, users]);
 
   const visibleCampaignIds = useMemo(
     () => new Set((leads || []).map((lead) => lead.campaignId).filter(Boolean)),
@@ -677,7 +668,7 @@ export default function Dashboard() {
                 user.role === 'sales_team_lead'
                   ? periodLeads.filter((lead) => {
                       const teamTelecallerIds = (users || [])
-                        .filter((member) => member.role === 'sales_executive' && member.createdBy === user.id)
+                        .filter((member) => belongsToTeamLeadTeam(member, user, currentTeamspace))
                         .map((member) => member.id);
                       return lead.assignedToIds?.some((id) => id === user.id || teamTelecallerIds.includes(id));
                     })
