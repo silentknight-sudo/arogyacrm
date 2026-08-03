@@ -284,7 +284,13 @@ export default function LeadsPage() {
                   {(users || [])
                     .filter((u) => {
                       if (currentUser?.role === 'admin') return u.role === 'sales_team_lead';
-                      if (currentUser?.role === 'sales_team_lead') return u.role === 'sales_executive' && u.createdBy === currentUser.id;
+                      if (currentUser?.role === 'sales_team_lead') {
+                        return (
+                          u.role === 'sales_executive' &&
+                          !!currentTeamspace?.id &&
+                          (u.teamspaceIds || []).includes(currentTeamspace.id)
+                        );
+                      }
                       return false;
                     })
                     .map((u) => (

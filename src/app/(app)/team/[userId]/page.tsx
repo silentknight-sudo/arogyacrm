@@ -195,10 +195,13 @@ export default function TeamMemberProfilePage() {
     if (currentUser.role === 'admin') return true;
     if (currentUser.id === member.id) return true;
     if (currentUser.role === 'sales_team_lead') {
-      return member.createdBy === currentUser.id || member.id === currentUser.id;
+      return (
+        member.id === currentUser.id ||
+        (!!currentTeamspace?.id && (member.teamspaceIds || []).includes(currentTeamspace.id))
+      );
     }
     return false;
-  }, [currentUser, member]);
+  }, [currentTeamspace?.id, currentUser, member]);
 
   if (loadingMember || loadingUsers || loadingLeads) {
     return (

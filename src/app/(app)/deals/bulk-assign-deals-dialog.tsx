@@ -44,17 +44,20 @@ export function BulkAssignDealsDialog({ open, onOpenChange, deals, users }: Bulk
   const [isPending, startTransition] = useTransition();
 
   // HIERARCHICAL FILTERING:
-  // Admin assigns ONLY to Team Leads. Team Leads assign ONLY to Executives they created.
+  // Admin assigns ONLY to Team Leads. Team Leads assign ONLY to telecallers in their active teamspace.
   const filteredUsers = useMemo(() => {
     if (!currentUser) return [];
     if (currentUser.role === 'admin') {
       return users.filter(u => u.role === 'sales_team_lead');
     }
     if (currentUser.role === 'sales_team_lead') {
-      return users.filter(u => u.role === 'sales_executive' && u.createdBy === currentUser.id);
+      if (!currentTeamspace?.id) return [];
+      return users.filter(
+        (u) => u.role === 'sales_executive' && (u.teamspaceIds || []).includes(currentTeamspace.id)
+      );
     }
     return [];
-  }, [users, currentUser]);
+  }, [users, currentUser, currentTeamspace?.id]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

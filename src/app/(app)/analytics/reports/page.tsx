@@ -132,8 +132,13 @@ export default function ReportsPage() {
     const isTeamLead = currentUser?.role === 'sales_team_lead';
     const teamTelecallers = useMemo(() => {
         if (!currentUser) return [];
-        return (users || []).filter((user) => user.role === 'sales_executive' && user.createdBy === currentUser.id);
-    }, [currentUser, users]);
+        if (!currentTeamspace?.id) return [];
+        return (users || []).filter(
+            (user) =>
+                user.role === 'sales_executive' &&
+                (user.teamspaceIds || []).includes(currentTeamspace.id)
+        );
+    }, [currentTeamspace?.id, currentUser, users]);
 
     const teamScopedLeads = useMemo(() => {
         const leadList = leads || [];

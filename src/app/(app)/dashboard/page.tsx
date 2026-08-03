@@ -326,13 +326,18 @@ export default function Dashboard() {
     if (isTelecaller) return leadList.filter((lead) => lead.assignedToIds?.includes(currentUser.id));
     if (isTeamLead) {
       const teamTelecallerIds = (users || [])
-        .filter((user) => user.role === 'sales_executive' && user.createdBy === currentUser.id)
+        .filter(
+          (user) =>
+            user.role === 'sales_executive' &&
+            !!currentTeamspace?.id &&
+            (user.teamspaceIds || []).includes(currentTeamspace.id)
+        )
         .map((user) => user.id);
       const visibleIds = new Set([currentUser.id, ...teamTelecallerIds]);
       return leadList.filter((lead) => lead.assignedToIds?.some((id) => visibleIds.has(id)));
     }
     return [];
-  }, [currentUser, isAdmin, isTeamLead, isTelecaller, rawLeads, users]);
+  }, [currentUser, currentTeamspace?.id, isAdmin, isTeamLead, isTelecaller, rawLeads, users]);
 
   const visibleCampaigns = useMemo(() => {
     const leadList = leads || [];
@@ -379,8 +384,13 @@ export default function Dashboard() {
 
   const teamTelecallers = useMemo(() => {
     if (!isTeamLead || !currentUser) return [];
-    return (users || []).filter((user) => user.role === 'sales_executive' && user.createdBy === currentUser.id);
-  }, [currentUser, isTeamLead, users]);
+    return (users || []).filter(
+      (user) =>
+        user.role === 'sales_executive' &&
+        !!currentTeamspace?.id &&
+        (user.teamspaceIds || []).includes(currentTeamspace.id)
+    );
+  }, [currentTeamspace?.id, currentUser, isTeamLead, users]);
 
   const visibleCampaignIds = useMemo(
     () => new Set((leads || []).map((lead) => lead.campaignId).filter(Boolean)),
