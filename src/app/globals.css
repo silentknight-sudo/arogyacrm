@@ -77,15 +77,15 @@
   }
 
   .glass-sidebar {
-    @apply bg-[#040C04] border-r border-white/5 shadow-2xl;
+    @apply bg-gradient-to-b from-[#133322] via-[#183b27] to-[#102a1c] border-r border-[#d3b66b]/20 shadow-2xl;
   }
 
   .sidebar-link {
-    @apply flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-black tracking-tight text-white/80 hover:text-white hover:bg-white/10 transition-all;
+    @apply flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-black tracking-tight text-[#f4eedb] hover:text-white hover:bg-white/14 transition-all;
   }
 
   .sidebar-link-active {
-    @apply bg-accent text-accent-foreground shadow-2xl shadow-accent/50 font-black scale-105;
+    @apply bg-[#d3b66b] text-[#183322] shadow-2xl shadow-[#d3b66b]/35 font-black scale-105;
   }
 
   .glass-header {

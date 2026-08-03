@@ -2,6 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { columns } from './columns';
@@ -16,13 +17,17 @@ import { useApp } from '@/context/app-context';
 export default function UserManagementPage() {
   const firestore = useFirestore();
   const { availableTeamspaces, areTeamspacesLoading, currentUser, currentTeamspace } = useApp();
+  const searchParams = useSearchParams();
+  const adminView = searchParams.get('view') === 'telecallers' ? 'telecallers' : 'team-leads';
 
-  // ROLE-BASED USER QUERY: Admin sees TLs first; TLs see only their own telecallers.
   const usersQuery = useMemoFirebase(() => {
     if (!currentUser) return null;
     
     if (currentUser.role === 'admin') {
-        return query(collection(firestore, 'users'), where('role', '==', 'sales_team_lead'));
+        return query(
+          collection(firestore, 'users'),
+          where('role', '==', adminView === 'telecallers' ? 'sales_executive' : 'sales_team_lead')
+        );
     }
     
     if (currentUser.role === 'sales_team_lead') {
@@ -34,7 +39,7 @@ export default function UserManagementPage() {
     }
     
     return null;
-  }, [firestore, currentUser]);
+  }, [firestore, currentUser, adminView]);
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 
@@ -49,7 +54,9 @@ export default function UserManagementPage() {
                 <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
                 <p className="text-muted-foreground">
                     {currentUser?.role === 'admin'
-                      ? 'Team Lead profiles first. Open a TL to manage their telecallers.'
+                      ? adminView === 'telecallers'
+                        ? 'Viewing all telecaller profiles only.'
+                        : 'Viewing Team Lead profiles only.'
                       : `Viewing your telecallers${currentTeamspace?.name ? ` for ${currentTeamspace.name}` : ''}.`}
                 </p>
             </div>
