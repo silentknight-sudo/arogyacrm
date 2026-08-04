@@ -43,10 +43,12 @@ import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getLeadStatusLabel } from '@/lib/status-labels';
 import { belongsToTeamLeadTeam } from '@/lib/team-membership';
+import { matchesRoleAwareLeadStage } from '@/lib/role-lead-stage';
 
-type FilterType = LeadStatus | 'fresh_uploads' | 'default';
+type RoleAwareFilter = 'fresh_uploads' | 'pending' | Exclude<LeadStatus, 'new'>;
+type FilterType = RoleAwareFilter | 'default';
 type VisibleFilterType = Exclude<FilterType, 'default'>;
-const ALL_FILTERS: VisibleFilterType[] = ['fresh_uploads', 'new', 'intrested', 'CNP', 'done', 'not intrested'];
+const ALL_FILTERS: VisibleFilterType[] = ['fresh_uploads', 'pending', 'intrested', 'CNP', 'done', 'not intrested'];
 
 export default function LeadsPage() {
   const searchParams = useSearchParams();
@@ -71,8 +73,9 @@ export default function LeadsPage() {
     const requestedStatus = searchParams.get('status');
     if (!requestedStatus) return;
 
-    if (requestedStatus === 'fresh_uploads') {
+    if (requestedStatus === 'fresh_uploads' || requestedStatus === 'pending') {
       setActiveFilter('fresh_uploads');
+      if (requestedStatus === 'pending') setActiveFilter('pending');
       return;
     }
 
@@ -92,9 +95,8 @@ export default function LeadsPage() {
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     const constraints: any[] = [];
 
-    if (activeFilter === 'fresh_uploads') {
+    if (activeFilter === 'fresh_uploads' || activeFilter === 'pending') {
       constraints.push(where('status', '==', 'new'));
-      constraints.push(where('reassigned', '==', false));
     } else if (activeFilter !== 'default') {
       constraints.push(where('status', '==', activeFilter));
     }
@@ -115,33 +117,6 @@ export default function LeadsPage() {
 
   const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
-  const filteredLeads = useMemo(() => {
-    if (!rawLeads) return [];
-
-    let leads = rawLeads;
-
-    if (currentUser?.role === 'admin' && assigneeFilter === 'direct') {
-      leads = leads.filter(lead => !lead.assignedToIds || lead.assignedToIds.length === 0 || lead.assignedToIds.includes(currentUser.id));
-    }
-
-    if (dateRange?.from) {
-      const start = startOfDay(dateRange.from);
-      const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-
-      leads = leads.filter(lead => {
-        if (!lead.createdAt) return false;
-        const leadDate = lead.createdAt.toDate ? lead.createdAt.toDate() : new Date(lead.createdAt);
-        return isWithinInterval(leadDate, { start, end });
-      });
-    }
-
-    return leads.slice().sort((a, b) => {
-      const aDate = a.createdAt?.toDate ? a.createdAt.toDate() : a.createdAt ? new Date(a.createdAt) : new Date(0);
-      const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt ? new Date(b.createdAt) : new Date(0);
-      return bDate.getTime() - aDate.getTime();
-    });
-  }, [rawLeads, currentUser?.role, assigneeFilter, dateRange]);
-
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
 
@@ -161,6 +136,42 @@ export default function LeadsPage() {
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+
+  const stageUsers = useMemo(
+    () => (currentUser ? [currentUser, ...(users || []).filter((user) => user.id !== currentUser.id)] : users || []),
+    [currentUser, users]
+  );
+
+  const filteredLeads = useMemo(() => {
+    if (!rawLeads) return [];
+
+    let leads = rawLeads;
+
+    if (currentUser?.role === 'admin' && assigneeFilter === 'direct') {
+      leads = leads.filter(lead => !lead.assignedToIds || lead.assignedToIds.length === 0 || lead.assignedToIds.includes(currentUser.id));
+    }
+
+    if (activeFilter === 'fresh_uploads' || activeFilter === 'pending') {
+      leads = leads.filter((lead) => matchesRoleAwareLeadStage(lead, activeFilter, currentUser, stageUsers, currentTeamspace));
+    }
+
+    if (dateRange?.from) {
+      const start = startOfDay(dateRange.from);
+      const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+
+      leads = leads.filter(lead => {
+        if (!lead.createdAt) return false;
+        const leadDate = lead.createdAt.toDate ? lead.createdAt.toDate() : new Date(lead.createdAt);
+        return isWithinInterval(leadDate, { start, end });
+      });
+    }
+
+    return leads.slice().sort((a, b) => {
+      const aDate = a.createdAt?.toDate ? a.createdAt.toDate() : a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return bDate.getTime() - aDate.getTime();
+    });
+  }, [rawLeads, currentUser, assigneeFilter, dateRange, activeFilter, stageUsers, currentTeamspace]);
 
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
@@ -237,7 +248,7 @@ export default function LeadsPage() {
                   onClick={() => setActiveFilter(f)}
                   className={`cursor-pointer px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg scale-105' : 'bg-muted/80 text-muted-foreground hover:bg-muted'}`}
                 >
-                  {f === 'fresh_uploads' ? 'Fresh Uploads' : getLeadStatusLabel(f)}
+                  {f === 'fresh_uploads' ? 'New Leads' : f === 'pending' ? 'Pending' : getLeadStatusLabel(f)}
                 </Badge>
               ))}
             </div>
