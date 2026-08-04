@@ -50,22 +50,12 @@ const formSchema = z.object({
   role: z.enum(['admin', 'sales_team_lead', 'sales_executive', 'marketer', 'support']),
   teamspaceIds: z.array(z.string()),
   managerId: z.string().optional(),
-  newTeamspaceName: z.string().optional(),
-  newTeamspaceDescription: z.string().optional(),
 }).superRefine((values, ctx) => {
   if (values.role === 'sales_executive' && !values.managerId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['managerId'],
       message: 'Choose the Team Lead this telecaller should work under.',
-    });
-  }
-
-  if (values.role === 'sales_team_lead' && !values.newTeamspaceName?.trim() && values.teamspaceIds.length !== 1) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['newTeamspaceName'],
-      message: 'Create a new teamspace for this Team Lead.',
     });
   }
 
@@ -127,8 +117,6 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
       role: 'sales_executive',
       teamspaceIds: currentUser?.role === 'sales_team_lead' && currentTeamspace ? [currentTeamspace.id] : [],
       managerId: '',
-      newTeamspaceName: '',
-      newTeamspaceDescription: '',
     },
   });
 
@@ -156,8 +144,6 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
           role: 'sales_executive',
           teamspaceIds: [],
           managerId: '',
-          newTeamspaceName: '',
-          newTeamspaceDescription: '',
         });
       } else {
         toast({
@@ -232,8 +218,6 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         field.onChange(value);
                         form.setValue('teamspaceIds', []);
                         form.setValue('managerId', '');
-                        form.setValue('newTeamspaceName', '');
-                        form.setValue('newTeamspaceDescription', '');
                       }}
                       value={field.value}
                       disabled={availableRoles.length === 1}
@@ -302,43 +286,15 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                 )}
                 {selectedRole === 'sales_team_lead' && (
                   <div className="rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4 shadow-sm">
-                    <div className="mb-4">
-                      <h3 className="text-sm font-semibold">Create Team Space</h3>
+                    <div className="mb-2">
+                      <h3 className="text-sm font-semibold">Single Workspace Mode</h3>
                       <p className="text-xs text-muted-foreground">
-                        This dedicated teamspace will be created and assigned to the new Team Lead automatically.
+                        New Team Leads are now created inside the shared SLT teamspace. Separate teamspace creation has been removed.
                       </p>
                     </div>
-                    <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="newTeamspaceName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Teamspace Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Example: Yogesh TL Team" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="newTeamspaceDescription"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Optional team notes or product focus" {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              You can transfer telecallers into this team after the TL is created.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    <Badge variant="secondary" className="mt-2">
+                      {currentTeamspace?.name || filteredTeamspaces[0]?.name || 'SLT'}
+                    </Badge>
                   </div>
                 )}
                 {!['sales_executive', 'sales_team_lead'].includes(selectedRole) && (
@@ -350,7 +306,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                         <div className="mb-2">
                             <FormLabel className="text-base">Workspace Assignment</FormLabel>
                             <FormDescription>
-                                Team leads should have one dedicated workspace. Telecallers can be moved between teamspaces by admin.
+                                All users are managed inside the shared SLT workspace.
                             </FormDescription>
                         </div>
                         <div className="space-y-2">
@@ -395,9 +351,7 @@ export function CreateUserDialog({ children, teamspaces, isLoadingTeamspaces }: 
                     isPending ||
                     (selectedRole === 'sales_executive'
                       ? isLoadingTeamLeads || !form.watch('managerId')
-                      : selectedRole === 'sales_team_lead'
-                        ? !form.watch('newTeamspaceName')?.trim()
-                        : isLoadingTeamspaces || filteredTeamspaces.length === 0)
+                      : isLoadingTeamspaces || filteredTeamspaces.length === 0)
                   }
                   className="w-full"
                 >

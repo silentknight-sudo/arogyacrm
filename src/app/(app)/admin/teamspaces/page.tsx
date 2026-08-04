@@ -1,14 +1,11 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import type { Teamspace } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreateTeamspaceDialog } from './create-teamspace-dialog';
 import { useApp } from '@/context/app-context';
 
 export default function TeamspaceManagementPage() {
@@ -31,16 +28,8 @@ export default function TeamspaceManagementPage() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Teamspace Management</h1>
                 <p className="text-muted-foreground">
-                    Create and manage workspaces for your teams.
+                    Single workspace mode is active. All teams now operate inside the shared SLT workspace.
                 </p>
-            </div>
-            <div className="flex items-center space-x-2">
-                <CreateTeamspaceDialog>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Create Teamspace
-                    </Button>
-                </CreateTeamspaceDialog>
             </div>
         </div>
         {displayLoadingState && (

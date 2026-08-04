@@ -13,8 +13,6 @@ const CreateUserInputSchema = z.object({
   teamspaceIds: z.array(z.string()),
   creatorId: z.string().min(1),
   managerId: z.string().optional(),
-  newTeamspaceName: z.string().optional(),
-  newTeamspaceDescription: z.string().optional(),
 });
 export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
 
@@ -32,6 +30,20 @@ function getEmployeeIdPrefix(role: string) {
 function normalizeSingleTeamspace(teamspaceIds: string[] | undefined | null) {
   const firstTeamspaceId = Array.isArray(teamspaceIds) ? teamspaceIds.find(Boolean) : null;
   return firstTeamspaceId ? [firstTeamspaceId] : [];
+}
+
+async function resolveSingleWorkspaceId() {
+  const teamspacesSnap = await adminDb.collection('teamspaces').get();
+  if (teamspacesSnap.empty) {
+    throw new Error('No teamspace found. Please create the SLT workspace in Firestore first.');
+  }
+
+  const preferred = teamspacesSnap.docs.find((doc) => {
+    const name = String(doc.data()?.name || '').trim().toLowerCase();
+    return name === 'slt';
+  });
+
+  return preferred?.id || teamspacesSnap.docs[0].id;
 }
 
 async function getNextEmployeeId(role: string) {
@@ -71,7 +83,8 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
         throw new Error('You do not have administrative privileges.');
     }
 
-    let finalTeamspaceIds = normalizeSingleTeamspace(validatedInput.teamspaceIds);
+    const singleWorkspaceId = await resolveSingleWorkspaceId();
+    let finalTeamspaceIds = [singleWorkspaceId];
     let createdBy = validatedInput.creatorId;
 
     if (validatedInput.role === 'sales_executive') {
@@ -89,30 +102,8 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
         throw new Error('Selected Team Lead does not have a teamspace.');
       }
 
-      finalTeamspaceIds = managerTeamspaceIds;
+      finalTeamspaceIds = [managerTeamspaceIds[0] || singleWorkspaceId];
       createdBy = validatedInput.managerId;
-    }
-
-    if (validatedInput.role === 'sales_team_lead') {
-      const isCreatingTeamspace = Boolean(validatedInput.newTeamspaceName?.trim());
-
-      if (!isCreatingTeamspace && validatedInput.teamspaceIds.length !== 1) {
-        throw new Error('Create a new teamspace or assign exactly one dedicated teamspace to this Team Lead.');
-      }
-
-      if (!isCreatingTeamspace) {
-        const selectedTeamspaceId = validatedInput.teamspaceIds[0];
-        const existingLeadSnap = await adminDb
-          .collection('users')
-          .where('role', '==', 'sales_team_lead')
-          .where('teamspaceIds', 'array-contains', selectedTeamspaceId)
-          .limit(1)
-          .get();
-
-        if (!existingLeadSnap.empty) {
-          throw new Error('This teamspace already has a Team Lead. Create or choose a different teamspace.');
-        }
-      }
     }
 
     // 2. CREATE IN AUTH
@@ -129,23 +120,6 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
     // 3. CREATE PROFILE
     const userDocRef = adminDb.collection('users').doc(newUserId);
     const batch = adminDb.batch();
-    let createdTeamspaceId: string | null = null;
-
-    if (validatedInput.role === 'sales_team_lead' && validatedInput.newTeamspaceName?.trim()) {
-      const newTeamspaceRef = adminDb.collection('teamspaces').doc();
-      createdTeamspaceId = newTeamspaceRef.id;
-      finalTeamspaceIds = [newTeamspaceRef.id];
-
-      batch.set(newTeamspaceRef, {
-        id: newTeamspaceRef.id,
-        name: validatedInput.newTeamspaceName.trim(),
-        description: validatedInput.newTeamspaceDescription?.trim() || `${validatedInput.displayName}'s teamspace`,
-        ownerId: newUserId,
-        memberIds: [newUserId],
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    }
 
     batch.set(userDocRef, {
       id: newUserId,
@@ -162,8 +136,6 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
     });
 
     finalTeamspaceIds.forEach(teamspaceId => {
-      if (teamspaceId === createdTeamspaceId) return;
-
       const teamspaceRef = adminDb.collection('teamspaces').doc(teamspaceId);
       batch.update(teamspaceRef, {
         memberIds: FieldValue.arrayUnion(newUserId),
