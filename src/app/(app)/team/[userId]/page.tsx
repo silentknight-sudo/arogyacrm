@@ -132,9 +132,16 @@ export default function TeamMemberProfilePage() {
     if (currentUser.role === 'admin') {
       return query(collection(firestore, 'users'));
     }
+    if (member?.role === 'sales_team_lead') {
+      return query(
+        collection(firestore, 'users'),
+        where('createdBy', '==', member.id),
+        where('role', '==', 'sales_executive')
+      );
+    }
     if (!profileTeamspaceId) return null;
     return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', profileTeamspaceId));
-  }, [firestore, currentUser, profileTeamspaceId]);
+  }, [firestore, currentUser, member?.id, member?.role, profileTeamspaceId]);
   const leadsQuery = useMemoFirebase(() => {
     if (!profileTeamspaceId) return null;
     return query(collection(firestore, 'teamspaces', profileTeamspaceId, 'leads'));
@@ -198,6 +205,7 @@ export default function TeamMemberProfilePage() {
     if (currentUser.role === 'sales_team_lead') {
       return (
         member.id === currentUser.id ||
+        member.createdBy === currentUser.id ||
         (!!currentTeamspace?.id && (member.teamspaceIds || []).includes(currentTeamspace.id))
       );
     }

@@ -50,13 +50,22 @@ service cloud.firestore {
         currentUserData.teamspaceIds.hasAny(userData.teamspaceIds);
     }
 
+    function isManagedTelecaller(userData) {
+      let currentUserData = getUserData();
+      return isSignedIn() &&
+        currentUserData.role == 'sales_team_lead' &&
+        userData.role == 'sales_executive' &&
+        userData.createdBy == request.auth.uid;
+    }
+
     // -- CORE RULES --
 
 match /users/{userId} {
   allow read: if isSignedIn() && (
     isAdmin() ||
     userId == request.auth.uid ||
-    sharesAnyTeamspaceWithUser(resource.data)
+    sharesAnyTeamspaceWithUser(resource.data) ||
+    isManagedTelecaller(resource.data)
   );
   allow write: if isAdmin();
 
