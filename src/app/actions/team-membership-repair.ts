@@ -13,8 +13,13 @@ export async function repairManagedTelecallers({ teamLeadId, teamspaceId }: Repa
   try {
     const teamLeadRef = adminDb.collection('users').doc(teamLeadId);
     const teamspaceRef = adminDb.collection('teamspaces').doc(teamspaceId);
+    const leadsRef = teamspaceRef.collection('leads');
 
-    const [teamLeadDoc, teamspaceDoc] = await Promise.all([teamLeadRef.get(), teamspaceRef.get()]);
+    const [teamLeadDoc, teamspaceDoc, leadsSnap] = await Promise.all([
+      teamLeadRef.get(),
+      teamspaceRef.get(),
+      leadsRef.get(),
+    ]);
 
     if (!teamLeadDoc.exists) throw new Error('Team Lead profile not found.');
     if (!teamspaceDoc.exists) throw new Error('Teamspace not found.');
@@ -26,6 +31,18 @@ export async function repairManagedTelecallers({ teamLeadId, teamspaceId }: Repa
 
     const teamLeadTeamspaceIds = Array.isArray(teamLead?.teamspaceIds) ? teamLead.teamspaceIds : [];
     const teamspaceMemberIds = Array.isArray(teamspaceDoc.data()?.memberIds) ? teamspaceDoc.data()?.memberIds : [];
+    const leadAssigneeIds = new Set<string>();
+
+    leadsSnap.forEach((leadDoc) => {
+      const assignedToIds = leadDoc.data()?.assignedToIds;
+      if (!Array.isArray(assignedToIds)) return;
+
+      assignedToIds.forEach((assigneeId: string) => {
+        if (assigneeId && assigneeId !== teamLeadId) {
+          leadAssigneeIds.add(assigneeId);
+        }
+      });
+    });
 
     const managedByCreatorSnap = await adminDb
       .collection('users')
@@ -35,6 +52,7 @@ export async function repairManagedTelecallers({ teamLeadId, teamspaceId }: Repa
 
     const candidateIds = new Set<string>([
       ...teamspaceMemberIds,
+      ...leadAssigneeIds,
       ...managedByCreatorSnap.docs.map((doc) => doc.id),
     ]);
 
@@ -90,6 +108,8 @@ export async function repairManagedTelecallers({ teamLeadId, teamspaceId }: Repa
       revalidatePath('/admin/users');
       revalidatePath('/leads');
       revalidatePath('/dashboard');
+      revalidatePath('/analytics/reports');
+      revalidatePath(`/team/${teamLeadId}`);
     }
 
     return { success: true, repaired };
