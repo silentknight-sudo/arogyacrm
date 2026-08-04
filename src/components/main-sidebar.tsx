@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
   BarChart3,
@@ -17,12 +18,13 @@ import {
   Users,
   WalletCards,
 } from 'lucide-react';
-import { collection, query } from 'firebase/firestore';
+import { collection, documentId, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/app-context';
 import { LEAD_STATUS_ORDER, getLeadStatusLabel } from '@/lib/status-labels';
-import type { Lead, LeadStatus } from '@/types';
+import type { Lead, LeadStatus, UserProfile } from '@/types';
+import { getRoleAwareLeadStage } from '@/lib/role-lead-stage';
 
 type SidebarItem = {
   href: string;
@@ -30,7 +32,7 @@ type SidebarItem = {
   icon: typeof LayoutDashboard;
 };
 
-const LEAD_FILTERS: Array<LeadStatus | 'fresh_uploads'> = ['fresh_uploads', ...LEAD_STATUS_ORDER];
+const LEAD_FILTERS: Array<'fresh_uploads' | 'pending' | Exclude<LeadStatus, 'new'>> = ['fresh_uploads', 'pending', 'done', 'not intrested', 'intrested', 'CNP'];
 
 export function MainSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
@@ -48,6 +50,26 @@ export function MainSidebar({ className }: { className?: string }) {
   }, [firestore, currentTeamspace?.id]);
   const { data: leads } = useCollection<Lead>(leadsQuery);
 
+  const usersQuery = useMemoFirebase(() => {
+    if (!currentUser || !currentTeamspace?.id) return null;
+    if (isAdmin) {
+      return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
+    }
+    if (isTL) {
+      return query(
+        collection(firestore, 'users'),
+        where('createdBy', '==', currentUser.id),
+        where('role', '==', 'sales_executive')
+      );
+    }
+    return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
+  }, [currentUser, currentTeamspace?.id, firestore, isAdmin, isTL]);
+  const { data: sidebarUsers } = useCollection<UserProfile>(usersQuery);
+  const stageUsers = useMemo(
+    () => (currentUser ? [currentUser, ...(sidebarUsers || []).filter((user) => user.id !== currentUser.id)] : sidebarUsers || []),
+    [currentUser, sidebarUsers]
+  );
+
   const visibleLeads = (leads || []).filter((lead) => {
     if (!currentUser) return false;
     if (isAdmin) {
@@ -56,14 +78,14 @@ export function MainSidebar({ className }: { className?: string }) {
     return (lead.assignedToIds || []).includes(currentUser.id);
   });
 
-  const stageCounts = LEAD_STATUS_ORDER.reduce<Record<LeadStatus, number>>(
-    (acc, status) => {
-      acc[status] = visibleLeads.filter((lead) => lead.status === status).length;
-      return acc;
-    },
-    { new: 0, done: 0, intrested: 0, CNP: 0, 'not intrested': 0 }
-  );
-  const newLeadCount = visibleLeads.filter((lead) => lead.status === 'new' && lead.reassigned !== true).length;
+  const stageCounts = useMemo(() => ({
+    fresh_uploads: visibleLeads.filter((lead) => getRoleAwareLeadStage(lead, currentUser, stageUsers, currentTeamspace) === 'fresh_uploads').length,
+    pending: visibleLeads.filter((lead) => getRoleAwareLeadStage(lead, currentUser, stageUsers, currentTeamspace) === 'pending').length,
+    done: visibleLeads.filter((lead) => lead.status === 'done').length,
+    'not intrested': visibleLeads.filter((lead) => lead.status === 'not intrested').length,
+    intrested: visibleLeads.filter((lead) => lead.status === 'intrested').length,
+    CNP: visibleLeads.filter((lead) => lead.status === 'CNP').length,
+  }), [visibleLeads, currentUser, stageUsers, currentTeamspace]);
 
   const crmItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -144,7 +166,7 @@ export function MainSidebar({ className }: { className?: string }) {
                     <div className="ml-8 space-y-1">
                       {LEAD_FILTERS.map((status) => {
                         const statusActive = pathname === '/leads' && searchParams.get('status') === status;
-                        const count = status === 'fresh_uploads' ? newLeadCount : stageCounts[status];
+                        const count = stageCounts[status];
 
                         return (
                           <Link
@@ -155,7 +177,7 @@ export function MainSidebar({ className }: { className?: string }) {
                               statusActive && 'bg-[#d3b66b]/20 text-[#f8f2dd]'
                             )}
                           >
-                            <span>{status === 'fresh_uploads' ? 'New Leads' : getLeadStatusLabel(status)}</span>
+                            <span>{status === 'fresh_uploads' ? 'New Leads' : status === 'pending' ? 'Pending' : getLeadStatusLabel(status)}</span>
                             <span className="rounded-full bg-[#d3b66b]/20 px-2 py-0.5 text-xs font-black text-[#f8f2dd]">{count}</span>
                           </Link>
                         );
