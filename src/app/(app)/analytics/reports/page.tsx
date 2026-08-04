@@ -124,13 +124,11 @@ export default function ReportsPage() {
     const usersQuery = useMemoFirebase(() =>
         !isUserLoading && currentUser
             ? currentUser.role === 'sales_team_lead'
-                ? currentTeamspace
-                    ? query(
-                        collection(firestore, 'users'),
-                        where('teamspaceIds', 'array-contains', currentTeamspace.id),
-                        where('role', '==', 'sales_executive')
-                      )
-                    : null
+                ? query(
+                    collection(firestore, 'users'),
+                    where('createdBy', '==', currentUser.id),
+                    where('role', '==', 'sales_executive')
+                  )
                 : currentTeamspace
                     ? query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id))
                     : null

@@ -32,16 +32,15 @@ export default function UserManagementPage() {
     }
     
     if (currentUser.role === 'sales_team_lead') {
-        if (!currentTeamspace?.id) return null;
         return query(
             collection(firestore, 'users'),
-            where('teamspaceIds', 'array-contains', currentTeamspace.id),
+            where('createdBy', '==', currentUser.id),
             where('role', '==', 'sales_executive')
         );
     }
     
     return null;
-  }, [firestore, currentUser, currentTeamspace?.id, adminView]);
+  }, [firestore, currentUser, adminView]);
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 

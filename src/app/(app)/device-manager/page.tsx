@@ -29,6 +29,13 @@ export default function DeviceManagerPage() {
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser) return null;
     if (currentUser.role === 'admin') return query(collection(firestore, 'users'));
+    if (currentUser.role === 'sales_team_lead') {
+      return query(
+        collection(firestore, 'users'),
+        where('createdBy', '==', currentUser.id),
+        where('role', '==', 'sales_executive')
+      );
+    }
     if (!currentTeamspace?.id) return null;
     return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
