@@ -124,7 +124,13 @@ export default function ReportsPage() {
     const usersQuery = useMemoFirebase(() =>
         !isUserLoading && currentUser
             ? currentUser.role === 'sales_team_lead'
-                ? query(collection(firestore, 'users'), where('role', '==', 'sales_executive'))
+                ? currentTeamspace
+                    ? query(
+                        collection(firestore, 'users'),
+                        where('teamspaceIds', 'array-contains', currentTeamspace.id),
+                        where('role', '==', 'sales_executive')
+                      )
+                    : null
                 : currentTeamspace
                     ? query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id))
                     : null
@@ -190,7 +196,7 @@ export default function ReportsPage() {
         return userList
             .filter((user) => user.role === 'sales_team_lead')
             .map((tl) => {
-                const telecallers = userList.filter((user) => user.role === 'sales_executive' && user.createdBy === tl.id);
+                const telecallers = userList.filter((user) => belongsToTeamLeadTeam(user, tl, currentTeamspace));
                 const teamIds = new Set([tl.id, ...telecallers.map((user) => user.id)]);
                 const teamLeads = leadList.filter((lead) => lead.assignedToIds?.some((id) => teamIds.has(id)));
 
@@ -202,7 +208,7 @@ export default function ReportsPage() {
                 };
             })
             .sort((a, b) => b.summary.total - a.summary.total);
-    }, [leads, users]);
+    }, [currentTeamspace, leads, users]);
 
     const teamInputOutputSummary = useMemo(() => getLeadSummary(teamScopedLeads), [teamScopedLeads]);
     const teamStageData = useMemo(() => [

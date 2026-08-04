@@ -312,9 +312,16 @@ export default function Dashboard() {
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser) return null;
     if (isAdmin) return query(collection(firestore, 'users'));
-    if (isTeamLead) return query(collection(firestore, 'users'), where('role', '==', 'sales_executive'));
+    if (isTeamLead) {
+      if (!currentTeamspace?.id) return null;
+      return query(
+        collection(firestore, 'users'),
+        where('teamspaceIds', 'array-contains', currentTeamspace.id),
+        where('role', '==', 'sales_executive')
+      );
+    }
     return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
-  }, [currentUser, firestore, isAdmin, isTeamLead, isUserLoading]);
+  }, [currentUser, currentTeamspace?.id, firestore, isAdmin, isTeamLead, isUserLoading]);
 
   const { data: rawLeads, isLoading: loadingLeads } = useCollection<Lead>(leadsQuery);
   const { data: campaigns, isLoading: loadingCampaigns } = useCollection<Campaign>(campaignsQuery);

@@ -150,7 +150,11 @@ export default function LeadsPage() {
     }
 
     if (currentUser.role === 'sales_team_lead') {
-      return query(collection(firestore, 'users'), where('role', '==', 'sales_executive'));
+      return query(
+        collection(firestore, 'users'),
+        where('teamspaceIds', 'array-contains', currentTeamspace.id),
+        where('role', '==', 'sales_executive')
+      );
     }
 
     return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
