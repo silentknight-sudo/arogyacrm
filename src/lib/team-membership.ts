@@ -1,5 +1,11 @@
 import type { Teamspace, UserProfile } from '@/types';
 
+export function getPrimaryTeamspaceId(user: UserProfile | null | undefined) {
+  return Array.isArray(user?.teamspaceIds) && user.teamspaceIds.length > 0
+    ? user.teamspaceIds[0]
+    : null;
+}
+
 export function belongsToTeamLeadTeam(
   member: UserProfile,
   teamLead: UserProfile | null | undefined,
@@ -7,15 +13,13 @@ export function belongsToTeamLeadTeam(
 ) {
   if (!teamLead || member.role !== 'sales_executive') return false;
 
-  const memberTeamspaceIds = Array.isArray(member.teamspaceIds) ? member.teamspaceIds : [];
-  const teamLeadTeamspaceIds = Array.isArray(teamLead.teamspaceIds) ? teamLead.teamspaceIds : [];
-  const currentTeamspaceId = currentTeamspace?.id;
-  const currentMemberIds = Array.isArray(currentTeamspace?.memberIds) ? currentTeamspace.memberIds : [];
+  const currentTeamspaceId = currentTeamspace?.id || null;
+  const memberPrimaryTeamspaceId = getPrimaryTeamspaceId(member);
+  const teamLeadPrimaryTeamspaceId = getPrimaryTeamspaceId(teamLead);
 
   return (
     member.createdBy === teamLead.id ||
-    (currentTeamspaceId ? memberTeamspaceIds.includes(currentTeamspaceId) : false) ||
-    currentMemberIds.includes(member.id) ||
-    memberTeamspaceIds.some((id) => teamLeadTeamspaceIds.includes(id))
+    (Boolean(currentTeamspaceId) && memberPrimaryTeamspaceId === currentTeamspaceId) ||
+    (Boolean(teamLeadPrimaryTeamspaceId) && memberPrimaryTeamspaceId === teamLeadPrimaryTeamspaceId)
   );
 }

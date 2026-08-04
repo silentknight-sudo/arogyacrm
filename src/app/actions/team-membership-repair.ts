@@ -29,7 +29,6 @@ export async function repairManagedTelecallers({ teamLeadId, teamspaceId }: Repa
       throw new Error('Only Team Leads or Admins can repair telecaller memberships.');
     }
 
-    const teamLeadTeamspaceIds = Array.isArray(teamLead?.teamspaceIds) ? teamLead.teamspaceIds : [];
     const teamspaceMemberIds = Array.isArray(teamspaceDoc.data()?.memberIds) ? teamspaceDoc.data()?.memberIds : [];
     const leadAssigneeIds = new Set<string>();
 
@@ -71,13 +70,12 @@ export async function repairManagedTelecallers({ teamLeadId, teamspaceId }: Repa
       const telecaller = telecallerDoc.data();
       if (telecaller?.role !== 'sales_executive') continue;
 
-      const currentTeamspaceIds = Array.isArray(telecaller?.teamspaceIds) ? telecaller.teamspaceIds : [];
-      const mergedTeamspaceIds = Array.from(new Set([...currentTeamspaceIds, ...teamLeadTeamspaceIds, teamspaceId]));
+      const currentPrimaryTeamspaceId = Array.isArray(telecaller?.teamspaceIds) ? telecaller.teamspaceIds[0] : null;
+      const normalizedTeamspaceIds = [teamspaceId];
 
       const needsRepair =
         telecaller.createdBy !== teamLeadId ||
-        mergedTeamspaceIds.length !== currentTeamspaceIds.length ||
-        !currentTeamspaceIds.includes(teamspaceId);
+        currentPrimaryTeamspaceId !== teamspaceId;
 
       if (!needsRepair) continue;
 
@@ -85,7 +83,7 @@ export async function repairManagedTelecallers({ teamLeadId, teamspaceId }: Repa
         telecallerRef,
         {
           createdBy: teamLeadId,
-          teamspaceIds: mergedTeamspaceIds,
+          teamspaceIds: normalizedTeamspaceIds,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }

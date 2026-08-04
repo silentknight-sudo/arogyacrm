@@ -6,6 +6,7 @@ import type { UserProfile, Teamspace, Notification } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { doc, collection, query, getDoc, orderBy, limit, addDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { repairManagedTelecallers } from '@/app/actions/team-membership-repair';
+import { getPrimaryTeamspaceId } from '@/lib/team-membership';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -103,8 +104,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isUserLoading && currentUser && currentUser.role !== 'admin') {
-      const teamspaceIds = currentUser.teamspaceIds || [];
-      if (teamspaceIds.length === 0) {
+      const primaryTeamspaceId = getPrimaryTeamspaceId(currentUser);
+      if (!primaryTeamspaceId) {
         setAvailableTeamspaces([]);
         setAreTeamspacesLoading(false);
         return;
@@ -113,11 +114,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAreTeamspacesLoading(true);
       const fetchTeamspaces = async () => {
         try {
-          const promises = teamspaceIds.map(id => getDoc(doc(firestore, 'teamspaces', id)));
-          const docSnapshots = await Promise.all(promises);
-          const teams = docSnapshots
-            .filter(snap => snap.exists())
-            .map(snap => ({ id: snap.id, ...snap.data() } as Teamspace));
+          const teamspaceSnap = await getDoc(doc(firestore, 'teamspaces', primaryTeamspaceId));
+          const teams = teamspaceSnap.exists()
+            ? [{ id: teamspaceSnap.id, ...teamspaceSnap.data() } as Teamspace]
+            : [];
           setAvailableTeamspaces(teams);
         } catch (error) {
           console.error("Error fetching user's teamspaces:", error);

@@ -42,7 +42,6 @@ import { DateRange } from 'react-day-picker';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getLeadStatusLabel } from '@/lib/status-labels';
-import { belongsToTeamLeadTeam } from '@/lib/team-membership';
 import { matchesRoleAwareLeadStage } from '@/lib/role-lead-stage';
 
 type RoleAwareFilter = 'fresh_uploads' | 'pending' | Exclude<LeadStatus, 'new'>;
@@ -305,7 +304,7 @@ export default function LeadsPage() {
                     .filter((u) => {
                       if (currentUser?.role === 'admin') return u.role === 'sales_team_lead';
                       if (currentUser?.role === 'sales_team_lead') {
-                        return belongsToTeamLeadTeam(u, currentUser, currentTeamspace);
+                        return u.role === 'sales_executive' && u.createdBy === currentUser.id;
                       }
                       return false;
                     })

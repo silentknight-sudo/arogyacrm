@@ -29,6 +29,11 @@ function getEmployeeIdPrefix(role: string) {
   return 'AGY-EMP';
 }
 
+function normalizeSingleTeamspace(teamspaceIds: string[] | undefined | null) {
+  const firstTeamspaceId = Array.isArray(teamspaceIds) ? teamspaceIds.find(Boolean) : null;
+  return firstTeamspaceId ? [firstTeamspaceId] : [];
+}
+
 async function getNextEmployeeId(role: string) {
   const prefix =
     role === 'sales_team_lead'
@@ -66,7 +71,7 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
         throw new Error('You do not have administrative privileges.');
     }
 
-    let finalTeamspaceIds = validatedInput.teamspaceIds;
+    let finalTeamspaceIds = normalizeSingleTeamspace(validatedInput.teamspaceIds);
     let createdBy = validatedInput.creatorId;
 
     if (validatedInput.role === 'sales_executive') {
@@ -79,8 +84,8 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
         throw new Error('Selected manager is not a valid Team Lead.');
       }
 
-      const managerTeamspaceIds = managerDoc.data()?.teamspaceIds || [];
-      if (!Array.isArray(managerTeamspaceIds) || managerTeamspaceIds.length === 0) {
+      const managerTeamspaceIds = normalizeSingleTeamspace(managerDoc.data()?.teamspaceIds || []);
+      if (managerTeamspaceIds.length === 0) {
         throw new Error('Selected Team Lead does not have a teamspace.');
       }
 
@@ -148,7 +153,7 @@ export async function createUser(values: CreateUserInput): Promise<CreateUserRes
       email: validatedInput.email,
       employeeId,
       role: validatedInput.role,
-      teamspaceIds: finalTeamspaceIds,
+      teamspaceIds: normalizeSingleTeamspace(finalTeamspaceIds),
       accessStatus: 'approved',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -310,8 +315,8 @@ export async function transferTelecallerToTeamLead(values: z.infer<typeof Transf
       throw new Error('Selected employee is not a Team Lead.');
     }
 
-    const oldTeamspaceIds = Array.isArray(telecallerData?.teamspaceIds) ? telecallerData.teamspaceIds : [];
-    const newTeamspaceIds = Array.isArray(teamLeadData?.teamspaceIds) ? teamLeadData.teamspaceIds : [];
+    const oldTeamspaceIds = normalizeSingleTeamspace(telecallerData?.teamspaceIds);
+    const newTeamspaceIds = normalizeSingleTeamspace(teamLeadData?.teamspaceIds);
 
     if (newTeamspaceIds.length === 0) {
       throw new Error('Selected Team Lead does not have an assigned teamspace.');

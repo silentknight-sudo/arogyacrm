@@ -45,17 +45,17 @@ async function assertAuthorizedLeadRecipients(actorId: string, recipientIds: str
     for (const recipientId of recipientIds) {
       const recipientDoc = await adminDb.collection('users').doc(recipientId).get();
       const recipient = recipientDoc.data();
-      const recipientTeamspaceIds = Array.isArray(recipient?.teamspaceIds) ? recipient.teamspaceIds : [];
-      const actorTeamspaceIds = Array.isArray(actorData?.teamspaceIds) ? actorData.teamspaceIds : [];
-      const sharesTeamspace =
-        recipientTeamspaceIds.includes(teamspaceId) ||
-        actorTeamspaceIds.includes(teamspaceId) ||
-        recipientTeamspaceIds.some((id: string) => actorTeamspaceIds.includes(id));
+      const recipientPrimaryTeamspaceId = Array.isArray(recipient?.teamspaceIds) ? recipient.teamspaceIds[0] : null;
+      const actorPrimaryTeamspaceId = Array.isArray(actorData?.teamspaceIds) ? actorData.teamspaceIds[0] : null;
+      const sharesPrimaryTeamspace =
+        recipientPrimaryTeamspaceId === teamspaceId ||
+        actorPrimaryTeamspaceId === teamspaceId ||
+        recipientPrimaryTeamspaceId === actorPrimaryTeamspaceId;
 
       if (
         !recipientDoc.exists ||
         recipient?.role !== 'sales_executive' ||
-        (!sharesTeamspace && recipient?.createdBy !== actorId)
+        (!sharesPrimaryTeamspace && recipient?.createdBy !== actorId)
       ) {
         throw new Error('Team Leads can assign leads only to their own telecallers.');
       }
