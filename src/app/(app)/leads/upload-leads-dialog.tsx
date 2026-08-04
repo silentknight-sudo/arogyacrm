@@ -40,7 +40,7 @@ import { Label } from '@/components/ui/label';
 import { getRoleLabel } from '@/lib/user-labels';
 
 const formSchema = z.object({
-  assignedToId: z.string().min(1, 'You must assign the leads to a team lead or telecaller.'),
+  assignedToId: z.string().optional(),
 });
 
 type UploadLeadsDialogProps = {
@@ -52,6 +52,7 @@ type UploadLeadsDialogProps = {
 export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
+  const isAdmin = currentUser?.role === 'admin';
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [importedLeads, setImportedLeads] = useState<any[]>([]);
@@ -131,7 +132,8 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
       try {
         const result = await uploadLeads({
           rawLeads: importedLeads,
-          assignedToId: values.assignedToId,
+          assignedToId: values.assignedToId || undefined,
+          importerId: currentUser.id,
           teamspaceId: currentTeamspace.id,
         });
 
@@ -188,20 +190,32 @@ export function UploadLeadsDialog({ children, users, isLoading }: UploadLeadsDia
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
                             <SelectTrigger disabled={isLoading} className="rounded-xl h-12 bg-muted/20 border-none">
-                                <SelectValue placeholder="Select team lead or telecaller" />
+                                <SelectValue placeholder={isAdmin ? 'Import to admin pool or select a team lead' : 'Select team lead or telecaller'} />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-xl">
+                            {isAdmin && currentUser && (
+                                <SelectItem value={currentUser.id}>Admin Team Pool</SelectItem>
+                            )}
                             {users.map(user => (
                                 <SelectItem key={user.id} value={user.id}>{user.displayName} ({getRoleLabel(user.role)})</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>
+                        {isAdmin && (
+                          <p className="text-xs font-medium text-muted-foreground">
+                            Choose <span className="font-bold text-primary">Admin Team Pool</span> to import leads into your pool first and assign them later.
+                          </p>
+                        )}
                         <FormMessage />
                         </FormItem>
                     )}
                     />
-                    <Button type="submit" disabled={isPending || users.length === 0} className="w-full h-14 rounded-2xl herbal-gradient font-black shadow-xl">
+                    <Button
+                      type="submit"
+                      disabled={isPending || (!isAdmin && users.length === 0)}
+                      className="w-full h-14 rounded-2xl herbal-gradient font-black shadow-xl"
+                    >
                     {isPending ? 'Syncing Pipeline...' : 'Finalize Batch Ingestion'}
                     </Button>
                 </form>
