@@ -12,6 +12,31 @@ const CreateTeamspaceSchema = z.object({
 
 type CreateTeamspaceInput = z.infer<typeof CreateTeamspaceSchema>;
 type CreateTeamspaceResult = { success: boolean; error?: string; teamspaceId?: string; name?: string };
+type DeleteTeamspaceResult = { success: boolean; error?: string; detachedUsers?: number };
+
+const DeleteTeamspaceSchema = z.object({
+  teamspaceId: z.string().min(1, 'Teamspace ID is required.'),
+  adminId: z.string().min(1, 'Admin ID is required.'),
+});
+
+const TEAMSPACE_COLLECTIONS_TO_DELETE = [
+  'leads',
+  'contacts',
+  'deals',
+  'tasks',
+  'meetings',
+  'calls',
+  'documents',
+  'campaigns',
+  'quotes',
+  'salesOrders',
+  'purchaseOrders',
+  'invoices',
+  'tickets',
+  'refunds',
+  'complaints',
+  'activityLogs',
+];
 
 export async function createTeamspace(values: CreateTeamspaceInput): Promise<CreateTeamspaceResult> {
   try {
@@ -57,5 +82,78 @@ export async function createTeamspace(values: CreateTeamspaceInput): Promise<Cre
   } catch (error: any) {
     const errorMessage = handleAdminSDKError(error);
     return { success: false, error: `Failed to create teamspace: ${errorMessage}` };
+  }
+}
+
+async function deleteCollectionRecursive(collectionRef: FirebaseFirestore.CollectionReference, batchSize = 25) {
+  const snapshot = await collectionRef.limit(batchSize).get();
+  if (snapshot.empty) return;
+
+  for (const doc of snapshot.docs) {
+    await deleteDocumentRecursive(doc.ref);
+  }
+
+  await deleteCollectionRecursive(collectionRef, batchSize);
+}
+
+async function deleteDocumentRecursive(docRef: FirebaseFirestore.DocumentReference) {
+  const nestedCollections = await docRef.listCollections();
+  for (const nestedCollection of nestedCollections) {
+    await deleteCollectionRecursive(nestedCollection);
+  }
+  await docRef.delete();
+}
+
+export async function deleteTeamspace(values: z.infer<typeof DeleteTeamspaceSchema>): Promise<DeleteTeamspaceResult> {
+  try {
+    const { teamspaceId, adminId } = DeleteTeamspaceSchema.parse(values);
+
+    const adminDoc = await adminDb.collection('users').doc(adminId).get();
+    if (!adminDoc.exists || adminDoc.data()?.role !== 'admin') {
+      throw new Error('Unauthorized: only admins can delete teamspaces.');
+    }
+
+    const [teamspacesSnapshot, teamspaceDoc, linkedUsersSnapshot] = await Promise.all([
+      adminDb.collection('teamspaces').get(),
+      adminDb.collection('teamspaces').doc(teamspaceId).get(),
+      adminDb.collection('users').where('teamspaceIds', 'array-contains', teamspaceId).get(),
+    ]);
+
+    if (!teamspaceDoc.exists) {
+      throw new Error('Teamspace not found.');
+    }
+
+    if (teamspacesSnapshot.size <= 1) {
+      throw new Error('You must keep at least one teamspace in the CRM.');
+    }
+
+    const batch = adminDb.batch();
+
+    linkedUsersSnapshot.docs.forEach((userDoc) => {
+      batch.update(userDoc.ref, {
+        teamspaceIds: FieldValue.arrayRemove(teamspaceId),
+      });
+    });
+
+    const leadSyncConfigRef = adminDb.collection('leadSyncConfigs').doc(teamspaceId);
+    batch.delete(leadSyncConfigRef);
+
+    await batch.commit();
+
+    const teamspaceRef = adminDb.collection('teamspaces').doc(teamspaceId);
+    for (const collectionName of TEAMSPACE_COLLECTIONS_TO_DELETE) {
+      await deleteCollectionRecursive(teamspaceRef.collection(collectionName));
+    }
+
+    await teamspaceRef.delete();
+
+    revalidatePath('/admin/teamspaces');
+    revalidatePath('/admin/users');
+    revalidatePath('/(app)', 'layout');
+
+    return { success: true, detachedUsers: linkedUsersSnapshot.size };
+  } catch (error: any) {
+    const errorMessage = handleAdminSDKError(error);
+    return { success: false, error: `Failed to delete teamspace: ${errorMessage}` };
   }
 }

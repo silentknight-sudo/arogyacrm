@@ -1,8 +1,9 @@
 'use client';
 
+import { useState, useTransition } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MoreHorizontal, ArrowUpDown, Trash2 } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,9 +15,24 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Teamspace } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { deleteTeamspace } from './actions';
+import { useApp } from '@/context/app-context';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const TeamspaceActions = ({ teamspace }: { teamspace: Teamspace }) => {
   const { toast } = useToast();
+  const { currentUser } = useApp();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, startDeleteTransition] = useTransition();
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(teamspace.id).then(() => {
@@ -34,21 +50,86 @@ const TeamspaceActions = ({ teamspace }: { teamspace: Teamspace }) => {
     });
   };
 
+  const handleDelete = () => {
+    if (!currentUser) {
+      toast({
+        variant: 'destructive',
+        title: 'Access denied',
+        description: 'You must be logged in as admin to delete a teamspace.',
+      });
+      return;
+    }
+
+    startDeleteTransition(async () => {
+      const result = await deleteTeamspace({
+        teamspaceId: teamspace.id,
+        adminId: currentUser.id,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'Teamspace deleted',
+          description: `${teamspace.name} was deleted and ${result.detachedUsers || 0} linked users were detached.`,
+        });
+        setIsDeleteOpen(false);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Delete failed',
+          description: result.error,
+        });
+      }
+    });
+  };
+
   return (
+    <>
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this teamspace?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes <span className="font-semibold">{teamspace.name}</span> and its workspace CRM data.
+              Linked users will be detached from this teamspace and may lose access until reassigned.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className={buttonVariants({ variant: 'destructive' })}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete teamspace'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <span className="sr-only">Open menu</span>
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={handleCopyId}>
-            Copy teamspace ID
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={handleCopyId}>
+              Copy teamspace ID
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setIsDeleteOpen(true)}
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+              disabled={isDeleting}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete teamspace
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+    </>
   );
 };
 
