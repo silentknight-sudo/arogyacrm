@@ -28,7 +28,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const TeamspaceActions = ({ teamspace }: { teamspace: Teamspace }) => {
+const TeamspaceActions = ({
+  teamspace,
+  showDeleteButton = false,
+}: {
+  teamspace: Teamspace;
+  showDeleteButton?: boolean;
+}) => {
   const { toast } = useToast();
   const { currentUser } = useApp();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -105,6 +111,19 @@ const TeamspaceActions = ({ teamspace }: { teamspace: Teamspace }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showDeleteButton && (
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          onClick={() => setIsDeleteOpen(true)}
+          disabled={isDeleting}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </Button>
+      )}
 
       <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -188,6 +207,11 @@ export const columns: ColumnDef<Teamspace>[] = [
   },
   {
     id: 'actions',
-    cell: ({ row }) => <TeamspaceActions teamspace={row.original} />,
+    header: 'Actions',
+    cell: ({ row }) => (
+      <div className="flex items-center justify-end gap-2">
+        <TeamspaceActions teamspace={row.original} showDeleteButton />
+      </div>
+    ),
   },
 ];
