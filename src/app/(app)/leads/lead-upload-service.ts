@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache';
 
 const UploadLeadsSchema = z.object({
   rawLeads: z.array(z.any()),
-  assignedToId: z.string().min(1),
+  assignedToId: z.string().optional(),
+  importerId: z.string().min(1),
   teamspaceId: z.string().min(1),
 });
 
@@ -14,12 +15,14 @@ type UploadLeadsResult = { success: boolean; error?: string; count?: number };
 
 export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeadsResult> {
   try {
-    const { rawLeads, assignedToId, teamspaceId } = UploadLeadsSchema.parse(values);
+    const { rawLeads, assignedToId, importerId, teamspaceId } = UploadLeadsSchema.parse(values);
 
     if (!rawLeads || rawLeads.length === 0) {
       throw new Error('No leads detected in the ingestion batch.');
     }
     
+    const effectiveAssignedToId = assignedToId || importerId;
+
     const chunks = [];
     for (let i = 0; i < rawLeads.length; i += 500) {
         chunks.push(rawLeads.slice(i, i + 500));
@@ -49,7 +52,7 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
                 phone: cleanPhone || '',
                 source: getVal(['campaign_name', 'platform', 'source']) || 'Meta Ads',
                 status: 'new',
-                assignedToIds: [assignedToId],
+                assignedToIds: effectiveAssignedToId ? [effectiveAssignedToId] : [],
                 teamspaceId: teamspaceId,
                 reassigned: false,
                 createdAt: getVal(['created_time', 'created_at']) || FieldValue.serverTimestamp(),
@@ -62,14 +65,20 @@ export async function uploadLeads(values: UploadLeadsInput): Promise<UploadLeads
     }
 
     // Trigger high-intensity alert pulse for the assigned specialist
-    await adminDb.collection('users').doc(assignedToId).collection('notifications').add({
-        title: `you got ${rawLeads.length} new leads`,
-        description: `Successfully ingested ${rawLeads.length} leads from Meta Ads.`,
-        type: 'lead_assigned',
-        timestamp: new Date().toISOString(),
-        read: false,
-        link: '/leads'
-    });
+    if (effectiveAssignedToId) {
+      await adminDb.collection('users').doc(effectiveAssignedToId).collection('notifications').add({
+          title: effectiveAssignedToId === importerId
+            ? `${rawLeads.length} leads added to admin pool`
+            : `you got ${rawLeads.length} new leads`,
+          description: effectiveAssignedToId === importerId
+            ? `Successfully ingested ${rawLeads.length} leads into the admin team pool.`
+            : `Successfully ingested ${rawLeads.length} leads from Meta Ads.`,
+          type: 'lead_assigned',
+          timestamp: new Date().toISOString(),
+          read: false,
+          link: '/leads'
+      });
+    }
 
     revalidatePath('/leads');
     revalidatePath('/deals');

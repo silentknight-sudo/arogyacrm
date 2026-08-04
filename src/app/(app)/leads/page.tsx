@@ -206,7 +206,7 @@ export default function LeadsPage() {
           <p className="text-2xl text-muted-foreground font-semibold">Managing active lead operations.</p>
         </div>
         <div className="flex items-center gap-4">
-          {isAdminOrTL && (
+          {currentUser?.role === 'admin' && (
             <>
               <DeduplicateLeadsDialog />
               <UploadLeadsDialog users={users || []} isLoading={loading}>
@@ -321,9 +321,11 @@ export default function LeadsPage() {
                   <Button className="rounded-xl herbal-gradient shadow-lg px-8 font-black h-11 uppercase tracking-widest text-[11px]" onClick={() => setBulkAssignOpen(true)}>
                     Delegate {selectedLeads.length}
                   </Button>
-                  <Button variant="destructive" className="rounded-xl shadow-lg px-5 font-black h-11" onClick={() => setIsDeleteOpen(true)} disabled={isDeleting}>
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
+                  {currentUser?.role === 'admin' && (
+                    <Button variant="destructive" className="rounded-xl shadow-lg px-5 font-black h-11" onClick={() => setIsDeleteOpen(true)} disabled={isDeleting}>
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
