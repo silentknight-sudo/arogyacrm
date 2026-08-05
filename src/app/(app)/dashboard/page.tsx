@@ -16,6 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { getLeadStatusLabel } from '@/lib/status-labels';
 import { getProfessionalEmployeeId, getRoleLabel } from '@/lib/user-labels';
 import { belongsToTeamLeadTeam } from '@/lib/team-membership';
+import { useTeamRoster } from '@/hooks/use-team-roster';
 
 type StageSummary = {
   total: number;
@@ -312,19 +313,16 @@ export default function Dashboard() {
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser) return null;
     if (isAdmin) return query(collection(firestore, 'users'));
-    if (isTeamLead) {
-      return query(
-        collection(firestore, 'users'),
-        where('createdBy', '==', currentUser.id),
-        where('role', '==', 'sales_executive')
-      );
-    }
+    if (isTeamLead) return null;
     return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
-  }, [currentUser, firestore, isAdmin, isTeamLead, isUserLoading]);
+  }, [currentTeamspace?.id, currentUser, firestore, isAdmin, isTeamLead, isUserLoading]);
 
   const { data: rawLeads, isLoading: loadingLeads } = useCollection<Lead>(leadsQuery);
   const { data: campaigns, isLoading: loadingCampaigns } = useCollection<Campaign>(campaignsQuery);
-  const { data: users, isLoading: loadingUsers } = useCollection<UserProfile>(usersQuery);
+  const { data: firestoreUsers, isLoading: loadingFirestoreUsers } = useCollection<UserProfile>(usersQuery);
+  const { users: rosterUsers, isLoading: loadingRoster } = useTeamRoster();
+  const users = isTeamLead ? rosterUsers : firestoreUsers;
+  const loadingUsers = isTeamLead ? loadingRoster : loadingFirestoreUsers;
 
   const leads = useMemo(() => {
     const leadList = rawLeads || [];

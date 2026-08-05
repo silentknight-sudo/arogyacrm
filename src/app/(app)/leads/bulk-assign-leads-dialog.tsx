@@ -28,6 +28,7 @@ import { useApp } from '@/context/app-context';
 import type { Lead, UserProfile } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getRoleLabel } from '@/lib/user-labels';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
 
 const formSchema = z.object({
   assignedToIds: z.array(z.string()).min(1, 'Select at least one authorized recipient.'),
@@ -53,10 +54,10 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
       return users.filter(u => u.role === 'sales_team_lead');
     }
     if (currentUser.role === 'sales_team_lead') {
-      return users.filter((u) => u.role === 'sales_executive' && u.createdBy === currentUser.id);
+      return users.filter((u) => belongsToTeamLeadTeam(u, currentUser, currentTeamspace));
     }
     return [];
-  }, [users, currentUser]);
+  }, [users, currentTeamspace, currentUser]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

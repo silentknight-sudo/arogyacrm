@@ -61,6 +61,8 @@ export function useCollection<T = any>(
     }
 
     setIsLoading(true);
+    // Never render rows from the previous query while the next listener starts.
+    setData(null);
     setError(null);
 
     const unsubscribe = onSnapshot(

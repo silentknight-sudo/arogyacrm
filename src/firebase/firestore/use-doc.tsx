@@ -67,6 +67,9 @@ export function useDoc<T = any>(
     }
 
     setIsLoading(true);
+    // Avoid exposing a document from the previous reference during auth/profile
+    // transitions. Consumers can rely on isLoading until the new snapshot lands.
+    setData(null);
     setError(null);
 
     const unsubscribe = onSnapshot(

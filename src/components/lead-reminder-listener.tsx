@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { collection, onSnapshot, orderBy, query, where, writeBatch, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, writeBatch, doc } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
 import type { Lead } from '@/types';
@@ -23,8 +23,7 @@ export function LeadReminderListener() {
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     const q = query(
       leadsRef,
-      where('assignedToIds', 'array-contains', currentUser.id),
-      orderBy('updatedAt', 'desc')
+      where('assignedToIds', 'array-contains', currentUser.id)
     );
 
     const unsubscribe = onSnapshot(q, async snapshot => {
@@ -65,6 +64,8 @@ export function LeadReminderListener() {
       });
 
       await batch.commit();
+    }, (error) => {
+      console.error('Lead reminder listener failed:', error);
     });
 
     return () => unsubscribe();

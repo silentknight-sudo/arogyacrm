@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import type { UserProfile, Teamspace, Notification } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { doc, collection, query, getDoc, orderBy, limit, addDoc, getDocs, writeBatch } from 'firebase/firestore';
-import { repairManagedTelecallers } from '@/app/actions/team-membership-repair';
 import { getPrimaryTeamspaceId } from '@/lib/team-membership';
 
 export type Theme = 'light' | 'dark' | 'system';
@@ -38,7 +37,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   , [firestore, authUser]);
   const { data: currentUser, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const isUserLoading = isAuthLoading || (!!authUser && isProfileLoading);
+  // Auth can resolve one render before the profile listener starts. Treat that
+  // hand-off as loading so protected layouts never redirect a valid user.
+  const isUserLoading = isAuthLoading || (
+    !!authUser && (isProfileLoading || currentUser?.id !== authUser.uid)
+  );
 
   const [availableTeamspaces, setAvailableTeamspaces] = useState<Teamspace[]>([]);
   const [areTeamspacesLoading, setAreTeamspacesLoading] = useState(true);
@@ -137,29 +140,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [currentTeamspace, setCurrentTeamspaceState] = useState<Teamspace | null>(null);
   const [theme, setThemeState] = useState<Theme>('light');
-
-  useEffect(() => {
-    if (isUserLoading || !currentUser || currentUser.role !== 'sales_team_lead' || !currentTeamspace?.id) {
-      return;
-    }
-
-    const repairKey = `telecaller-repair:${currentUser.id}:${currentTeamspace.id}`;
-    if (sessionStorage.getItem(repairKey) === 'done') {
-      return;
-    }
-
-    sessionStorage.setItem(repairKey, 'pending');
-    repairManagedTelecallers({
-      teamLeadId: currentUser.id,
-      teamspaceId: currentTeamspace.id,
-    })
-      .then((result) => {
-        sessionStorage.setItem(repairKey, result.success ? 'done' : 'failed');
-      })
-      .catch(() => {
-        sessionStorage.setItem(repairKey, 'failed');
-      });
-  }, [currentTeamspace?.id, currentUser, isUserLoading]);
 
   useEffect(() => {
     if (!isUserLoading && availableTeamspaces && availableTeamspaces.length > 0) {

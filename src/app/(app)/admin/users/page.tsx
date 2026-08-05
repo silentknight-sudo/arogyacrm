@@ -13,6 +13,8 @@ import type { UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateUserDialog } from './create-user-dialog';
 import { useApp } from '@/context/app-context';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
+import { useTeamRoster } from '@/hooks/use-team-roster';
 
 export default function UserManagementPage() {
   const firestore = useFirestore();
@@ -30,20 +32,17 @@ export default function UserManagementPage() {
         );
     }
     
-    if (currentUser.role === 'sales_team_lead') {
-        return query(
-            collection(firestore, 'users'),
-            where('createdBy', '==', currentUser.id),
-            where('role', '==', 'sales_executive')
-        );
-    }
-    
     return null;
-  }, [firestore, currentUser, adminView]);
+  }, [adminView, currentTeamspace?.id, currentUser, firestore]);
 
-  const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+  const { data: firestoreUsers, isLoading: isFirestoreLoading } = useCollection<UserProfile>(usersQuery);
+  const { users: rosterUsers, isLoading: isRosterLoading } = useTeamRoster();
+  const users = currentUser?.role === 'sales_team_lead' ? rosterUsers : firestoreUsers;
+  const isLoading = currentUser?.role === 'sales_team_lead' ? isRosterLoading : isFirestoreLoading;
 
-  const visibleUsers = users || [];
+  const visibleUsers = currentUser?.role === 'sales_team_lead'
+    ? (users || []).filter((user) => belongsToTeamLeadTeam(user, currentUser, currentTeamspace))
+    : users || [];
 
   const canCreateUser = currentUser?.role === 'admin';
   const canViewUsers = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';

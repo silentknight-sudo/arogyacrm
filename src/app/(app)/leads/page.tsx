@@ -43,6 +43,8 @@ import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getLeadStatusLabel } from '@/lib/status-labels';
 import { matchesRoleAwareLeadStage } from '@/lib/role-lead-stage';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
+import { useTeamRoster } from '@/hooks/use-team-roster';
 
 type RoleAwareFilter = 'fresh_uploads' | 'pending' | Exclude<LeadStatus, 'new'>;
 type FilterType = RoleAwareFilter | 'default';
@@ -123,22 +125,26 @@ export default function LeadsPage() {
       return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
     }
 
-    if (currentUser.role === 'sales_team_lead') {
-      return query(
-        collection(firestore, 'users'),
-        where('createdBy', '==', currentUser.id),
-        where('role', '==', 'sales_executive')
-      );
-    }
+    if (currentUser.role === 'sales_team_lead') return null;
 
     return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
-  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+  const { data: firestoreUsers, isLoading: isFirestoreUsersLoading } = useCollection<UserProfile>(usersQuery);
+  const { users: rosterUsers, isLoading: isRosterLoading } = useTeamRoster();
+  const users = currentUser?.role === 'sales_team_lead' ? rosterUsers : firestoreUsers;
+  const isLoadingUsers = currentUser?.role === 'sales_team_lead' ? isRosterLoading : isFirestoreUsersLoading;
 
   const stageUsers = useMemo(
-    () => (currentUser ? [currentUser, ...(users || []).filter((user) => user.id !== currentUser.id)] : users || []),
-    [currentUser, users]
+    () => {
+      if (!currentUser) return users || [];
+      const visibleUsers = currentUser.role === 'sales_team_lead'
+        ? (users || []).filter((user) => belongsToTeamLeadTeam(user, currentUser, currentTeamspace))
+        : (users || []).filter((user) => user.id !== currentUser.id);
+
+      return [currentUser, ...visibleUsers];
+    },
+    [currentTeamspace, currentUser, users]
   );
 
   const filteredLeads = useMemo(() => {
@@ -304,7 +310,7 @@ export default function LeadsPage() {
                     .filter((u) => {
                       if (currentUser?.role === 'admin') return u.role === 'sales_team_lead';
                       if (currentUser?.role === 'sales_team_lead') {
-                        return u.role === 'sales_executive' && u.createdBy === currentUser.id;
+                        return belongsToTeamLeadTeam(u, currentUser, currentTeamspace);
                       }
                       return false;
                     })

@@ -83,7 +83,8 @@ function createLazyProxy<T extends object>(initializer: () => T | null, name: st
         };
       }
 
-      return Reflect.get(instance, prop, receiver);
+      const value = Reflect.get(instance, prop, instance);
+      return typeof value === 'function' ? value.bind(instance) : value;
     }
   });
 }

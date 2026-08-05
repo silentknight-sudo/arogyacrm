@@ -25,6 +25,8 @@ import { useApp } from '@/context/app-context';
 import { LEAD_STATUS_ORDER, getLeadStatusLabel } from '@/lib/status-labels';
 import type { Lead, LeadStatus, UserProfile } from '@/types';
 import { getRoleAwareLeadStage } from '@/lib/role-lead-stage';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
+import { useTeamRoster } from '@/hooks/use-team-roster';
 
 type SidebarItem = {
   href: string;
@@ -55,20 +57,19 @@ export function MainSidebar({ className }: { className?: string }) {
     if (isAdmin) {
       return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
     }
-    if (isTL) {
-      return query(
-        collection(firestore, 'users'),
-        where('createdBy', '==', currentUser.id),
-        where('role', '==', 'sales_executive')
-      );
-    }
+    if (isTL) return null;
     return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
   }, [currentUser, currentTeamspace?.id, firestore, isAdmin, isTL]);
-  const { data: sidebarUsers } = useCollection<UserProfile>(usersQuery);
-  const stageUsers = useMemo(
-    () => (currentUser ? [currentUser, ...(sidebarUsers || []).filter((user) => user.id !== currentUser.id)] : sidebarUsers || []),
-    [currentUser, sidebarUsers]
-  );
+  const { data: firestoreSidebarUsers } = useCollection<UserProfile>(usersQuery);
+  const { users: rosterUsers } = useTeamRoster();
+  const sidebarUsers = isTL ? rosterUsers : firestoreSidebarUsers;
+  const stageUsers = useMemo(() => {
+    if (!currentUser) return sidebarUsers || [];
+    const visibleUsers = isTL
+      ? (sidebarUsers || []).filter((user) => belongsToTeamLeadTeam(user, currentUser, currentTeamspace))
+      : (sidebarUsers || []).filter((user) => user.id !== currentUser.id);
+    return [currentUser, ...visibleUsers];
+  }, [currentTeamspace, currentUser, isTL, sidebarUsers]);
 
   const visibleLeads = (leads || []).filter((lead) => {
     if (!currentUser) return false;

@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { updateMemberAccess } from './actions';
+import { belongsToTeamLeadTeam } from '@/lib/team-membership';
+import { useTeamRoster } from '@/hooks/use-team-roster';
 
 export default function DeviceManagerPage() {
   const { currentTeamspace, currentUser, isUserLoading } = useApp();
@@ -29,29 +31,30 @@ export default function DeviceManagerPage() {
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser) return null;
     if (currentUser.role === 'admin') return query(collection(firestore, 'users'));
-    if (currentUser.role === 'sales_team_lead') {
-      return query(
-        collection(firestore, 'users'),
-        where('createdBy', '==', currentUser.id),
-        where('role', '==', 'sales_executive')
-      );
-    }
+    if (currentUser.role === 'sales_team_lead') return null;
     if (!currentTeamspace?.id) return null;
     return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading]);
 
-  const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+  const { data: firestoreUsers, isLoading: isFirestoreLoading } = useCollection<UserProfile>(usersQuery);
+  const { users: rosterUsers, isLoading: isRosterLoading } = useTeamRoster();
+  const users = currentUser?.role === 'sales_team_lead' ? rosterUsers : firestoreUsers;
+  const isLoading = currentUser?.role === 'sales_team_lead' ? isRosterLoading : isFirestoreLoading;
 
   const filteredUsers = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return (users || []).filter((user) => {
+    const scopedUsers = currentUser?.role === 'sales_team_lead'
+      ? (users || []).filter((user) => belongsToTeamLeadTeam(user, currentUser, currentTeamspace))
+      : users || [];
+
+    return scopedUsers.filter((user) => {
       const matchesSearch = !term || [user.displayName, user.email, user.phone, getProfessionalEmployeeId(user)]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term));
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       return matchesSearch && matchesRole;
     });
-  }, [users, search, roleFilter]);
+  }, [currentTeamspace, currentUser, roleFilter, search, users]);
 
   const approvedCount = (users || []).filter((user) => user.accessStatus !== 'blocked').length;
   const blockedCount = (users || []).filter((user) => user.accessStatus === 'blocked').length;
