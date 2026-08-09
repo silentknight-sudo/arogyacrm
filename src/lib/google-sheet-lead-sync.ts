@@ -95,8 +95,25 @@ function makeSyncKey(phone: string, email: string, name: string) {
   return [phone, email.toLowerCase(), name.toLowerCase()].join('|');
 }
 
+async function resolveAdminRecipient(config: LeadSyncConfig) {
+  const creator = await adminDb.collection('users').doc(config.createdBy).get();
+  if (creator.exists && creator.data()?.role === 'admin') return creator.id;
+
+  const teamspace = await adminDb.collection('teamspaces').doc(config.teamspaceId).get();
+  const ownerId = teamspace.data()?.ownerId;
+  if (ownerId) {
+    const owner = await adminDb.collection('users').doc(ownerId).get();
+    if (owner.exists && owner.data()?.role === 'admin') return owner.id;
+  }
+
+  const admins = await adminDb.collection('users').where('role', '==', 'admin').limit(1).get();
+  if (admins.empty) throw new Error('No admin account is available to receive synced leads.');
+  return admins.docs[0].id;
+}
+
 export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<GoogleSheetSyncResult> {
   try {
+    const adminRecipientId = await resolveAdminRecipient(config);
     const response = await fetch(toCsvUrl(config.sheetUrl), { cache: 'no-store' });
     if (!response.ok) {
       throw new Error('Unable to fetch Google Sheet data.');
@@ -144,7 +161,7 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
         phone,
         status: 'new',
         source: getVal(record, ['source', 'platform']) || 'google_sheet_sync',
-        assignedToIds: [config.assignedToId],
+        assignedToIds: [adminRecipientId],
         teamspaceId: config.teamspaceId,
         reassigned: false,
         notes: getVal(record, ['notes', 'query']) || undefined,
@@ -158,9 +175,9 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
     }
 
     if (count > 0) {
-      await adminDb.collection('users').doc(config.assignedToId).collection('notifications').add({
+      await adminDb.collection('users').doc(adminRecipientId).collection('notifications').add({
         title: 'New Synced Leads',
-        description: `${count} new leads were imported from Google Sheets.`,
+        description: `${count} new leads were imported into your New Leads pool from Google Sheets.`,
         type: 'lead_sync',
         timestamp: new Date().toISOString(),
         read: false,

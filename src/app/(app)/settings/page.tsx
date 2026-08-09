@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useApp, type Theme } from '@/context/app-context';
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import type { UserProfile } from '@/types';
 import { saveLeadSyncConfig, syncLeadsFromGoogleSheet } from './actions';
 
 const themeTiles = [
@@ -56,11 +55,10 @@ export default function SettingsPage() {
   const [isSaving, startSaving] = useTransition();
 
   const [sheetUrl, setSheetUrl] = useState('');
-  const [assignedToId, setAssignedToId] = useState('');
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
   const [intervalMinutes, setIntervalMinutes] = useState('15');
 
-  const canSyncSheets = currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead';
+  const canSyncSheets = currentUser?.role === 'admin';
 
   const syncConfigRef = useMemoFirebase(
     () => (canSyncSheets && currentTeamspace?.id ? doc(firestore, 'leadSyncConfigs', currentTeamspace.id) : null),
@@ -71,42 +69,20 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!syncConfig) return;
     setSheetUrl(syncConfig.sheetUrl || '');
-    setAssignedToId(syncConfig.assignedToId || '');
     setAutoSyncEnabled(Boolean(syncConfig.enabled));
     setIntervalMinutes(String(syncConfig.intervalMinutes || 15));
   }, [syncConfig]);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!canSyncSheets || !currentUser || !currentTeamspace?.id) return null;
-    if (currentUser.role === 'admin') {
-      return query(collection(firestore, 'users'), where('role', '==', 'sales_team_lead'));
-    }
-    return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
-  }, [firestore, currentTeamspace?.id, currentUser, canSyncSheets]);
-  const { data: users } = useCollection<UserProfile>(usersQuery);
-
-  const assignableUsers = useMemo(() => {
-    if (!users || !currentUser || !currentTeamspace?.id) return [];
-    if (currentUser.role === 'admin') {
-      return users.filter((user) => user.role === 'sales_team_lead');
-    }
-    return users.filter(
-      (user) =>
-        user.role === 'sales_executive' &&
-        (user.createdBy === currentUser.id || (user.teamspaceIds || []).includes(currentTeamspace.id))
-    );
-  }, [users, currentUser, currentTeamspace?.id]);
-
   const handleSync = () => {
-    if (!currentTeamspace?.id || !currentUser?.id || !sheetUrl || !assignedToId) {
-      toast({ title: 'Missing fields', description: 'Add a Google Sheet link and assignee first.', variant: 'destructive' });
+    if (!currentTeamspace?.id || !currentUser?.id || !sheetUrl) {
+      toast({ title: 'Missing fields', description: 'Add a Google Sheet link first.', variant: 'destructive' });
       return;
     }
     startTransition(async () => {
       const result = await syncLeadsFromGoogleSheet({
         teamspaceId: currentTeamspace.id,
         sheetUrl,
-        assignedToId,
+        assignedToId: currentUser.id,
         createdBy: currentUser.id,
       });
       if (!result.success) {
@@ -121,15 +97,15 @@ export default function SettingsPage() {
   };
 
   const handleSaveAutoSync = () => {
-    if (!currentTeamspace?.id || !currentUser?.id || !sheetUrl || !assignedToId) {
-      toast({ title: 'Missing fields', description: 'Add a Google Sheet link and assignee first.', variant: 'destructive' });
+    if (!currentTeamspace?.id || !currentUser?.id || !sheetUrl) {
+      toast({ title: 'Missing fields', description: 'Add a Google Sheet link first.', variant: 'destructive' });
       return;
     }
     startSaving(async () => {
       const result = await saveLeadSyncConfig({
         teamspaceId: currentTeamspace.id,
         sheetUrl,
-        assignedToId,
+        assignedToId: currentUser.id,
         createdBy: currentUser.id,
         enabled: autoSyncEnabled,
         intervalMinutes: Number(intervalMinutes || 15),
@@ -186,7 +162,7 @@ export default function SettingsPage() {
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <CardTitle className="text-2xl font-black">Lead Sync Automation</CardTitle>
-              <CardDescription>Sync Meta ad leads from a Google Sheet link and automatically route them into the CRM.</CardDescription>
+              <CardDescription>Sync Meta ad leads from Google Sheets into the Admin New Leads pool before assignment.</CardDescription>
             </div>
             <Badge variant={autoSyncEnabled ? 'default' : 'secondary'} className="rounded-full px-4 py-2 text-xs font-black uppercase tracking-[0.2em]">
               {autoSyncEnabled ? 'Auto Sync On' : 'Manual Mode'}
@@ -223,22 +199,10 @@ export default function SettingsPage() {
                   className="h-12 rounded-2xl"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground">
-                  {currentUser?.role === 'admin' ? 'Assign Leads To Team Lead' : 'Assign Leads To Telecaller'}
-                </Label>
-                <Select value={assignedToId} onValueChange={setAssignedToId}>
-                  <SelectTrigger className="h-12 rounded-2xl">
-                    <SelectValue placeholder="Choose assignee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assignableUsers.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.displayName} {user.employeeId ? `(${user.employeeId})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="rounded-3xl border border-primary/15 bg-primary/5 p-5">
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground">Initial Destination</p>
+                <p className="mt-2 text-lg font-black text-primary">Admin New Leads Pool</p>
+                <p className="mt-1 text-sm font-medium text-muted-foreground">Synced leads remain with the admin until they are assigned to a Team Lead.</p>
               </div>
             </div>
 
