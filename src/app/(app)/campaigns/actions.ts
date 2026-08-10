@@ -53,7 +53,7 @@ const CreateCampaignSchema = z.object({
 });
 
 export type CreateCampaignInput = z.infer<typeof CreateCampaignSchema>;
-type CreateCampaignResult = { success: boolean; error?: string; campaignId?: string };
+type CreateCampaignResult = { success: boolean; error?: string; campaignId?: string; landingPath?: string };
 
 export async function createCampaign(values: CreateCampaignInput): Promise<CreateCampaignResult> {
     try {
@@ -114,11 +114,23 @@ export async function createCampaign(values: CreateCampaignInput): Promise<Creat
             updatedAt: serverTimestamp(),
         };
 
-        await newCampaignRef.set(newCampaignData);
+        const publicPageRef = adminDb.collection('landingPages').doc(slug);
+        const batch = adminDb.batch();
+        batch.set(newCampaignRef, newCampaignData);
+        batch.set(publicPageRef, {
+            slug,
+            campaignId: newCampaignId,
+            teamspaceId: validatedInput.teamspaceId,
+            enabled: newCampaignData.landingPageEnabled,
+            status: newCampaignData.landingPageStatus,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+        await batch.commit();
         
         revalidatePath('/campaigns');
 
-        return { success: true, campaignId: newCampaignId };
+        return { success: true, campaignId: newCampaignId, landingPath: newCampaignData.landingPath };
 
     } catch (error: any) {
         const errorMessage = handleAdminSDKError(error);
@@ -135,10 +147,13 @@ export async function deleteCampaign(values: z.infer<typeof DeleteCampaignSchema
     try {
         const { teamspaceId, campaignId } = DeleteCampaignSchema.parse(values);
         const campaignRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('campaigns').doc(campaignId);
+        const campaignSnap = await campaignRef.get();
         const leadsSnap = await campaignRef.collection('landingLeads').get();
         const batch = adminDb.batch();
 
         leadsSnap.docs.forEach((doc) => batch.delete(doc.ref));
+        const slug = campaignSnap.data()?.slug;
+        if (slug) batch.delete(adminDb.collection('landingPages').doc(slug));
         batch.delete(campaignRef);
         await batch.commit();
 

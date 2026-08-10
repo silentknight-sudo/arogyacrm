@@ -23,7 +23,7 @@ import { useTransition } from 'react';
 const CampaignActions = ({ campaign }: { campaign: Campaign }) => {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const landingPath = `/landing/${encodeURIComponent(campaign.id)}`;
+  const landingPath = campaign.landingPath || `/landing/${encodeURIComponent(campaign.slug || campaign.id)}`;
   const landingUrl = buildPublicUrl(landingPath);
 
   const copyText = async (value: string, successMessage: string) => {
@@ -134,7 +134,7 @@ export const columns: ColumnDef<Campaign>[] = [
     header: 'View',
     cell: ({ row }) => {
       const campaign = row.original;
-      const landingPath = `/landing/${encodeURIComponent(campaign.id)}`;
+      const landingPath = campaign.landingPath || `/landing/${encodeURIComponent(campaign.slug || campaign.id)}`;
       const landingUrl = buildPublicUrl(landingPath);
       return (
         <div className="flex items-center gap-2">
@@ -173,7 +173,8 @@ export const columns: ColumnDef<Campaign>[] = [
     accessorKey: 'landingPath',
     header: 'Landing Link',
     cell: ({ row }) => {
-      const landingPath = `/landing/${encodeURIComponent(row.original.id)}`;
+      const campaign = row.original;
+      const landingPath = campaign.landingPath || `/landing/${encodeURIComponent(campaign.slug || campaign.id)}`;
       return <span className="text-xs font-medium">{landingPath}</span>;
     },
   },

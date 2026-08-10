@@ -36,7 +36,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { ExternalLink, PlusCircle, Trash2 } from 'lucide-react';
+import { CampaignImageUpload } from './campaign-image-upload';
+import { buildPublicUrl } from '@/lib/utils';
 
 const campaignStatuses = ['Planned', 'Active', 'Completed', 'Paused', 'Cancelled'] as const;
 const campaignTypes = ['Landing Page Campaign', 'Social Media Ad', 'Event Promotion', 'Content Marketing', 'Referral Program'];
@@ -186,9 +188,15 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
       });
 
       if (result.success) {
+        const landingUrl = buildPublicUrl(result.landingPath || `/landing/${result.campaignId}`);
         toast({
-          title: 'Campaign Created',
-          description: `Successfully created campaign "${values.name}".`,
+          title: 'Campaign and landing page published',
+          description: `The production landing page for "${values.name}" is ready.`,
+          action: values.landingPageStatus === 'live' ? (
+            <Button type="button" size="sm" variant="outline" onClick={() => window.open(landingUrl, '_blank', 'noopener,noreferrer')}>
+              <ExternalLink className="mr-2 h-4 w-4" /> Open
+            </Button>
+          ) : undefined,
         });
         setOpen(false);
         form.reset();
@@ -205,7 +213,7 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-6xl">
+      <DialogContent className="max-w-7xl">
         <DialogHeader>
           <DialogTitle>Create New Campaign</DialogTitle>
           <DialogDescription>
@@ -287,14 +295,16 @@ export function CreateCampaignDialog({ children }: CreateCampaignDialogProps) {
                     <FormField control={form.control} name="accentColor" render={({ field }) => (
                       <FormItem><FormLabel>Accent Color</FormLabel><FormControl><Input type="color" {...field} className="h-12" /></FormControl><FormMessage /></FormItem>
                     )} />
+                  </div>
+                  <div className="grid gap-4 lg:grid-cols-3">
                     <FormField control={form.control} name="heroImageUrl" render={({ field }) => (
-                      <FormItem><FormLabel>Hero Image URL</FormLabel><FormControl><Input {...field} placeholder="https://..." /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormControl><CampaignImageUpload label="Hero Image" description="Primary lifestyle visual shown above the fold." value={field.value} onChange={field.onChange} teamspaceId={currentTeamspace?.id} assetType="hero" /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="productImageUrl" render={({ field }) => (
-                      <FormItem><FormLabel>Product Image URL</FormLabel><FormControl><Input {...field} placeholder="https://..." /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormControl><CampaignImageUpload label="Product Image" description="Clear packshot or product-focused creative." value={field.value} onChange={field.onChange} teamspaceId={currentTeamspace?.id} assetType="product" /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="secondaryImageUrl" render={({ field }) => (
-                      <FormItem><FormLabel>Secondary Image URL</FormLabel><FormControl><Input {...field} placeholder="https://..." /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormControl><CampaignImageUpload label="Supporting Image" description="Proof, usage, ingredient, or secondary visual." value={field.value} onChange={field.onChange} teamspaceId={currentTeamspace?.id} assetType="secondary" /></FormControl><FormMessage /></FormItem>
                     )} />
                   </div>
                   <FormField control={form.control} name="benefitsText" render={({ field }) => (

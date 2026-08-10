@@ -45,19 +45,24 @@ export function LandingForm({
   const [form, setForm] = useState<Record<string, string>>(initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    const missing = formFields.find((field) => field.required && !form[field.name]?.trim());
+    if (missing) {
+      setError(`${missing.label} is required.`);
+      return;
+    }
 
     setIsSubmitting(true);
+    setError('');
     try {
       const response = await fetch('/api/campaign-leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           slug,
-          campaignId,
-          teamspaceId,
           fullName: form.fullName || '',
           phone: form.phone || '',
           email: form.email || '',
@@ -77,7 +82,7 @@ export function LandingForm({
       setSubmitted(true);
       setForm(initialState);
     } catch (error: any) {
-      alert(error?.message || 'कृपया दोबारा कोशिश करें।');
+      setError(error?.message || 'कृपया दोबारा कोशिश करें।');
     } finally {
       setIsSubmitting(false);
     }
@@ -139,6 +144,7 @@ export function LandingForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-[2rem] border border-emerald-300 bg-white/95 p-6 shadow-2xl">
+      <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       <div className="space-y-1">
         <p className="text-2xl font-black" style={{ color: primaryColor }}>{formTitle || 'अभी जानकारी भरें'}</p>
         <p className="text-sm font-medium text-muted-foreground">
@@ -153,6 +159,7 @@ export function LandingForm({
           {renderField(field)}
         </div>
       ))}
+      {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>}
       <Button type="submit" disabled={isSubmitting} className="h-14 w-full rounded-2xl text-lg font-black text-white" style={{ backgroundColor: primaryColor }}>
         {isSubmitting ? 'भेजा जा रहा है...' : ctaText}
       </Button>

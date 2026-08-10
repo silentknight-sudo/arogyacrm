@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth as AdminAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 /**
  * HYPER-RESILIENT PEM PARSER
@@ -48,6 +49,7 @@ function getAdminApp(): App | null {
       adminApp = initializeApp({
         credential: cert({ projectId, clientEmail, privateKey }),
         projectId,
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${projectId}.firebasestorage.app`,
       });
       return adminApp;
     }
@@ -59,6 +61,21 @@ function getAdminApp(): App | null {
     console.warn('ADMIN_INIT_DEFERRED: Credentials missing or invalid. Deployment builds should defer init.');
     return null;
   }
+}
+
+export function getAdminStorageBucket() {
+  const app = getAdminApp();
+  if (!app) {
+    throw new Error('CRITICAL_ENVIRONMENT_ERROR: Firebase Storage credentials are missing.');
+  }
+
+  const projectId = app.options.projectId || process.env.FIREBASE_PROJECT_ID;
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET || app.options.storageBucket || (projectId ? `${projectId}.firebasestorage.app` : undefined);
+  if (!bucketName) {
+    throw new Error('FIREBASE_STORAGE_BUCKET is not configured.');
+  }
+
+  return getStorage(app).bucket(bucketName);
 }
 
 /**

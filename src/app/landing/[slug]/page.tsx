@@ -3,21 +3,30 @@ import { adminDb } from '@/firebase/admin';
 import { Badge } from '@/components/ui/badge';
 import { LandingForm } from './landing-form';
 import type { Campaign } from '@/types';
-import { FieldPath } from 'firebase-admin/firestore';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 
 async function getLiveCampaignBySlug(slug: string): Promise<{ campaign: Campaign; campaignId: string; teamspaceId: string } | null> {
   try {
-    let campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
+    const publicPage = await adminDb.collection('landingPages').doc(slug).get();
+    let campaignDoc;
 
-    if (campaignSnap.empty) {
-      campaignSnap = await adminDb.collectionGroup('campaigns').where(FieldPath.documentId(), '==', slug).limit(1).get();
+    if (publicPage.exists) {
+      const locator = publicPage.data();
+      campaignDoc = await adminDb.collection('teamspaces').doc(locator?.teamspaceId).collection('campaigns').doc(locator?.campaignId).get();
+    } else {
+      let campaignSnap = await adminDb.collectionGroup('campaigns').where('slug', '==', slug).limit(1).get();
+
+      // Compatibility for campaigns created before slugs were introduced.
+      if (campaignSnap.empty) {
+        campaignSnap = await adminDb.collectionGroup('campaigns').where('id', '==', slug).limit(1).get();
+      }
+      if (campaignSnap.empty) return null;
+      campaignDoc = campaignSnap.docs[0];
     }
 
-    if (campaignSnap.empty) return null;
-
-    const campaignDoc = campaignSnap.docs[0];
+    if (!campaignDoc?.exists) return null;
     const campaign = campaignDoc.data() as Campaign;
     const campaignId = campaignDoc.id;
     const teamspaceId = campaign.teamspaceId;
@@ -31,6 +40,22 @@ async function getLiveCampaignBySlug(slug: string): Promise<{ campaign: Campaign
     console.error('LANDING_CAMPAIGN_LOOKUP_FAILED:', error);
     return null;
   }
+}
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const result = await getLiveCampaignBySlug(params.slug);
+  if (!result) return { title: 'Campaign unavailable | Arogya Bio' };
+  const campaign = result.campaign;
+  return {
+    title: `${campaign.headline || campaign.name} | Arogya Bio`,
+    description: campaign.subheadline || campaign.description || 'Discover trusted wellness solutions from Arogya Bio.',
+    openGraph: {
+      title: campaign.headline || campaign.name,
+      description: campaign.subheadline || campaign.description,
+      images: [campaign.heroImageUrl, campaign.productImageUrl].filter(Boolean) as string[],
+      type: 'website',
+    },
+  };
 }
 
 export default async function LandingPage({ params }: { params: { slug: string } }) {
@@ -68,11 +93,11 @@ export default async function LandingPage({ params }: { params: { slug: string }
               </Badge>
             </div>
 
-            {(campaign.heroImageUrl || campaign.productImageUrl) && (
-              <div className="mb-6 grid gap-4 md:grid-cols-2">
-                {[campaign.heroImageUrl, campaign.productImageUrl].filter(Boolean).map((image) => (
+            {(campaign.heroImageUrl || campaign.productImageUrl || campaign.secondaryImageUrl) && (
+              <div className="mb-6 grid gap-4 md:grid-cols-3">
+                {[campaign.heroImageUrl, campaign.productImageUrl, campaign.secondaryImageUrl].filter(Boolean).map((image) => (
                   <div key={image} className="overflow-hidden rounded-[2rem] border border-emerald-200 bg-white shadow-xl">
-                    <img src={image} alt={campaign.productName || 'Campaign image'} className="h-[320px] w-full object-cover" />
+                    <img src={image} alt={campaign.productName || 'Campaign image'} className="h-[320px] w-full object-cover" loading="eager" />
                   </div>
                 ))}
               </div>
