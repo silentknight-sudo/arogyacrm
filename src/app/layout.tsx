@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AppProvider } from '@/context/app-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Analytics } from '@vercel/analytics/next';
 
 export const viewport: Viewport = {
   themeColor: '#2D5A27',
@@ -90,6 +91,7 @@ export default function RootLayout({
             </TooltipProvider>
           </AppProvider>
         </FirebaseClientProvider>
+        <Analytics />
       </body>
     </html>
   );
