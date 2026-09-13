@@ -140,6 +140,15 @@ export default function LeadsPage() {
 
   const { data: stageCountLeads } = useCollection<Lead>(stageCountsQuery);
 
+  // The assignee dropdown needs totals for every selectable person, not only
+  // the person currently selected in the table filter.
+  const assigneeCountsQuery = useMemoFirebase(() => {
+    if (!mounted || isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+    return query(collection(firestore, 'teamspaces', currentTeamspace.id, 'leads'));
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, mounted]);
+
+  const { data: assigneeCountLeads } = useCollection<Lead>(assigneeCountsQuery);
+
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
 
@@ -213,6 +222,24 @@ export default function LeadsPage() {
       return counts;
     }, {} as Record<VisibleFilterType, number>);
   }, [stageCountLeads, currentUser, assigneeFilter, stageUsers, currentTeamspace]);
+
+  const assigneeLeadCounts = useMemo(() => {
+    const leads = assigneeCountLeads || [];
+    return leads.reduce<Record<string, number>>((counts, lead) => {
+      (lead.assignedToIds || []).forEach((userId) => {
+        counts[userId] = (counts[userId] || 0) + 1;
+      });
+      return counts;
+    }, {});
+  }, [assigneeCountLeads]);
+
+  const directLeadCount = useMemo(() => {
+    const leads = assigneeCountLeads || [];
+    if (currentUser?.role === 'admin') {
+      return leads.filter((lead) => !lead.assignedToIds || lead.assignedToIds.length === 0 || lead.assignedToIds.includes(currentUser.id)).length;
+    }
+    return assigneeLeadCounts[currentUser?.id || ''] || 0;
+  }, [assigneeCountLeads, assigneeLeadCounts, currentUser]);
 
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
@@ -341,7 +368,10 @@ export default function LeadsPage() {
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl border-none shadow-2xl">
                   <SelectItem value="direct" className="text-[11px] font-black uppercase">
-                    {currentUser?.role === 'admin' ? 'Admin Lead Pool' : 'Assigned To Me'}
+                    <div className="flex w-full min-w-[150px] items-center justify-between gap-4">
+                      <span>{currentUser?.role === 'admin' ? 'Admin Lead Pool' : 'Assigned To Me'}</span>
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] tabular-nums text-primary">{directLeadCount}</span>
+                    </div>
                   </SelectItem>
                   {(users || [])
                     .filter((u) => {
@@ -352,7 +382,12 @@ export default function LeadsPage() {
                       return false;
                     })
                     .map((u) => (
-                    <SelectItem key={u.id} value={u.id} className="text-[11px] font-black uppercase">{u.displayName}</SelectItem>
+                    <SelectItem key={u.id} value={u.id} className="text-[11px] font-black uppercase">
+                      <div className="flex w-full min-w-[150px] items-center justify-between gap-4">
+                        <span>{u.displayName}</span>
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] tabular-nums text-primary">{assigneeLeadCounts[u.id] || 0}</span>
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
