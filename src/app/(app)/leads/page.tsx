@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useTransition, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -53,6 +53,7 @@ const ALL_FILTERS: VisibleFilterType[] = ['fresh_uploads', 'pending', 'intrested
 
 export default function LeadsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { currentUser, currentTeamspace, isUserLoading } = useApp();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -118,6 +119,27 @@ export default function LeadsPage() {
 
   const { data: rawLeads, isLoading: isLoadingLeads } = useCollection<Lead>(leadsQuery);
 
+  // This unfiltered query powers the counters beside every pipeline stage.
+  // Keep its assignment scope identical to the table query so the numbers
+  // always describe the leads this user can currently work with.
+  const stageCountsQuery = useMemoFirebase(() => {
+    if (!mounted || isUserLoading || !currentUser || !currentTeamspace?.id) return null;
+
+    const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
+    if (currentUser.role === 'admin') {
+      return assigneeFilter === 'direct'
+        ? query(leadsRef)
+        : query(leadsRef, where('assignedToIds', 'array-contains', assigneeFilter));
+    }
+
+    const assigneeId = currentUser.role === 'sales_team_lead'
+      ? (assigneeFilter === 'direct' ? currentUser.id : assigneeFilter)
+      : currentUser.id;
+    return query(leadsRef, where('assignedToIds', 'array-contains', assigneeId));
+  }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, assigneeFilter, mounted]);
+
+  const { data: stageCountLeads } = useCollection<Lead>(stageCountsQuery);
+
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
 
@@ -177,6 +199,20 @@ export default function LeadsPage() {
       return bDate.getTime() - aDate.getTime();
     });
   }, [rawLeads, currentUser, assigneeFilter, dateRange, activeFilter, stageUsers, currentTeamspace]);
+
+  const stageCounts = useMemo(() => {
+    let leads = stageCountLeads || [];
+    if (currentUser?.role === 'admin' && assigneeFilter === 'direct') {
+      leads = leads.filter((lead) => !lead.assignedToIds || lead.assignedToIds.length === 0 || lead.assignedToIds.includes(currentUser.id));
+    }
+
+    return ALL_FILTERS.reduce((counts, stage) => {
+      counts[stage] = (stage === 'fresh_uploads' || stage === 'pending')
+        ? leads.filter((lead) => matchesRoleAwareLeadStage(lead, stage, currentUser, stageUsers, currentTeamspace)).length
+        : leads.filter((lead) => lead.status === stage).length;
+      return counts;
+    }, {} as Record<VisibleFilterType, number>);
+  }, [stageCountLeads, currentUser, assigneeFilter, stageUsers, currentTeamspace]);
 
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
@@ -253,7 +289,8 @@ export default function LeadsPage() {
                   onClick={() => setActiveFilter(f)}
                   className={`cursor-pointer px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] border-none transition-all ${activeFilter === f ? 'bg-primary text-white shadow-lg scale-105' : 'bg-muted/80 text-muted-foreground hover:bg-muted'}`}
                 >
-                  {f === 'fresh_uploads' ? 'New Leads' : f === 'pending' ? 'Pending' : getLeadStatusLabel(f)}
+                  <span>{f === 'fresh_uploads' ? 'New Leads' : f === 'pending' ? 'Pending' : getLeadStatusLabel(f)}</span>
+                  <span className="ml-2 rounded-full bg-black/10 px-2 py-0.5 text-[10px] tabular-nums">{stageCounts[f] ?? 0}</span>
                 </Badge>
               ))}
             </div>
@@ -367,7 +404,17 @@ export default function LeadsPage() {
         )}
       </div>
 
-      <BulkAssignLeadsDialog open={isBulkAssignOpen} onOpenChange={setBulkAssignOpen} leads={selectedLeads} users={users || []} />
+      <BulkAssignLeadsDialog
+        open={isBulkAssignOpen}
+        onOpenChange={setBulkAssignOpen}
+        leads={selectedLeads}
+        users={users || []}
+        onAssigned={() => {
+          setSelectedLeads([]);
+          setSelectCount('');
+          router.refresh();
+        }}
+      />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent className="rounded-[2.5rem] bg-card text-card-foreground border border-border shadow-2xl p-10">

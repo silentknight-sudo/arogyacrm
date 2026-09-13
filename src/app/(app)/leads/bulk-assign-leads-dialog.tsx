@@ -39,9 +39,10 @@ type BulkAssignLeadsDialogProps = {
   onOpenChange: (open: boolean) => void;
   leads: Lead[];
   users: UserProfile[];
+  onAssigned?: () => void;
 };
 
-export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: BulkAssignLeadsDialogProps) {
+export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users, onAssigned }: BulkAssignLeadsDialogProps) {
   const { toast } = useToast();
   const { currentUser, currentTeamspace } = useApp();
   const [isPending, startTransition] = useTransition();
@@ -91,6 +92,7 @@ export function BulkAssignLeadsDialog({ open, onOpenChange, leads, users }: Bulk
         });
         onOpenChange(false);
         form.reset();
+        onAssigned?.();
       } else {
         toast({
           variant: 'destructive',
