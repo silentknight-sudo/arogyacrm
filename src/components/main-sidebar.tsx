@@ -71,10 +71,22 @@ export function MainSidebar({ className }: { className?: string }) {
     return [currentUser, ...visibleUsers];
   }, [currentTeamspace, currentUser, isTL, sidebarUsers]);
 
+  const teamLeadScopeIds = useMemo(() => new Set([
+    currentUser?.id,
+    ...(isTL
+      ? (sidebarUsers || [])
+          .filter((user) => belongsToTeamLeadTeam(user, currentUser, currentTeamspace))
+          .map((user) => user.id)
+      : []),
+  ].filter(Boolean) as string[]), [currentTeamspace, currentUser, isTL, sidebarUsers]);
+
   const visibleLeads = (leads || []).filter((lead) => {
     if (!currentUser) return false;
     if (isAdmin) {
       return !lead.assignedToIds || lead.assignedToIds.length === 0 || lead.assignedToIds.includes(currentUser.id);
+    }
+    if (isTL) {
+      return (lead.assignedToIds || []).some((id) => teamLeadScopeIds.has(id));
     }
     return (lead.assignedToIds || []).includes(currentUser.id);
   });

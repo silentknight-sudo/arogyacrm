@@ -103,12 +103,9 @@ export default function LeadsPage() {
       constraints.push(where('status', '==', activeFilter));
     }
 
-    if (currentUser.role === 'admin') {
+    if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
       // Admin filters are applied client-side below. A Team Lead's view must
       // include leads that they have already delegated to their telecallers.
-    } else if (currentUser.role === 'sales_team_lead') {
-      const directAssigneeId = assigneeFilter === 'direct' ? currentUser.id : assigneeFilter;
-      constraints.push(where('assignedToIds', 'array-contains', directAssigneeId));
     } else {
       constraints.push(where('assignedToIds', 'array-contains', currentUser.id));
     }
@@ -125,14 +122,11 @@ export default function LeadsPage() {
     if (!mounted || isUserLoading || !currentUser || !currentTeamspace?.id) return null;
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
-    if (currentUser.role === 'admin') {
+    if (currentUser.role === 'admin' || currentUser.role === 'sales_team_lead') {
       return query(leadsRef);
     }
 
-    const assigneeId = currentUser.role === 'sales_team_lead'
-      ? (assigneeFilter === 'direct' ? currentUser.id : assigneeFilter)
-      : currentUser.id;
-    return query(leadsRef, where('assignedToIds', 'array-contains', assigneeId));
+    return query(leadsRef, where('assignedToIds', 'array-contains', currentUser.id));
   }, [firestore, currentTeamspace?.id, currentUser, isUserLoading, assigneeFilter, mounted]);
 
   const { data: stageCountLeads } = useCollection<Lead>(stageCountsQuery);
@@ -177,7 +171,7 @@ export default function LeadsPage() {
 
   // A Team Lead owns both their directly assigned leads and the leads they
   // have passed down to their telecallers. Keep that relationship intact in
-  // the admin filter instead of losing older delegated leads.
+  // both the admin's team filter and the Team Lead's own CRM view.
   const assigneeScopeIds = useMemo(() => {
     const scopes = new Map<string, Set<string>>();
     (users || []).forEach((user) => {
@@ -193,6 +187,12 @@ export default function LeadsPage() {
   }, [users, currentTeamspace]);
 
   const filterByAssigneeScope = (leads: Lead[]) => {
+    if (currentUser?.role === 'sales_team_lead') {
+      const visibleIds = assigneeFilter === 'direct'
+        ? (assigneeScopeIds.get(currentUser.id) || new Set([currentUser.id]))
+        : new Set([assigneeFilter]);
+      return leads.filter((lead) => (lead.assignedToIds || []).some((id) => visibleIds.has(id)));
+    }
     if (currentUser?.role !== 'admin' || assigneeFilter === 'direct') return leads;
     const visibleIds = assigneeScopeIds.get(assigneeFilter) || new Set([assigneeFilter]);
     return leads.filter((lead) => (lead.assignedToIds || []).some((id) => visibleIds.has(id)));
