@@ -45,6 +45,7 @@ export function MainSidebar({ className }: { className?: string }) {
   const isAdmin = currentUser?.role === 'admin';
   const isTL = currentUser?.role === 'sales_team_lead';
   const isTelecaller = currentUser?.role === 'sales_executive';
+  const selectedAssigneeId = searchParams.get('assignee');
 
   const leadsQuery = useMemoFirebase(() => {
     if (!currentTeamspace?.id) return null;
@@ -80,9 +81,24 @@ export function MainSidebar({ className }: { className?: string }) {
       : []),
   ].filter(Boolean) as string[]), [currentTeamspace, currentUser, isTL, sidebarUsers]);
 
+  const selectedAssigneeScopeIds = useMemo(() => {
+    if (!selectedAssigneeId) return null;
+    const selectedUser = (sidebarUsers || []).find((user) => user.id === selectedAssigneeId);
+    const ids = new Set([selectedAssigneeId]);
+    if (selectedUser?.role === 'sales_team_lead') {
+      (sidebarUsers || [])
+        .filter((user) => belongsToTeamLeadTeam(user, selectedUser, currentTeamspace))
+        .forEach((user) => ids.add(user.id));
+    }
+    return ids;
+  }, [currentTeamspace, selectedAssigneeId, sidebarUsers]);
+
   const visibleLeads = (leads || []).filter((lead) => {
     if (!currentUser) return false;
     if (isAdmin) {
+      if (selectedAssigneeScopeIds) {
+        return (lead.assignedToIds || []).some((id) => selectedAssigneeScopeIds.has(id));
+      }
       return !lead.assignedToIds || lead.assignedToIds.length === 0 || lead.assignedToIds.includes(currentUser.id);
     }
     if (isTL) {
@@ -180,11 +196,13 @@ export function MainSidebar({ className }: { className?: string }) {
                       {LEAD_FILTERS.map((status) => {
                         const statusActive = pathname === '/leads' && searchParams.get('status') === status;
                         const count = stageCounts[status];
+                        const leadFilterParams = new URLSearchParams({ status });
+                        if (selectedAssigneeId) leadFilterParams.set('assignee', selectedAssigneeId);
 
                         return (
                           <Link
                             key={status}
-                            href={`/leads?status=${encodeURIComponent(status)}`}
+                            href={`/leads?${leadFilterParams.toString()}`}
                             className={cn(
                               'flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-extrabold text-[#e4dcc2] transition-colors hover:bg-white/10 hover:text-white',
                               statusActive && 'bg-[#d3b66b]/20 text-[#f8f2dd]'

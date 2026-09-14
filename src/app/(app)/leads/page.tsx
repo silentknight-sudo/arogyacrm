@@ -86,6 +86,10 @@ export default function LeadsPage() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    setAssigneeFilter(searchParams.get('assignee') || 'direct');
+  }, [searchParams]);
+
   const isAdminOrTL = useMemo(
     () => currentUser?.role === 'admin' || currentUser?.role === 'sales_team_lead',
     [currentUser]
@@ -278,6 +282,17 @@ export default function LeadsPage() {
     }
   };
 
+  const handleAssigneeFilterChange = (assigneeId: string) => {
+    setAssigneeFilter(assigneeId);
+    const params = new URLSearchParams(searchParams.toString());
+    if (assigneeId === 'direct') {
+      params.delete('assignee');
+    } else {
+      params.set('assignee', assigneeId);
+    }
+    router.replace(`/leads${params.size ? `?${params.toString()}` : ''}`);
+  };
+
   const handleDeleteLeads = () => {
     if (!currentUser || !currentTeamspace?.id || selectedLeads.length === 0) return;
     startDelete(async () => {
@@ -385,7 +400,7 @@ export default function LeadsPage() {
           <div className="flex items-center gap-4 bg-muted/20 p-2 rounded-2xl border border-primary/5">
             <div className="flex items-center gap-2 px-3 border-r border-primary/10 mr-2 h-10">
               <UsersIcon className="h-4 w-4 text-primary" />
-              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+              <Select value={assigneeFilter} onValueChange={handleAssigneeFilterChange}>
                 <SelectTrigger className="w-[180px] h-10 rounded-xl bg-background border-none shadow-inner text-[11px] font-black uppercase tracking-tight">
                   <SelectValue placeholder={currentUser?.role === 'admin' ? 'Admin Lead Pool' : 'Assigned To Me'} />
                 </SelectTrigger>
