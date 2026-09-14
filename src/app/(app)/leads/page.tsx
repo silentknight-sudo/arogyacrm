@@ -104,9 +104,8 @@ export default function LeadsPage() {
     }
 
     if (currentUser.role === 'admin') {
-      if (assigneeFilter !== 'direct') {
-        constraints.push(where('assignedToIds', 'array-contains', assigneeFilter));
-      }
+      // Admin filters are applied client-side below. A Team Lead's view must
+      // include leads that they have already delegated to their telecallers.
     } else if (currentUser.role === 'sales_team_lead') {
       const directAssigneeId = assigneeFilter === 'direct' ? currentUser.id : assigneeFilter;
       constraints.push(where('assignedToIds', 'array-contains', directAssigneeId));
@@ -127,9 +126,7 @@ export default function LeadsPage() {
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     if (currentUser.role === 'admin') {
-      return assigneeFilter === 'direct'
-        ? query(leadsRef)
-        : query(leadsRef, where('assignedToIds', 'array-contains', assigneeFilter));
+      return query(leadsRef);
     }
 
     const assigneeId = currentUser.role === 'sales_team_lead'
@@ -178,6 +175,29 @@ export default function LeadsPage() {
     [currentTeamspace, currentUser, users]
   );
 
+  // A Team Lead owns both their directly assigned leads and the leads they
+  // have passed down to their telecallers. Keep that relationship intact in
+  // the admin filter instead of losing older delegated leads.
+  const assigneeScopeIds = useMemo(() => {
+    const scopes = new Map<string, Set<string>>();
+    (users || []).forEach((user) => {
+      const ids = new Set([user.id]);
+      if (user.role === 'sales_team_lead') {
+        (users || [])
+          .filter((member) => member.role === 'sales_executive' && belongsToTeamLeadTeam(member, user, currentTeamspace))
+          .forEach((member) => ids.add(member.id));
+      }
+      scopes.set(user.id, ids);
+    });
+    return scopes;
+  }, [users, currentTeamspace]);
+
+  const filterByAssigneeScope = (leads: Lead[]) => {
+    if (currentUser?.role !== 'admin' || assigneeFilter === 'direct') return leads;
+    const visibleIds = assigneeScopeIds.get(assigneeFilter) || new Set([assigneeFilter]);
+    return leads.filter((lead) => (lead.assignedToIds || []).some((id) => visibleIds.has(id)));
+  };
+
   const filteredLeads = useMemo(() => {
     if (!rawLeads) return [];
 
@@ -185,6 +205,8 @@ export default function LeadsPage() {
 
     if (currentUser?.role === 'admin' && assigneeFilter === 'direct') {
       leads = leads.filter(lead => !lead.assignedToIds || lead.assignedToIds.length === 0 || lead.assignedToIds.includes(currentUser.id));
+    } else {
+      leads = filterByAssigneeScope(leads);
     }
 
     if (activeFilter === 'fresh_uploads' || activeFilter === 'pending') {
@@ -207,12 +229,14 @@ export default function LeadsPage() {
       const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt ? new Date(b.createdAt) : new Date(0);
       return bDate.getTime() - aDate.getTime();
     });
-  }, [rawLeads, currentUser, assigneeFilter, dateRange, activeFilter, stageUsers, currentTeamspace]);
+  }, [rawLeads, currentUser, assigneeFilter, dateRange, activeFilter, stageUsers, currentTeamspace, assigneeScopeIds]);
 
   const stageCounts = useMemo(() => {
     let leads = stageCountLeads || [];
     if (currentUser?.role === 'admin' && assigneeFilter === 'direct') {
       leads = leads.filter((lead) => !lead.assignedToIds || lead.assignedToIds.length === 0 || lead.assignedToIds.includes(currentUser.id));
+    } else {
+      leads = filterByAssigneeScope(leads);
     }
 
     return ALL_FILTERS.reduce((counts, stage) => {
@@ -221,17 +245,16 @@ export default function LeadsPage() {
         : leads.filter((lead) => lead.status === stage).length;
       return counts;
     }, {} as Record<VisibleFilterType, number>);
-  }, [stageCountLeads, currentUser, assigneeFilter, stageUsers, currentTeamspace]);
+  }, [stageCountLeads, currentUser, assigneeFilter, stageUsers, currentTeamspace, assigneeScopeIds]);
 
   const assigneeLeadCounts = useMemo(() => {
     const leads = assigneeCountLeads || [];
-    return leads.reduce<Record<string, number>>((counts, lead) => {
-      (lead.assignedToIds || []).forEach((userId) => {
-        counts[userId] = (counts[userId] || 0) + 1;
-      });
+    return (users || []).reduce<Record<string, number>>((counts, user) => {
+      const scope = assigneeScopeIds.get(user.id) || new Set([user.id]);
+      counts[user.id] = leads.filter((lead) => (lead.assignedToIds || []).some((id) => scope.has(id))).length;
       return counts;
     }, {});
-  }, [assigneeCountLeads]);
+  }, [assigneeCountLeads, users, assigneeScopeIds]);
 
   const directLeadCount = useMemo(() => {
     const leads = assigneeCountLeads || [];
