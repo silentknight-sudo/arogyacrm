@@ -182,7 +182,7 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
     if (count > 0) {
       await adminDb.collection('users').doc(adminRecipientId).collection('notifications').add({
         title: 'New Synced Leads',
-        description: `${count} new leads were imported into your New Leads pool from Google.,`
+        description: `${count} new leads were imported into your New Leads pool from Google Sheets.`,
         type: 'lead_sync',
         timestamp: new Date().toISOString(),
         read: false,
