@@ -155,21 +155,26 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
 
       const createdValue = getVal(record, ['created_time', 'created at', 'created_at']);
 
-      await leadsRef.add({
+      const leadData = {
         fullName,
-        email: email || undefined,
         phone,
         status: 'new',
         source: getVal(record, ['source', 'platform']) || 'google_sheet_sync',
         assignedToIds: [adminRecipientId],
         teamspaceId: config.teamspaceId,
         reassigned: false,
-        notes: getVal(record, ['notes', 'query']) || undefined,
         sourceSyncKey,
         sourceSyncUrl: config.sheetUrl,
         createdAt: createdValue || FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-      });
+      } as Record<string, unknown>;
+
+      // Firestore does not accept `undefined`; omit optional sheet columns when blank.
+      if (email) leadData.email = email;
+      const notes = getVal(record, ['notes', 'query']);
+      if (notes) leadData.notes = notes;
+
+      await leadsRef.add(leadData);
 
       count += 1;
     }
@@ -177,7 +182,7 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
     if (count > 0) {
       await adminDb.collection('users').doc(adminRecipientId).collection('notifications').add({
         title: 'New Synced Leads',
-        description: `${count} new leads were imported into your New Leads pool from Google Sheets.`,
+        description: `${count} new leads were imported into your New Leads pool from Google.,`
         type: 'lead_sync',
         timestamp: new Date().toISOString(),
         read: false,
