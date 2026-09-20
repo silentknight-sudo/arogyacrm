@@ -6,6 +6,7 @@ export type LeadSyncConfig = {
   sheetUrl: string;
   assignedToId: string;
   createdBy: string;
+  campaignId?: string;
   enabled?: boolean;
   intervalMinutes?: number;
 };
@@ -91,8 +92,8 @@ function normalizePhone(value: string) {
   return value.replace(/[^\d+]/g, '').trim();
 }
 
-function makeSyncKey(phone: string, email: string, name: string) {
-  return [phone, email.toLowerCase(), name.toLowerCase()].join('|');
+function makeSyncKey(phone: string, email: string, name: string, campaignId?: string) {
+  return [phone, email.toLowerCase(), name.toLowerCase(), campaignId || ''].join('|');
 }
 
 async function resolveAdminRecipient(config: LeadSyncConfig) {
@@ -144,7 +145,7 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
         continue;
       }
 
-      const sourceSyncKey = makeSyncKey(phone, email, fullName);
+      const sourceSyncKey = makeSyncKey(phone, email, fullName, config.campaignId);
       const leadsRef = adminDb.collection('teamspaces').doc(config.teamspaceId).collection('leads');
       const existing = await leadsRef.where('sourceSyncKey', '==', sourceSyncKey).limit(1).get();
 
@@ -173,6 +174,7 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
       if (email) leadData.email = email;
       const notes = getVal(record, ['notes', 'query']);
       if (notes) leadData.notes = notes;
+      if (config.campaignId) leadData.campaignId = config.campaignId;
 
       await leadsRef.add(leadData);
 

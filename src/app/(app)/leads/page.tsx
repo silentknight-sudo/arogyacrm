@@ -7,7 +7,7 @@ import { DataTable } from './data-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, documentId } from 'firebase/firestore';
 import { useApp } from '@/context/app-context';
-import type { Lead, UserProfile, LeadStatus, Product } from '@/types';
+import type { Lead, UserProfile, LeadStatus, Product, Campaign } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,7 @@ export default function LeadsPage() {
   const firestore = useFirestore();
   const [activeFilter, setActiveFilter] = useState<FilterType>('default');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('direct');
+  const [productFilter, setProductFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
@@ -217,6 +218,10 @@ export default function LeadsPage() {
       leads = leads.filter((lead) => matchesRoleAwareLeadStage(lead, activeFilter, currentUser, stageUsers, currentTeamspace));
     }
 
+    if (productFilter !== 'all') {
+      leads = leads.filter((lead) => lead.campaignId === productFilter);
+    }
+
     if (dateRange?.from) {
       const start = startOfDay(dateRange.from);
       const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
@@ -233,7 +238,7 @@ export default function LeadsPage() {
       const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt ? new Date(b.createdAt) : new Date(0);
       return bDate.getTime() - aDate.getTime();
     });
-  }, [rawLeads, currentUser, assigneeFilter, dateRange, activeFilter, stageUsers, currentTeamspace, assigneeScopeIds]);
+  }, [rawLeads, currentUser, assigneeFilter, dateRange, activeFilter, stageUsers, currentTeamspace, assigneeScopeIds, productFilter]);
 
   const stageCounts = useMemo(() => {
     let leads = stageCountLeads || [];
@@ -270,6 +275,12 @@ export default function LeadsPage() {
 
   const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+
+  const campaignsQuery = useMemoFirebase(
+    () => (currentTeamspace?.id ? query(collection(firestore, 'teamspaces', currentTeamspace.id, 'campaigns')) : null),
+    [firestore, currentTeamspace?.id]
+  );
+  const { data: campaigns } = useCollection<Campaign>(campaignsQuery);
 
   const loading = isUserLoading || isLoadingLeads || isLoadingUsers || isLoadingProducts || !mounted;
 
@@ -394,6 +405,20 @@ export default function LeadsPage() {
               </div>
             </PopoverContent>
           </Popover>
+
+          <Select value={productFilter} onValueChange={setProductFilter}>
+            <SelectTrigger className="w-[200px] h-10 rounded-2xl border-primary/10 bg-background/70 font-bold">
+              <SelectValue placeholder="All Products" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Products</SelectItem>
+              {(campaigns || []).map((campaign) => (
+                <SelectItem key={campaign.id} value={campaign.id}>
+                  {campaign.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {isAdminOrTL && (

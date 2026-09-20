@@ -431,12 +431,12 @@ export default function Dashboard() {
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black text-primary">Campaign Details</h2>
+              <h2 className="text-2xl font-black text-primary">Product Details</h2>
               <p className="text-sm font-medium text-muted-foreground">
                 Each campaign card shows only outcomes from leads assigned to your team.
               </p>
             </div>
-            <Badge variant="secondary">{teamLeadCampaigns.length} campaigns</Badge>
+            <Badge variant="secondary">{teamLeadCampaigns.length} products</Badge>
           </div>
           {teamLeadCampaigns.length === 0 ? (
             <Card className="rounded-2xl">
@@ -512,12 +512,12 @@ export default function Dashboard() {
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black text-primary">Campaign Details</h2>
+              <h2 className="text-2xl font-black text-primary">Product Details</h2>
               <p className="text-sm font-medium text-muted-foreground">
-                Only campaigns with leads assigned to you are shown here.
+                Only products with leads assigned to you are shown here.
               </p>
             </div>
-            <Badge variant="secondary">{visibleCampaigns.length} campaigns</Badge>
+            <Badge variant="secondary">{visibleCampaigns.length} products</Badge>
           </div>
           {visibleCampaigns.length === 0 ? (
             <Card className="rounded-2xl">
@@ -557,7 +557,7 @@ export default function Dashboard() {
                 <h1 className="text-5xl font-black tracking-tight text-primary">Performance Tracker</h1>
                 <p className="mt-1 text-base font-semibold text-muted-foreground">
                   {isAdmin
-                    ? 'Monitor team lead performance, product campaigns, and CRM-wide lead movement.'
+                    ? 'Monitor team lead performance, products, and CRM-wide lead movement.'
                     : isTeamLead
                       ? `Monitor ${currentTeamspace?.name || 'your team'} telecallers with real-time lead insights.`
                       : 'Track your assigned products, calls, and lead outcomes.'}
@@ -602,16 +602,16 @@ export default function Dashboard() {
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-black text-primary">{isTeamLead || isTelecaller ? 'Product Lead Details' : 'Campaign Details'}</h2>
+            <h2 className="text-xl font-black text-primary">Product Details</h2>
             <p className="text-sm font-medium text-muted-foreground">
               {isTeamLead
                 ? 'Product-wise total leads and stage distribution for your sales department.'
                 : isTelecaller
                   ? 'Your assigned work grouped by product and current lead stage.'
-                : 'Each campaign card shows its lead distribution by stage.'}
+                : 'Each product card shows its lead distribution by stage.'}
             </p>
           </div>
-          <Badge variant="secondary">{isTeamLead || isTelecaller ? `${productGroups.length} products` : `${visibleCampaigns.length} campaigns`}</Badge>
+          <Badge variant="secondary">{isTeamLead || isTelecaller ? `${productGroups.length} products` : `${visibleCampaigns.length} products`}</Badge>
         </div>
         {isTeamLead || isTelecaller ? (
           productGroups.length === 0 ? (
@@ -630,7 +630,7 @@ export default function Dashboard() {
         ) : visibleCampaigns.length === 0 ? (
           <Card className="rounded-lg">
             <CardContent className="p-8 text-center text-sm font-medium text-muted-foreground">
-              No campaigns are visible for this role yet.
+              No products are visible for this role yet.
             </CardContent>
           </Card>
         ) : (

@@ -91,6 +91,11 @@ match /users/{userId} {
     match /leadSyncConfigs/{teamspaceId} {
       allow read: if isMember(teamspaceId);
       allow write: if isAdmin();
+
+      match /sheets/{sheetId} {
+        allow read: if isMember(teamspaceId);
+        allow write: if isAdmin();
+      }
     }
   }
 }
