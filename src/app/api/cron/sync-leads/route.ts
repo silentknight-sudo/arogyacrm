@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
-  const snapshot = await adminDb.collection('leadSyncConfigs').where('enabled', '==', true).get();
+  const snapshot = await adminDb.collectionGroup('sheets').where('enabled', '==', true).get();
   const results = [];
 
   for (const doc of snapshot.docs) {
@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       sheetUrl: config.sheetUrl,
       assignedToId: config.assignedToId,
       createdBy: config.createdBy,
+      campaignId: config.campaignId,
       enabled: config.enabled,
       intervalMinutes: config.intervalMinutes,
     });
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
       { merge: true }
     );
 
-    results.push({ id: doc.id, ...result });
+    results.push({ id: doc.id, campaignId: config.campaignId, ...result });
   }
 
   return NextResponse.json({ success: true, results });

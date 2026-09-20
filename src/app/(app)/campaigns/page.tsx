@@ -49,16 +49,16 @@ export default function CampaignsPage() {
     <div className="space-y-8 pb-12">
         <div className="flex items-center justify-between">
             <div>
-                <h1 className="text-4xl font-black tracking-tight text-primary">Campaign Management</h1>
+                <h1 className="text-4xl font-black tracking-tight text-primary">Products</h1>
                 <p className="text-muted-foreground font-medium">
-                    Campaign-wise lead totals and stage distribution.
+                    Product-wise lead totals and stage distribution.
                 </p>
             </div>
             <div className="flex items-center space-x-2">
                 <CreateCampaignDialog>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Create Campaign
+                        Create Product
                     </Button>
                 </CreateCampaignDialog>
             </div>
@@ -68,7 +68,7 @@ export default function CampaignsPage() {
             <thead className="bg-primary text-primary-foreground">
               <tr>
                 <th className="px-4 py-4 text-left font-black">S.No</th>
-                <th className="px-4 py-4 text-left font-black">Campaign</th>
+                <th className="px-4 py-4 text-left font-black">Product</th>
                 <th className="px-4 py-4 text-left font-black">New Leads</th>
                 <th className="px-4 py-4 text-left font-black">{getLeadStatusLabel('new')} Leads</th>
                 <th className="px-4 py-4 text-left font-black">{getLeadStatusLabel('CNP')} Leads</th>
