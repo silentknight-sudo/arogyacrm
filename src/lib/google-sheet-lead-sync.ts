@@ -92,8 +92,16 @@ function normalizePhone(value: string) {
   return value.replace(/[^\d+]/g, '').trim();
 }
 
-function makeSyncKey(phone: string, email: string, name: string, campaignId?: string) {
-  return [phone, email.toLowerCase(), name.toLowerCase(), campaignId || ''].join('|');
+// Canonical form used only for duplicate matching, so "+91 98765-43210",
+// "919876543210" and "9876543210" from different sheet exports (or a
+// manually created lead) all resolve to the same person.
+function canonicalPhone(value: string) {
+  const digitsOnly = value.replace(/\D/g, '');
+  return digitsOnly.length > 10 ? digitsOnly.slice(-10) : digitsOnly;
+}
+
+function makeSyncKey(phone: string, email: string, name: string) {
+  return [phone, email.toLowerCase(), name.toLowerCase()].join('|');
 }
 
 async function resolveAdminRecipient(config: LeadSyncConfig) {
@@ -136,25 +144,40 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
         return acc;
       }, {});
 
-      const fullName = getVal(record, ['name', 'full name', 'full_name', 'customer name']);
-      const email = getVal(record, ['email', 'email address', 'email_address']);
-      const phone = normalizePhone(getVal(record, ['phone', 'phone number', 'mobile', 'mobile number']));
+      const fullName = getVal(record, [
+        'name', 'full name', 'full_name', 'customer name', 'customer_name', 'lead name', 'lead_name',
+      ]);
+      const email = getVal(record, ['email', 'email address', 'email_address', 'e-mail']);
+      const phone = normalizePhone(getVal(record, [
+        'phone', 'phone number', 'phone_number', 'mobile', 'mobile number', 'mobile_number',
+        'contact number', 'contact_number', 'whatsapp number', 'whatsapp_number',
+      ]));
 
       if (!fullName || !phone) {
         skipped += 1;
         continue;
       }
 
-      const sourceSyncKey = makeSyncKey(phone, email, fullName, config.campaignId);
+      const phoneCanonical = canonicalPhone(phone);
+      const sourceSyncKey = makeSyncKey(phone, email, fullName);
       const leadsRef = adminDb.collection('teamspaces').doc(config.teamspaceId).collection('leads');
-      const existing = await leadsRef.where('sourceSyncKey', '==', sourceSyncKey).limit(1).get();
 
-      if (!existing.empty) {
+      // Skip duplicates completely: match against ANY existing lead for this
+      // person in the teamspace (however it was created), not only leads
+      // already synced from a sheet.
+      const [byCanonicalPhone, byRawPhone] = await Promise.all([
+        leadsRef.where('phoneCanonical', '==', phoneCanonical).limit(1).get(),
+        leadsRef.where('phone', '==', phone).limit(1).get(),
+      ]);
+
+      if (!byCanonicalPhone.empty || !byRawPhone.empty) {
         skipped += 1;
         continue;
       }
 
-      const createdValue = getVal(record, ['created_time', 'created at', 'created_at']);
+      const createdValue = getVal(record, [
+        'created_time', 'created at', 'created_at', 'timestamp', 'date',
+      ]);
       const parsedCreatedAt = createdValue ? new Date(createdValue) : null;
       const createdAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
         ? parsedCreatedAt
@@ -163,8 +186,9 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
       const leadData = {
         fullName,
         phone,
+        phoneCanonical,
         status: 'new',
-        source: getVal(record, ['source', 'platform']) || 'google_sheet_sync',
+        source: getVal(record, ['source', 'platform', 'campaign', 'campaign_name', 'ad_name', 'form_name']) || 'google_sheet_sync',
         assignedToIds: [adminRecipientId],
         teamspaceId: config.teamspaceId,
         reassigned: false,
@@ -176,9 +200,28 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
 
       // Firestore does not accept `undefined`; omit optional sheet columns when blank.
       if (email) leadData.email = email;
-      const notes = getVal(record, ['notes', 'query']);
+      const notes = getVal(record, ['notes', 'query', 'message', 'remark', 'remarks']);
       if (notes) leadData.notes = notes;
       if (config.campaignId) leadData.campaignId = config.campaignId;
+
+      // Keep every other sheet column on the lead so the CRM tracks the
+      // sheet's own format instead of dropping columns it doesn't recognize.
+      const mappedHeaders = new Set([
+        'name', 'full name', 'full_name', 'customer name', 'customer_name', 'lead name', 'lead_name',
+        'email', 'email address', 'email_address', 'e-mail',
+        'phone', 'phone number', 'phone_number', 'mobile', 'mobile number', 'mobile_number',
+        'contact number', 'contact_number', 'whatsapp number', 'whatsapp_number',
+        'source', 'platform', 'campaign', 'campaign_name', 'ad_name', 'form_name',
+        'notes', 'query', 'message', 'remark', 'remarks',
+        'created_time', 'created at', 'created_at', 'timestamp', 'date',
+      ]);
+      const extraFields = Object.entries(record).reduce<Record<string, string>>((acc, [header, value]) => {
+        if (!mappedHeaders.has(header) && value && value.trim()) {
+          acc[header] = value.trim();
+        }
+        return acc;
+      }, {});
+      if (Object.keys(extraFields).length > 0) leadData.demographicData = extraFields;
 
       await leadsRef.add(leadData);
 

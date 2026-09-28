@@ -8,7 +8,7 @@
  */
 
 import {setGlobalOptions} from "firebase-functions";
-import {onRequest} from "firebase-functions/https";
+import {onSchedule} from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
 
 // Start writing functions
@@ -26,7 +26,30 @@ import * as logger from "firebase-functions/logger";
 // this will be the maximum concurrent request count.
 setGlobalOptions({ maxInstances: 10 });
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// The CRM's Next.js app runs on Firebase App Hosting, which has no built-in
+// cron support (the app's vercel.json cron entry only works when deployed to
+// Vercel). This scheduled function is what actually triggers lead sync in
+// production, every minute, by calling the app's own cron endpoint, which
+// then decides per-sheet whether that sheet's configured interval is due.
+const SYNC_ENDPOINT = process.env.LEAD_SYNC_URL ||
+  "https://studio--studio-3238704164-621f1.us-central1.hosted.app/api/cron/sync-leads";
+
+export const syncGoogleSheetLeadsEveryMinute = onSchedule(
+  { schedule: "every 1 minutes", region: "us-central1", retryCount: 0 },
+  async () => {
+    const headers: Record<string, string> = {};
+    if (process.env.CRON_SECRET) {
+      headers.Authorization = `Bearer ${process.env.CRON_SECRET}`;
+    }
+
+    const response = await fetch(SYNC_ENDPOINT, { headers });
+    const body = await response.text();
+
+    if (!response.ok) {
+      logger.error("Lead sync cron call failed", { status: response.status, body });
+      return;
+    }
+
+    logger.info("Lead sync cron call completed", { body });
+  }
+);

@@ -312,8 +312,15 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
       const data = doc.data();
       const phone = (data.phone || '').trim();
       if (phone) {
-        if (!leadsByPhone[phone]) leadsByPhone[phone] = [];
-        leadsByPhone[phone].push({ id: doc.id, createdAt: data.createdAt?.toDate() || new Date(0) });
+        // Group by a canonicalized number so "+91 98765-43210" and
+        // "9876543210" are recognized as the same duplicate.
+        const digitsOnly = phone.replace(/\D/g, '');
+        const key = digitsOnly.length > 10 ? digitsOnly.slice(-10) : digitsOnly || phone;
+        if (!leadsByPhone[key]) leadsByPhone[key] = [];
+        const raw = data.createdAt;
+        const parsed = typeof raw?.toDate === 'function' ? raw.toDate() : raw ? new Date(raw) : null;
+        const createdAt = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date(0);
+        leadsByPhone[key].push({ id: doc.id, createdAt });
       }
     });
 
