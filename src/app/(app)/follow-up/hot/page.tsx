@@ -38,7 +38,8 @@ export default function HotLeadsPage() {
               </thead>
               <tbody>
                 {isLoading ? <tr><td colSpan={6} className="px-4 py-8 text-center">Loading...</td></tr> : (leads || []).map((lead, index) => {
-                  const createdAt = lead.createdAt?.toDate ? lead.createdAt.toDate() : lead.createdAt ? new Date(lead.createdAt) : null;
+                  const rawCreatedAt = lead.createdAt?.toDate ? lead.createdAt.toDate() : lead.createdAt ? new Date(lead.createdAt) : null;
+                  const createdAt = rawCreatedAt && !Number.isNaN(rawCreatedAt.getTime()) ? rawCreatedAt : null;
                   return (
                     <tr key={lead.id} className="border-t">
                       <td className="px-4 py-3 font-bold">{index + 1}</td>

@@ -228,7 +228,8 @@ const UpdateLeadDialog = ({ lead }: { lead: Lead }) => {
             {history.length === 0 ? (
               <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">No history yet.</div>
             ) : history.map((item, index) => {
-              const updatedAt = item.updatedAt?.toDate ? item.updatedAt.toDate() : item.updatedAt ? new Date(item.updatedAt) : null;
+              const rawUpdatedAt = item.updatedAt?.toDate ? item.updatedAt.toDate() : item.updatedAt ? new Date(item.updatedAt) : null;
+              const updatedAt = rawUpdatedAt && !Number.isNaN(rawUpdatedAt.getTime()) ? rawUpdatedAt : null;
               return (
                 <div key={`${item.status}-${index}`} className="overflow-hidden rounded-2xl border bg-background">
                   <div className="bg-primary/10 px-5 py-3 text-sm font-black text-primary">{updatedAt ? format(updatedAt, 'PPp') : 'Time not provided'}</div>
@@ -293,6 +294,7 @@ export const columns: ColumnDef<Lead>[] = [
         const date = row.original.createdAt;
         if (!date) return 'N/A';
         const d = date.toDate ? date.toDate() : new Date(date);
+        if (Number.isNaN(d.getTime())) return 'N/A';
         return <span className="text-[10px] font-bold text-muted-foreground">{format(d, 'PPp')}</span>;
     },
   },

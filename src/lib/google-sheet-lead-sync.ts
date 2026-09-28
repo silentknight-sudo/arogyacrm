@@ -155,6 +155,10 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
       }
 
       const createdValue = getVal(record, ['created_time', 'created at', 'created_at']);
+      const parsedCreatedAt = createdValue ? new Date(createdValue) : null;
+      const createdAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
+        ? parsedCreatedAt
+        : FieldValue.serverTimestamp();
 
       const leadData = {
         fullName,
@@ -166,7 +170,7 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
         reassigned: false,
         sourceSyncKey,
         sourceSyncUrl: config.sheetUrl,
-        createdAt: createdValue || FieldValue.serverTimestamp(),
+        createdAt,
         updatedAt: FieldValue.serverTimestamp(),
       } as Record<string, unknown>;
 
