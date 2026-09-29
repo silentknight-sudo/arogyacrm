@@ -2,6 +2,7 @@
 
 import { adminDb, FieldValue, handleAdminSDKError } from '@/firebase/admin';
 import { sendMetaCapiEvent } from '@/lib/meta-capi';
+import { syncGoogleSheetLeads } from '@/lib/google-sheet-lead-sync';
 import { revalidatePath } from 'next/cache';
 import type { LeadStatus } from '@/types';
 
@@ -347,5 +348,66 @@ export async function cleanupDuplicateLeads(teamspaceId: string): Promise<{ succ
     return { success: true, removedCount };
   } catch (error: any) {
     return { success: false, removedCount: 0, error: handleAdminSDKError(error) };
+  }
+}
+
+export type SyncAllSheetsResult = {
+  success: boolean;
+  sheetsSynced: number;
+  totalAdded: number;
+  totalSkipped: number;
+  errors: string[];
+};
+
+// Manual stand-in for the scheduled auto-sync (which needs the Cloud
+// Function deployed) — pulls every connected Google Sheet for this
+// teamspace right now, regardless of each sheet's own auto-sync interval.
+export async function syncAllSheetsNow(teamspaceId: string): Promise<SyncAllSheetsResult> {
+  try {
+    const sheetsRef = adminDb.collection('leadSyncConfigs').doc(teamspaceId).collection('sheets');
+    const snapshot = await sheetsRef.get();
+
+    let totalAdded = 0;
+    let totalSkipped = 0;
+    const errors: string[] = [];
+
+    for (const doc of snapshot.docs) {
+      const config = doc.data();
+      if (!config.sheetUrl || !config.assignedToId || !config.createdBy) continue;
+
+      const result = await syncGoogleSheetLeads({
+        teamspaceId,
+        sheetUrl: config.sheetUrl,
+        assignedToId: config.assignedToId,
+        createdBy: config.createdBy,
+        campaignId: config.campaignId,
+      });
+
+      await doc.ref.set(
+        {
+          lastSyncedAt: FieldValue.serverTimestamp(),
+          lastSyncCount: result.count,
+          lastSyncSkipped: result.skipped,
+          lastSyncError: result.success ? null : result.error || 'Sync failed',
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      if (result.success) {
+        totalAdded += result.count;
+        totalSkipped += result.skipped;
+      } else {
+        errors.push(result.error || 'A connected sheet failed to sync.');
+      }
+    }
+
+    revalidatePath('/leads');
+    revalidatePath('/dashboard');
+    revalidatePath('/settings');
+
+    return { success: true, sheetsSynced: snapshot.docs.length, totalAdded, totalSkipped, errors };
+  } catch (error: any) {
+    return { success: false, sheetsSynced: 0, totalAdded: 0, totalSkipped: 0, errors: [handleAdminSDKError(error)] };
   }
 }

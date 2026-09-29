@@ -11,14 +11,14 @@ import type { Lead, UserProfile, LeadStatus, Product, Campaign } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateLeadDialog } from './create-lead-dialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, Trash2, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle, Upload, Target, Users as UsersIcon, Filter, Trash2, Calendar as CalendarIcon, RefreshCw } from 'lucide-react';
 import { UploadLeadsDialog } from './upload-leads-dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { BulkAssignLeadsDialog } from './bulk-assign-leads-dialog';
 import { DeduplicateLeadsDialog } from './deduplicate-leads-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { deleteLeads } from './actions';
+import { deleteLeads, syncAllSheetsNow } from './actions';
 import {
   Select,
   SelectContent,
@@ -66,6 +66,7 @@ export default function LeadsPage() {
   const [isDeleteDialogOpen, setIsDeleteOpen] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [isDeleting, startDelete] = useTransition();
+  const [isSyncingSheets, startSyncSheets] = useTransition();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -320,6 +321,26 @@ export default function LeadsPage() {
     });
   };
 
+  const handleSyncAllSheets = () => {
+    if (!currentTeamspace?.id) return;
+    startSyncSheets(async () => {
+      const result = await syncAllSheetsNow(currentTeamspace.id);
+      if (!result.success) {
+        toast({ title: 'Sync failed', description: result.errors[0] || 'Could not sync connected sheets.', variant: 'destructive' });
+        return;
+      }
+      if (result.sheetsSynced === 0) {
+        toast({ title: 'No sheets connected', description: 'Connect a Google Sheet to a product from Settings first.' });
+        return;
+      }
+      toast({
+        title: 'Sheet sync complete',
+        description: `${result.sheetsSynced} sheet${result.sheetsSynced === 1 ? '' : 's'} checked · ${result.totalAdded} new leads added · ${result.totalSkipped} duplicates skipped${result.errors.length ? ` · ${result.errors.length} sheet(s) had errors` : ''}.`,
+        variant: result.errors.length ? 'destructive' : undefined,
+      });
+    });
+  };
+
   if (!mounted) return null;
 
   return (
@@ -336,6 +357,15 @@ export default function LeadsPage() {
         <div className="flex items-center gap-4">
           {currentUser?.role === 'admin' && (
             <>
+              <Button
+                variant="outline"
+                onClick={handleSyncAllSheets}
+                disabled={isSyncingSheets}
+                className="rounded-2xl border-primary/20 hover:bg-primary/5 px-8 py-8 font-black tracking-tight text-base shadow-sm"
+              >
+                <RefreshCw className={`mr-3 h-5 w-5 ${isSyncingSheets ? 'animate-spin' : ''}`} />
+                {isSyncingSheets ? 'Syncing Sheets...' : 'Sync All Sheets'}
+              </Button>
               <DeduplicateLeadsDialog />
               <UploadLeadsDialog users={users || []} isLoading={loading}>
                 <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 px-8 py-8 font-black tracking-tight text-base shadow-sm">
