@@ -21,6 +21,16 @@ export type UserProfile = {
   createdBy?: string;
 };
 
+export type LoginSession = {
+  id: string;
+  device: string;
+  userAgent?: string;
+  ip?: string;
+  location: string;
+  loginAt: any;
+  logoutAt?: any;
+};
+
 export type Teamspace = {
   id: string;
   name: string;

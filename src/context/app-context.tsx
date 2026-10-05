@@ -6,6 +6,7 @@ import type { UserProfile, Teamspace, Notification } from '@/types';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { doc, collection, query, getDoc, orderBy, limit, addDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { getPrimaryTeamspaceId } from '@/lib/team-membership';
+import { recordLogoutSession } from '@/app/(app)/device-manager/actions';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -179,6 +180,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    const sessionId = typeof window !== 'undefined' ? localStorage.getItem('arogya-crm-session-id') : null;
+    if (sessionId && currentUser?.id) {
+      try {
+        await recordLogoutSession({ userId: currentUser.id, sessionId });
+      } catch {
+        // Never block sign-out on logout-tracking failures.
+      }
+      localStorage.removeItem('arogya-crm-session-id');
+    }
     setCurrentTeamspaceState(null);
     setAvailableTeamspaces([]);
     await auth.signOut();

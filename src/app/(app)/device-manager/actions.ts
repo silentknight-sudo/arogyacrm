@@ -3,7 +3,105 @@
 import { adminAuth, adminDb, handleAdminSDKError } from '@/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { z } from 'zod';
+
+function describeDevice(userAgent: string): string {
+  if (!userAgent) return 'Unknown device';
+
+  const ua = userAgent.toLowerCase();
+  let os = 'Unknown OS';
+  if (ua.includes('windows')) os = 'Windows';
+  else if (ua.includes('iphone')) os = 'iPhone';
+  else if (ua.includes('ipad')) os = 'iPad';
+  else if (ua.includes('mac os')) os = 'Mac';
+  else if (ua.includes('android')) os = 'Android';
+  else if (ua.includes('linux')) os = 'Linux';
+
+  let browser = 'Unknown browser';
+  if (ua.includes('edg/')) browser = 'Edge';
+  else if (ua.includes('chrome/') && !ua.includes('edg/')) browser = 'Chrome';
+  else if (ua.includes('firefox/')) browser = 'Firefox';
+  else if (ua.includes('safari/') && !ua.includes('chrome/')) browser = 'Safari';
+
+  return `${os} · ${browser}`;
+}
+
+async function resolveIpLocation(ip: string): Promise<string> {
+  if (!ip || ip === '::1' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+    return 'Unknown location';
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const response = await fetch(`https://ipapi.co/${ip}/json/`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!response.ok) return 'Unknown location';
+
+    const data = await response.json();
+    const parts = [data.city, data.region, data.country_name].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : 'Unknown location';
+  } catch {
+    return 'Unknown location';
+  }
+}
+
+function getClientIp(): string {
+  const headerList = headers();
+  const forwardedFor = headerList.get('x-forwarded-for');
+  if (forwardedFor) return forwardedFor.split(',')[0].trim();
+  return headerList.get('x-real-ip') || '';
+}
+
+const RecordLoginSchema = z.object({
+  userId: z.string().min(1),
+  userAgent: z.string().optional(),
+});
+
+export async function recordLoginSession(values: z.infer<typeof RecordLoginSchema>) {
+  try {
+    const { userId, userAgent } = RecordLoginSchema.parse(values);
+    const ip = getClientIp();
+    const [location] = await Promise.all([resolveIpLocation(ip)]);
+
+    const sessionRef = adminDb.collection('users').doc(userId).collection('loginSessions').doc();
+    await sessionRef.set({
+      id: sessionRef.id,
+      device: describeDevice(userAgent || ''),
+      userAgent: userAgent || '',
+      ip: ip || 'Unknown',
+      location,
+      loginAt: FieldValue.serverTimestamp(),
+      logoutAt: null,
+    });
+
+    return { success: true, sessionId: sessionRef.id };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
+
+const RecordLogoutSchema = z.object({
+  userId: z.string().min(1),
+  sessionId: z.string().min(1),
+});
+
+export async function recordLogoutSession(values: z.infer<typeof RecordLogoutSchema>) {
+  try {
+    const { userId, sessionId } = RecordLogoutSchema.parse(values);
+    await adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('loginSessions')
+      .doc(sessionId)
+      .set({ logoutAt: FieldValue.serverTimestamp() }, { merge: true });
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleAdminSDKError(error) };
+  }
+}
 
 const UpdateAccessSchema = z.object({
   targetUserId: z.string().min(1),

@@ -21,7 +21,7 @@ import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, ShieldCheck, TrendingUp, Zap, Leaf } from 'lucide-react';
-import { notifyBlockedLoginAttempt } from '@/app/(app)/device-manager/actions';
+import { notifyBlockedLoginAttempt, recordLoginSession } from '@/app/(app)/device-manager/actions';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -52,7 +52,15 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      const credential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      recordLoginSession({
+        userId: credential.user.uid,
+        userAgent: navigator.userAgent,
+      }).then((result) => {
+        if (result.success && result.sessionId) {
+          localStorage.setItem('arogya-crm-session-id', result.sessionId);
+        }
+      }).catch(() => {});
       toast({
         title: 'Executive Session Initiated',
         description: 'Welcome to the Arogya Elite operational center.',

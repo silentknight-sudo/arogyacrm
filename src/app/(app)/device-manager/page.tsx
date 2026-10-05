@@ -1,11 +1,12 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { collection, query, where } from 'firebase/firestore';
-import { Eye, Loader2, MonitorSmartphone, ShieldCheck, ShieldOff, Search } from 'lucide-react';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { Eye, Loader2, LogIn, LogOut, MapPin, MonitorSmartphone, ShieldCheck, ShieldOff, Search } from 'lucide-react';
+import { format } from 'date-fns';
 import { useApp } from '@/context/app-context';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { UserProfile } from '@/types';
+import type { LoginSession, UserProfile } from '@/types';
 import { getProfessionalEmployeeId, getRoleLabel } from '@/lib/user-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,25 @@ export default function DeviceManagerPage() {
   const [pendingUserId, setPendingUserId] = useState('');
   const [selectedDeviceUser, setSelectedDeviceUser] = useState<UserProfile | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const loginSessionsQuery = useMemoFirebase(
+    () => (selectedDeviceUser
+      ? query(
+          collection(firestore, 'users', selectedDeviceUser.id, 'loginSessions'),
+          orderBy('loginAt', 'desc'),
+          limit(15)
+        )
+      : null),
+    [firestore, selectedDeviceUser]
+  );
+  const { data: loginSessions, isLoading: isLoadingSessions } = useCollection<LoginSession>(loginSessionsQuery);
+
+  const formatSessionTime = (value: any) => {
+    if (!value) return null;
+    const date = typeof value?.toDate === 'function' ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return format(date, 'PPp');
+  };
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser) return null;
@@ -126,9 +146,40 @@ export default function DeviceManagerPage() {
               </div>
               <div className="rounded-2xl border bg-background p-5 md:col-span-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Login History</p>
-                <p className="mt-3 text-sm font-semibold text-muted-foreground">
-                  Detailed login device, location, login time, and logout time history has not been recorded for this account yet. Access approval/blocking is active from this manager.
-                </p>
+                <div className="mt-3 space-y-3">
+                  {isLoadingSessions ? (
+                    <p className="text-sm font-medium text-muted-foreground">Loading login history...</p>
+                  ) : (loginSessions || []).length === 0 ? (
+                    <p className="text-sm font-semibold text-muted-foreground">
+                      No recorded logins yet. History starts building from this account's next sign-in.
+                    </p>
+                  ) : (
+                    (loginSessions || []).map((session) => {
+                      const loginTime = formatSessionTime(session.loginAt);
+                      const logoutTime = formatSessionTime(session.logoutAt);
+                      return (
+                        <div key={session.id} className="rounded-xl border bg-muted/20 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 font-black text-primary">
+                              <MonitorSmartphone className="h-4 w-4" />
+                              {session.device || 'Unknown device'}
+                            </div>
+                            {logoutTime ? (
+                              <Badge variant="outline" className="border-muted-foreground/20 text-muted-foreground">Ended</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">Active</Badge>
+                            )}
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-muted-foreground">
+                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{session.location || 'Unknown location'}</span>
+                            <span className="flex items-center gap-1"><LogIn className="h-3 w-3" />{loginTime || 'Unknown time'}</span>
+                            {logoutTime && <span className="flex items-center gap-1"><LogOut className="h-3 w-3" />{logoutTime}</span>}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
           )}
