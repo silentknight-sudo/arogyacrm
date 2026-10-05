@@ -27,31 +27,62 @@ function describeDevice(userAgent: string): string {
   return `${os} · ${browser}`;
 }
 
+async function fetchWithTimeout(url: string, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function resolveViaIpapi(ip: string): Promise<string | null> {
+  const response = await fetchWithTimeout(`https://ipapi.co/${ip}/json/`, 3000);
+  if (!response.ok) return null;
+  const data = await response.json();
+  if (data?.error) return null;
+  const parts = [data.city, data.region, data.country_name].filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : null;
+}
+
+async function resolveViaIpApiCom(ip: string): Promise<string | null> {
+  // Free tier is HTTP-only (no HTTPS without a paid plan).
+  const response = await fetchWithTimeout(`http://ip-api.com/json/${ip}?fields=status,city,regionName,country`, 3000);
+  if (!response.ok) return null;
+  const data = await response.json();
+  if (data?.status !== 'success') return null;
+  const parts = [data.city, data.regionName, data.country].filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : null;
+}
+
 async function resolveIpLocation(ip: string): Promise<string> {
   if (!ip || ip === '::1' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
     return 'Unknown location';
   }
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
-    const response = await fetch(`https://ipapi.co/${ip}/json/`, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (!response.ok) return 'Unknown location';
-
-    const data = await response.json();
-    const parts = [data.city, data.region, data.country_name].filter(Boolean);
-    return parts.length > 0 ? parts.join(', ') : 'Unknown location';
-  } catch {
-    return 'Unknown location';
+  for (const resolver of [resolveViaIpapi, resolveViaIpApiCom]) {
+    try {
+      const location = await resolver(ip);
+      if (location) return location;
+    } catch {
+      // Try the next provider.
+    }
   }
+
+  return 'Unknown location';
 }
 
 function getClientIp(): string {
   const headerList = headers();
-  const forwardedFor = headerList.get('x-forwarded-for');
-  if (forwardedFor) return forwardedFor.split(',')[0].trim();
-  return headerList.get('x-real-ip') || '';
+  const candidates = [
+    headerList.get('x-forwarded-for')?.split(',')[0]?.trim(),
+    headerList.get('x-real-ip'),
+    headerList.get('cf-connecting-ip'),
+    headerList.get('true-client-ip'),
+    headerList.get('fastly-client-ip'),
+  ];
+  return candidates.find((value) => value && value.trim()) || '';
 }
 
 const RecordLoginSchema = z.object({
@@ -63,7 +94,7 @@ export async function recordLoginSession(values: z.infer<typeof RecordLoginSchem
   try {
     const { userId, userAgent } = RecordLoginSchema.parse(values);
     const ip = getClientIp();
-    const [location] = await Promise.all([resolveIpLocation(ip)]);
+    const location = await resolveIpLocation(ip);
 
     const sessionRef = adminDb.collection('users').doc(userId).collection('loginSessions').doc();
     await sessionRef.set({
