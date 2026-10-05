@@ -72,6 +72,15 @@ match /users/{userId} {
   match /notifications/{notificationId} {
     allow read, write: if isSignedIn() && userId == request.auth.uid;
   }
+
+  match /loginSessions/{sessionId} {
+    allow read: if isSignedIn() && (
+      isAdmin() ||
+      userId == request.auth.uid ||
+      sharesAnyTeamspaceWithUser(get(/databases/$(database)/documents/users/$(userId)).data)
+    );
+    allow write: if false;
+  }
 }
 
     match /products/{productId} {
