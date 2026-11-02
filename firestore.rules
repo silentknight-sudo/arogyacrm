@@ -77,7 +77,8 @@ match /users/{userId} {
     allow read: if isSignedIn() && (
       isAdmin() ||
       userId == request.auth.uid ||
-      sharesAnyTeamspaceWithUser(get(/databases/$(database)/documents/users/$(userId)).data)
+      sharesAnyTeamspaceWithUser(get(/databases/$(database)/documents/users/$(userId)).data) ||
+      isManagedTelecaller(get(/databases/$(database)/documents/users/$(userId)).data)
     );
     allow write: if false;
   }
