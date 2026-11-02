@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { collection, collectionGroup, documentId, query, where } from 'firebase/firestore';
+import { collection, documentId, query, where } from 'firebase/firestore';
 import { addDays, addMonths, addYears, isAfter } from 'date-fns';
 import { BarChart3, CalendarDays, CheckCircle2, CirclePause, Package, PhoneOff, ShieldX, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { useApp } from '@/context/app-context';
@@ -291,9 +291,7 @@ export default function Dashboard() {
   const isTelecaller = currentUser?.role === 'sales_executive';
 
   const leadsQuery = useMemoFirebase(() => {
-    if (isUserLoading || !currentUser) return null;
-    if (isAdmin) return query(collectionGroup(firestore, 'leads'));
-    if (!currentTeamspace?.id) return null;
+    if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
 
     const leadsRef = collection(firestore, 'teamspaces', currentTeamspace.id, 'leads');
     if (isTelecaller) {
@@ -301,18 +299,19 @@ export default function Dashboard() {
     }
 
     return query(leadsRef);
-  }, [currentUser, currentTeamspace?.id, firestore, isAdmin, isTelecaller, isUserLoading]);
+  }, [currentUser, currentTeamspace?.id, firestore, isTelecaller, isUserLoading]);
 
   const campaignsQuery = useMemoFirebase(() => {
-    if (isUserLoading || !currentUser) return null;
-    if (isAdmin) return query(collectionGroup(firestore, 'campaigns'));
-    if (!currentTeamspace?.id) return null;
+    if (isUserLoading || !currentUser || !currentTeamspace?.id) return null;
     return query(collection(firestore, 'teamspaces', currentTeamspace.id, 'campaigns'));
-  }, [currentUser, currentTeamspace?.id, firestore, isAdmin, isUserLoading]);
+  }, [currentUser, currentTeamspace?.id, firestore, isUserLoading]);
 
   const usersQuery = useMemoFirebase(() => {
     if (isUserLoading || !currentUser) return null;
-    if (isAdmin) return query(collection(firestore, 'users'));
+    if (isAdmin) {
+      if (!currentTeamspace?.id) return null;
+      return query(collection(firestore, 'users'), where('teamspaceIds', 'array-contains', currentTeamspace.id));
+    }
     if (isTeamLead) return null;
     return query(collection(firestore, 'users'), where(documentId(), '==', currentUser.id));
   }, [currentTeamspace?.id, currentUser, firestore, isAdmin, isTeamLead, isUserLoading]);
