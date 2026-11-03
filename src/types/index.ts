@@ -55,6 +55,7 @@ export type Lead = {
   campaignId?: string;
   campaignLeadId?: string;
   source?: string;
+  sheetId?: string;
   assignedToIds: string[];
   teamspaceId: string;
   metaLeadId?: string;

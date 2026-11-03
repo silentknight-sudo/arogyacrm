@@ -411,6 +411,7 @@ export async function syncAllSheetsNow(teamspaceId: string): Promise<SyncAllShee
         assignedToId: config.assignedToId,
         createdBy: config.createdBy,
         campaignId: config.campaignId,
+        sheetId: doc.id,
       });
 
       await doc.ref.set(
