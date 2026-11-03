@@ -73,6 +73,8 @@ export type Lead = {
     [key: string]: any;
   };
   reassigned?: boolean;
+  teamLeadId?: string;
+  teamLeadAssignedAt?: any;
   reminderValue?: number;
   reminderUnit?: 'hours' | 'days';
   reminderAt?: any;

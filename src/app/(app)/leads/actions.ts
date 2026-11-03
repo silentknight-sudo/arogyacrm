@@ -46,17 +46,11 @@ async function assertAuthorizedLeadRecipients(actorId: string, recipientIds: str
     for (const recipientId of recipientIds) {
       const recipientDoc = await adminDb.collection('users').doc(recipientId).get();
       const recipient = recipientDoc.data();
-      const recipientPrimaryTeamspaceId = Array.isArray(recipient?.teamspaceIds) ? recipient.teamspaceIds[0] : null;
-      const actorPrimaryTeamspaceId = Array.isArray(actorData?.teamspaceIds) ? actorData.teamspaceIds[0] : null;
-      const sharesPrimaryTeamspace =
-        recipientPrimaryTeamspaceId === teamspaceId ||
-        actorPrimaryTeamspaceId === teamspaceId ||
-        recipientPrimaryTeamspaceId === actorPrimaryTeamspaceId;
 
       if (
         !recipientDoc.exists ||
         recipient?.role !== 'sales_executive' ||
-        (!sharesPrimaryTeamspace && recipient?.createdBy !== actorId)
+        recipient?.createdBy !== actorId
       ) {
         throw new Error('Team Leads can assign leads only to their own telecallers.');
       }
@@ -64,6 +58,28 @@ async function assertAuthorizedLeadRecipients(actorId: string, recipientIds: str
   }
 
   return { actorRole, isLeaderAction: actorRole === 'admin' || actorRole === 'sales_team_lead' };
+}
+
+// Leads are owned by whichever Team Lead admin handed them to, and stay
+// "theirs" even after they delegate the lead to one of their own
+// telecallers — teamLeadId tracks that owner separately from
+// assignedToIds (the current holder), so "today's allocation" reporting
+// can tell "still with the TL" apart from "delegated, and to whom".
+async function resolveTeamLeadOwnership(
+  actorId: string,
+  actorRole: string | undefined,
+  recipientIds: string[],
+  existingTeamLeadId: string | undefined
+): Promise<{ teamLeadId?: string; isNewTeamLeadAssignment: boolean }> {
+  if (actorRole === 'admin' && recipientIds.length === 1) {
+    const isNewTeamLeadAssignment = existingTeamLeadId !== recipientIds[0];
+    return { teamLeadId: recipientIds[0], isNewTeamLeadAssignment };
+  }
+  if (actorRole === 'sales_team_lead') {
+    const isNewTeamLeadAssignment = existingTeamLeadId !== actorId;
+    return { teamLeadId: actorId, isNewTeamLeadAssignment };
+  }
+  return { teamLeadId: existingTeamLeadId, isNewTeamLeadAssignment: false };
 }
 
 export async function assignLead(values: {
@@ -78,16 +94,23 @@ export async function assignLead(values: {
     const leadDoc = await leadRef.get();
     const leadData = leadDoc.data();
 
-    const { isLeaderAction } = await assertAuthorizedLeadRecipients(currentUserId, newAssignedToIds, teamspaceId);
+    const { actorRole, isLeaderAction } = await assertAuthorizedLeadRecipients(currentUserId, newAssignedToIds, teamspaceId);
     const isInitialDist = isLeaderAction && leadData?.status === 'new';
+    const { teamLeadId, isNewTeamLeadAssignment } = await resolveTeamLeadOwnership(
+      currentUserId, actorRole, newAssignedToIds, leadData?.teamLeadId
+    );
 
-    await leadRef.update({
+    const updateData: Record<string, unknown> = {
       assignedToIds: newAssignedToIds,
       status: isLeaderAction ? 'new' : leadData?.status,
       reassigned: isInitialDist ? false : true,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-    });
+    };
+    if (teamLeadId) updateData.teamLeadId = teamLeadId;
+    if (isNewTeamLeadAssignment) updateData.teamLeadAssignedAt = FieldValue.serverTimestamp();
+
+    await leadRef.update(updateData);
 
     for (const uid of newAssignedToIds) {
       if (uid === currentUserId) continue;
@@ -116,21 +139,28 @@ export async function bulkAssignLeads(values: {
 }) {
   try {
     const { leadIds, teamspaceId, newAssignedToIds, currentUserId } = values;
-    const { isLeaderAction } = await assertAuthorizedLeadRecipients(currentUserId, newAssignedToIds, teamspaceId);
+    const { actorRole, isLeaderAction } = await assertAuthorizedLeadRecipients(currentUserId, newAssignedToIds, teamspaceId);
     const leadsRef = adminDb.collection('teamspaces').doc(teamspaceId).collection('leads');
 
     for (const id of leadIds) {
       const leadDoc = await leadsRef.doc(id).get();
       const leadData = leadDoc.data();
       const isInitialDist = isLeaderAction && leadData?.status === 'new';
+      const { teamLeadId, isNewTeamLeadAssignment } = await resolveTeamLeadOwnership(
+        currentUserId, actorRole, newAssignedToIds, leadData?.teamLeadId
+      );
 
-      await leadsRef.doc(id).update({
+      const updateData: Record<string, unknown> = {
         assignedToIds: newAssignedToIds,
         status: isLeaderAction ? 'new' : leadData?.status,
         reassigned: isInitialDist ? false : true,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-      });
+      };
+      if (teamLeadId) updateData.teamLeadId = teamLeadId;
+      if (isNewTeamLeadAssignment) updateData.teamLeadAssignedAt = FieldValue.serverTimestamp();
+
+      await leadsRef.doc(id).update(updateData);
     }
 
     revalidatePath('/leads');

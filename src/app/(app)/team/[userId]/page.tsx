@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Award, BriefcaseBusiness, CalendarDays, CheckCircle2, CirclePause, FileUp, GraduationCap, KeyRound, Mail, Phone, PhoneOff, Shield, ShieldX, TrendingUp, UserRound, Users } from 'lucide-react';
+import { isToday } from 'date-fns';
 import type { Lead, UserProfile } from '@/types';
 import { RolePerformancePanel } from '@/components/role-performance-panel';
 import { getProfessionalEmployeeId, getRoleLabel } from '@/lib/user-labels';
@@ -176,6 +177,44 @@ export default function TeamMemberProfilePage() {
       : [],
     [currentTeamspace, member, users]
   );
+
+  // Leads admin handed to this TL today, split by whether the TL still
+  // holds them or has already delegated them to a specific telecaller.
+  const todaysTeamLeadLeads = useMemo(() => {
+    if (!member || member.role !== 'sales_team_lead') return [];
+    return leads.filter((lead) => {
+      if (lead.teamLeadId !== member.id) return false;
+      const raw = lead.teamLeadAssignedAt;
+      const date = typeof raw?.toDate === 'function' ? raw.toDate() : raw ? new Date(raw) : null;
+      return date && !Number.isNaN(date.getTime()) && isToday(date);
+    });
+  }, [leads, member]);
+
+  const stillWithTeamLead = useMemo(
+    () => todaysTeamLeadLeads.filter((lead) => (lead.assignedToIds || []).includes(member?.id || '')),
+    [todaysTeamLeadLeads, member]
+  );
+
+  const delegatedToday = useMemo(() => {
+    if (!member) return [];
+    const grouped = new Map<string, Lead[]>();
+
+    todaysTeamLeadLeads
+      .filter((lead) => !(lead.assignedToIds || []).includes(member.id))
+      .forEach((lead) => {
+        (lead.assignedToIds || []).forEach((uid) => {
+          grouped.set(uid, [...(grouped.get(uid) || []), lead]);
+        });
+      });
+
+    return Array.from(grouped.entries())
+      .map(([userId, userLeads]) => ({
+        userId,
+        user: users.find((candidate) => candidate.id === userId),
+        leads: userLeads,
+      }))
+      .sort((a, b) => b.leads.length - a.leads.length);
+  }, [todaysTeamLeadLeads, member, users]);
 
   const assignedSummary = useMemo(() => getStageSummary(assignedLeads), [assignedLeads]);
   const completionRate = assignedSummary.total > 0 ? Math.round((assignedSummary.completed / assignedSummary.total) * 100) : 0;
@@ -358,6 +397,61 @@ export default function TeamMemberProfilePage() {
                     leads={leads.filter((lead) => lead.assignedToIds?.includes(telecaller.id))}
                   />
                 ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {member.role === 'sales_team_lead' && (
+            <Card className="rounded-[2rem] border-primary/10">
+              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-2xl font-black text-primary">Today&apos;s Lead Allocation</CardTitle>
+                  <CardDescription>
+                    Leads admin handed to {member.displayName} today, and how many have already been delegated onward.
+                  </CardDescription>
+                </div>
+                <Badge className="rounded-2xl bg-primary px-4 py-2 text-sm font-black text-primary-foreground">
+                  {todaysTeamLeadLeads.length} today
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <SummaryTile label="Still With Team Lead" value={stillWithTeamLead.length} icon={UserRound} tone="bg-gradient-to-br from-amber-400 to-orange-500" />
+                  <SummaryTile
+                    label="Delegated To Telecallers"
+                    value={todaysTeamLeadLeads.length - stillWithTeamLead.length}
+                    icon={Users}
+                    tone="bg-gradient-to-br from-emerald-400 to-green-600"
+                  />
+                </div>
+
+                {todaysTeamLeadLeads.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-primary/15 p-6 text-sm font-medium text-muted-foreground italic">
+                    No leads have been assigned to this Team Lead today yet.
+                  </div>
+                ) : delegatedToday.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-primary/15 p-6 text-sm font-medium text-muted-foreground italic">
+                    All of today&apos;s leads are still with {member.displayName} &mdash; none delegated yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Delegated to</p>
+                    {delegatedToday.map(({ userId, user, leads: userLeads }) => (
+                      <div key={userId} className="flex items-center justify-between gap-4 rounded-2xl border border-primary/10 bg-muted/20 p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-black text-primary">
+                            {(user?.displayName || 'NA').slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-black text-primary">{user?.displayName || 'Unknown telecaller'}</p>
+                            <p className="text-xs font-medium text-muted-foreground">{user ? getProfessionalEmployeeId(user) : userId}</p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="rounded-full px-4 py-1.5 text-sm font-black">{userLeads.length}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
