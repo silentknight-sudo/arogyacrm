@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { collection, documentId, query, where } from 'firebase/firestore';
-import { addDays, addMonths, addYears, isAfter } from 'date-fns';
+import { addDays, addMonths, addYears, isAfter, isToday } from 'date-fns';
 import { BarChart3, CalendarDays, CheckCircle2, CirclePause, Package, PhoneOff, ShieldX, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { useApp } from '@/context/app-context';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -44,6 +44,98 @@ function getLeadDate(lead: Lead): Date | null {
   const source = lead.updatedAt || lead.createdAt;
   if (!source) return null;
   return source.toDate ? source.toDate() : new Date(source);
+}
+
+type TodaysAllocation = {
+  total: number;
+  stillWithTeamLead: number;
+  delegated: { userId: string; count: number }[];
+};
+
+// Leads keep a stable teamLeadId (the TL admin originally handed them to)
+// separate from assignedToIds (whoever currently holds them), so this can
+// tell "still with the TL" apart from "delegated, and to how many people"
+// even after the TL pushes leads out to their telecallers.
+function getTodaysAllocation(leads: Lead[], teamLeadId: string): TodaysAllocation {
+  const todays = leads.filter((lead) => {
+    if (lead.teamLeadId !== teamLeadId) return false;
+    const raw = lead.teamLeadAssignedAt;
+    const date = raw?.toDate ? raw.toDate() : raw ? new Date(raw) : null;
+    return date && !Number.isNaN(date.getTime()) && isToday(date);
+  });
+
+  const stillWithTeamLead = todays.filter((lead) => (lead.assignedToIds || []).includes(teamLeadId)).length;
+
+  const delegatedCounts = new Map<string, number>();
+  todays
+    .filter((lead) => !(lead.assignedToIds || []).includes(teamLeadId))
+    .forEach((lead) => {
+      (lead.assignedToIds || []).forEach((uid) => {
+        delegatedCounts.set(uid, (delegatedCounts.get(uid) || 0) + 1);
+      });
+    });
+
+  return {
+    total: todays.length,
+    stillWithTeamLead,
+    delegated: Array.from(delegatedCounts.entries())
+      .map(([userId, count]) => ({ userId, count }))
+      .sort((a, b) => b.count - a.count),
+  };
+}
+
+function TodaysAllocationCard({
+  title,
+  description,
+  allocation,
+  users,
+}: {
+  title: string;
+  description: string;
+  allocation: TodaysAllocation;
+  users: UserProfile[];
+}) {
+  return (
+    <Card className="rounded-[2rem] border-primary/10">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+        <div>
+          <CardTitle className="text-2xl font-black text-primary">Today&apos;s Lead Allocation</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+        <Badge className="rounded-2xl bg-primary px-4 py-2 text-sm font-black text-primary-foreground">
+          {allocation.total} today
+        </Badge>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Still With {title}</p>
+            <p className="mt-2 text-3xl font-black text-primary">{allocation.stillWithTeamLead}</p>
+          </div>
+          <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Delegated Today</p>
+            <p className="mt-2 text-3xl font-black text-primary">{allocation.total - allocation.stillWithTeamLead}</p>
+          </div>
+        </div>
+        {allocation.total === 0 ? (
+          <p className="text-sm font-medium text-muted-foreground">No leads have been assigned today yet.</p>
+        ) : allocation.delegated.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Delegated to</p>
+            {allocation.delegated.map(({ userId, count }) => {
+              const user = users.find((candidate) => candidate.id === userId);
+              return (
+                <div key={userId} className="flex items-center justify-between rounded-xl border border-primary/10 bg-background px-4 py-2.5">
+                  <span className="font-bold text-primary">{user?.displayName || 'Unknown telecaller'}</span>
+                  <Badge variant="secondary" className="rounded-full px-3 font-black">{count}</Badge>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function filterLeadsByPeriod(leads: Lead[], period: PeriodFilter) {
@@ -386,6 +478,16 @@ export default function Dashboard() {
     return (users || []).filter((user) => belongsToTeamLeadTeam(user, currentUser, currentTeamspace));
   }, [currentTeamspace, currentUser, isTeamLead, users]);
 
+  const myTodaysAllocation = useMemo(
+    () => (isTeamLead && currentUser ? getTodaysAllocation(leads || [], currentUser.id) : null),
+    [currentUser, isTeamLead, leads]
+  );
+
+  const todaysAllocationByTeamLead = useMemo(() => {
+    if (!isAdmin) return new Map<string, TodaysAllocation>();
+    return new Map(performanceUsers.map((tl) => [tl.id, getTodaysAllocation(leads || [], tl.id)]));
+  }, [isAdmin, leads, performanceUsers]);
+
   const visibleCampaignIds = useMemo(
     () => new Set((leads || []).map((lead) => lead.campaignId).filter(Boolean)),
     [leads]
@@ -426,6 +528,15 @@ export default function Dashboard() {
           <TrackerMetric label={`Total Calls ${getLeadStatusLabel('intrested')}`} value={allTimeSummary.holding} icon={CirclePause} accent="bg-gradient-to-br from-sky-400 to-cyan-600" detail="Follow-up or holding leads" />
           <TrackerMetric label={`Total Calls ${getLeadStatusLabel('not intrested')}`} value={allTimeSummary.rejected} icon={ShieldX} accent="bg-gradient-to-br from-rose-400 to-red-600" detail="Rejected lead outcomes" />
         </section>
+
+        {myTodaysAllocation && (
+          <TodaysAllocationCard
+            title="Me"
+            description="Leads admin handed to you today, and how many you've delegated onward to your telecallers."
+            allocation={myTodaysAllocation}
+            users={users || []}
+          />
+        )}
 
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-4">
@@ -644,6 +755,50 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      {isAdmin && (
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-black text-primary">Today&apos;s Lead Allocation</h2>
+            <p className="text-sm font-medium text-muted-foreground">Per Team Lead: leads handed out today, still-held vs. delegated.</p>
+          </div>
+          {performanceUsers.length === 0 ? (
+            <Card className="rounded-lg">
+              <CardContent className="p-8 text-center text-sm font-medium text-muted-foreground">
+                No Team Leads in this teamspace yet.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {performanceUsers.map((tl) => {
+                const allocation = todaysAllocationByTeamLead.get(tl.id) || { total: 0, stillWithTeamLead: 0, delegated: [] };
+                return (
+                  <Link key={tl.id} href={`/team/${tl.id}`} className="block">
+                    <Card className="h-full rounded-[2rem] border-primary/10 shadow-sm transition-colors hover:border-primary/40">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <CardTitle className="text-lg font-black text-primary">{tl.displayName}</CardTitle>
+                          <Badge className="rounded-2xl bg-primary px-3 py-1 text-xs font-black text-primary-foreground">{allocation.total} today</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="grid grid-cols-2 gap-2">
+                        <div className="rounded-xl border border-primary/10 bg-primary/5 p-3">
+                          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground">Still With TL</p>
+                          <p className="mt-1 text-2xl font-black text-primary">{allocation.stillWithTeamLead}</p>
+                        </div>
+                        <div className="rounded-xl border border-primary/10 bg-primary/5 p-3">
+                          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground">Delegated</p>
+                          <p className="mt-1 text-2xl font-black text-primary">{allocation.total - allocation.stillWithTeamLead}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
