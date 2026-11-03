@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
       assignedToId: config.assignedToId,
       createdBy: config.createdBy,
       campaignId: config.campaignId,
+      sheetId: doc.id,
       enabled: config.enabled,
       intervalMinutes: config.intervalMinutes,
     });

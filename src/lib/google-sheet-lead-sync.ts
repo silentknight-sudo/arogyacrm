@@ -7,6 +7,7 @@ export type LeadSyncConfig = {
   assignedToId: string;
   createdBy: string;
   campaignId?: string;
+  sheetId?: string;
   enabled?: boolean;
   intervalMinutes?: number;
 };
@@ -276,6 +277,7 @@ export async function syncGoogleSheetLeads(config: LeadSyncConfig): Promise<Goog
       const notes = getVal(record, ['notes', 'query', 'message', 'remark', 'remarks']);
       if (notes) leadData.notes = notes;
       if (config.campaignId) leadData.campaignId = config.campaignId;
+      if (config.sheetId) leadData.sheetId = config.sheetId;
 
       // Keep every other sheet column on the lead so the CRM tracks the
       // sheet's own format instead of dropping columns it doesn't recognize.

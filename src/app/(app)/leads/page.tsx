@@ -60,6 +60,7 @@ export default function LeadsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('default');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('direct');
   const [productFilter, setProductFilter] = useState<string>('all');
+  const [sheetFilter, setSheetFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectCount, setSelectCount] = useState<string>('');
   const [isBulkAssignOpen, setBulkAssignOpen] = useState(false);
@@ -223,6 +224,10 @@ export default function LeadsPage() {
       leads = leads.filter((lead) => lead.campaignId === productFilter);
     }
 
+    if (sheetFilter !== 'all') {
+      leads = leads.filter((lead) => lead.sheetId === sheetFilter);
+    }
+
     if (dateRange?.from) {
       const start = startOfDay(dateRange.from);
       const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
@@ -239,7 +244,7 @@ export default function LeadsPage() {
       const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt ? new Date(b.createdAt) : new Date(0);
       return bDate.getTime() - aDate.getTime();
     });
-  }, [rawLeads, currentUser, assigneeFilter, dateRange, activeFilter, stageUsers, currentTeamspace, assigneeScopeIds, productFilter]);
+  }, [rawLeads, currentUser, assigneeFilter, dateRange, activeFilter, stageUsers, currentTeamspace, assigneeScopeIds, productFilter, sheetFilter]);
 
   const stageCounts = useMemo(() => {
     let leads = stageCountLeads || [];
@@ -282,6 +287,12 @@ export default function LeadsPage() {
     [firestore, currentTeamspace?.id]
   );
   const { data: campaigns } = useCollection<Campaign>(campaignsQuery);
+
+  const sheetsQuery = useMemoFirebase(
+    () => (currentTeamspace?.id ? query(collection(firestore, 'leadSyncConfigs', currentTeamspace.id, 'sheets')) : null),
+    [firestore, currentTeamspace?.id]
+  );
+  const { data: sheets } = useCollection<{ id: string; sheetUrl: string; campaignId?: string }>(sheetsQuery);
 
   const loading = isUserLoading || isLoadingLeads || isLoadingUsers || isLoadingProducts || !mounted;
 
@@ -447,6 +458,25 @@ export default function LeadsPage() {
                   {campaign.name}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={sheetFilter} onValueChange={setSheetFilter}>
+            <SelectTrigger className="w-[220px] h-10 rounded-2xl border-primary/10 bg-background/70 font-bold">
+              <SelectValue placeholder="All Sheets" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sheets</SelectItem>
+              {(sheets || []).map((sheet) => {
+                const product = (campaigns || []).find((campaign) => campaign.id === sheet.campaignId);
+                const sheetIdMatch = sheet.sheetUrl?.match(/\/spreadsheets\/d\/([^/]+)/);
+                const shortId = sheetIdMatch?.[1]?.slice(0, 6) || sheet.id.slice(0, 6);
+                return (
+                  <SelectItem key={sheet.id} value={sheet.id}>
+                    {product ? `${product.name} · ${shortId}` : `Sheet · ${shortId}`}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
